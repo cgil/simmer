@@ -10,6 +10,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import theme from './theme/theme';
 import CatalogPage from './pages/catalog/CatalogPage';
+import RecipePage from './pages/recipe/RecipePage';
 
 const App: FC = () => {
     return (
@@ -18,6 +19,7 @@ const App: FC = () => {
             <Router>
                 <Routes>
                     <Route path="/" element={<CatalogPage />} />
+                    <Route path="/recipe/:id" element={<RecipePage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </Router>
