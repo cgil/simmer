@@ -5,7 +5,6 @@ import {
     Typography,
     Grid,
     Chip,
-    IconButton,
     Paper,
     Button,
     useTheme,
@@ -50,22 +49,37 @@ const RecipePage: FC = () => {
         setServings(value as number);
     };
 
-    return (
-        <AppLayout>
-            <Box sx={{ position: 'relative' }}>
-                <IconButton
-                    onClick={() => navigate('/')}
-                    sx={{
-                        position: { xs: 'static', sm: 'absolute' },
-                        left: 0,
-                        top: 0,
-                        mb: { xs: 2, sm: 0 },
-                    }}
-                    aria-label="back to recipes"
-                >
-                    <ArrowBackIcon />
-                </IconButton>
+    const headerContent = (
+        <Box
+            onClick={() => navigate('/')}
+            sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+                cursor: 'pointer',
+                color: 'text.primary',
+                '&:hover': {
+                    color: 'primary.main',
+                },
+            }}
+        >
+            <ArrowBackIcon sx={{ fontSize: 24 }} />
+            <Typography
+                variant="body1"
+                sx={{
+                    fontWeight: 500,
+                    fontSize: { xs: '1rem', sm: '1.125rem' },
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                }}
+            >
+                Back
+            </Typography>
+        </Box>
+    );
 
+    return (
+        <AppLayout headerContent={headerContent} showIcon={false}>
+            <Box sx={{ position: 'relative' }}>
                 <Grid container spacing={4}>
                     {/* Header Section */}
                     <Grid item xs={12}>

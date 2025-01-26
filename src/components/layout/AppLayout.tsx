@@ -5,18 +5,27 @@ import {
     Container,
     Toolbar,
     Typography,
-    Button,
     useTheme,
     useMediaQuery,
+    Button,
 } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 import AddIcon from '@mui/icons-material/Add';
 
 interface AppLayoutProps {
     children: ReactNode;
+    headerContent?: ReactNode;
+    showIcon?: boolean;
+    showAddButton?: boolean;
 }
 
-const AppLayout: FC<AppLayoutProps> = ({ children }) => {
+const AppLayout: FC<AppLayoutProps> = ({
+    children,
+    headerContent,
+    showIcon = true,
+    showAddButton = false,
+}) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -28,49 +37,123 @@ const AppLayout: FC<AppLayoutProps> = ({ children }) => {
                 minHeight: '100vh',
             }}
         >
-            <AppBar position="fixed" elevation={0}>
-                <Toolbar sx={{ px: { xs: 2, sm: 3 } }}>
-                    <Typography
-                        variant={isMobile ? 'h6' : 'h5'}
-                        component={RouterLink}
-                        to="/"
+            <AppBar
+                position="sticky"
+                elevation={0}
+                sx={{
+                    bgcolor: 'background.paper',
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                }}
+            >
+                <Container maxWidth="xl">
+                    <Toolbar
+                        disableGutters
                         sx={{
-                            textDecoration: 'none',
-                            color: 'inherit',
-                            flexGrow: 1,
-                            fontWeight: 600,
+                            height: { xs: 56, sm: 64 },
+                            gap: { xs: 1, sm: 2 },
                         }}
                     >
-                        Simmer
-                    </Typography>
-                    <Button
-                        component={RouterLink}
-                        to="/add"
-                        variant="contained"
-                        color="secondary"
-                        startIcon={isMobile ? null : <AddIcon />}
-                        size={isMobile ? 'small' : 'medium'}
-                        sx={{
-                            borderRadius: 8,
-                            px: isMobile ? 2 : 3,
-                        }}
-                    >
-                        {isMobile ? <AddIcon /> : 'Add Recipe'}
-                    </Button>
-                </Toolbar>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                flex: 1,
+                            }}
+                        >
+                            {showIcon && (
+                                <MenuBookIcon
+                                    sx={{
+                                        color: 'primary.main',
+                                        fontSize: { xs: 28, sm: 32 },
+                                    }}
+                                />
+                            )}
+                            {headerContent || (
+                                <Link
+                                    to="/"
+                                    style={{
+                                        textDecoration: 'none',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                    }}
+                                >
+                                    <Typography
+                                        variant={isMobile ? 'h6' : 'h5'}
+                                        component="h1"
+                                        sx={{
+                                            fontWeight: 700,
+                                            color: 'text.primary',
+                                            letterSpacing: '-0.5px',
+                                            fontFamily:
+                                                'Inter, system-ui, sans-serif',
+                                        }}
+                                    >
+                                        Simmer
+                                    </Typography>
+                                </Link>
+                            )}
+                        </Box>
+
+                        {showAddButton && (
+                            <Button
+                                component={Link}
+                                to="/recipe/new"
+                                variant="outlined"
+                                color="primary"
+                                startIcon={
+                                    <AddIcon
+                                        sx={{
+                                            fontSize: { xs: 20, sm: 22 },
+                                            transition: 'transform 0.2s ease',
+                                        }}
+                                    />
+                                }
+                                sx={{
+                                    height: { xs: 38, sm: 42 },
+                                    px: { xs: 1.5, sm: 2.5 },
+                                    borderWidth: 1.5,
+                                    borderColor: 'primary.main',
+                                    color: 'primary.main',
+                                    fontWeight: 600,
+                                    fontSize: {
+                                        xs: '0.875rem',
+                                        sm: '0.9375rem',
+                                    },
+                                    fontFamily: 'Inter, system-ui, sans-serif',
+                                    letterSpacing: '0.01em',
+                                    textTransform: 'none',
+                                    transition: 'all 0.2s ease',
+                                    '&:hover': {
+                                        borderWidth: 1.5,
+                                        backgroundColor: 'primary.main',
+                                        color: 'primary.contrastText',
+                                        '& .MuiSvgIcon-root': {
+                                            transform: 'rotate(90deg)',
+                                        },
+                                    },
+                                }}
+                            >
+                                {isMobile ? '' : 'New Recipe'}
+                            </Button>
+                        )}
+                    </Toolbar>
+                </Container>
             </AppBar>
-            <Toolbar /> {/* Spacer for fixed AppBar */}
-            <Container
+
+            <Box
                 component="main"
-                maxWidth="lg"
                 sx={{
                     flexGrow: 1,
-                    py: { xs: 2, sm: 3, md: 4 },
+                    width: '100%',
+                    bgcolor: 'background.default',
                     px: { xs: 2, sm: 3 },
+                    py: { xs: 3, sm: 4 },
                 }}
             >
                 {children}
-            </Container>
+            </Box>
         </Box>
     );
 };

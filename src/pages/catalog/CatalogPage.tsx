@@ -28,7 +28,7 @@ const CatalogPage: FC = () => {
     );
 
     return (
-        <AppLayout>
+        <AppLayout showAddButton>
             <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 2, sm: 3 } }}>
                 <Typography
                     variant="h3"
@@ -143,7 +143,6 @@ const CatalogPage: FC = () => {
                                                 size="small"
                                                 color="secondary"
                                                 sx={{
-                                                    borderRadius: '12px',
                                                     fontSize: '0.75rem',
                                                 }}
                                             />
@@ -156,7 +155,6 @@ const CatalogPage: FC = () => {
                                                 size="small"
                                                 variant="outlined"
                                                 sx={{
-                                                    borderRadius: '12px',
                                                     fontSize: '0.75rem',
                                                 }}
                                             />
