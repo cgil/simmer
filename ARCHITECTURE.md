@@ -1,6 +1,6 @@
 # Simmer – Technical Architecture Document (TypeScript)
 
-This document describes how **Simmer** will be built using React (with Vite), TypeScript, Material UI, Supabase, and OpenAI. It aims to be concise and focused on the core features from the [Product Requirements](#).
+This document is a technical and architectural summary for the application. It should be used to inform decisions although it is not always completely up to date. It should be used as a reference and starting point when working on new problems to ensure we adhere to creating a consistent application.
 
 ---
 
