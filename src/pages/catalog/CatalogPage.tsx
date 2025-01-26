@@ -1,13 +1,14 @@
 import { FC, useState } from 'react';
 import { Grid, Typography, Box, Paper, Chip } from '@mui/material';
 import AppLayout from '../../components/layout/AppLayout';
-import SearchBar from '../../components/search-bar/SearchBar';
 import { MOCK_RECIPES } from '../../mocks/recipes';
 import { IngredientSection } from '../../types';
 import { Card, CardMedia, CardContent } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import SearchIcon from '@mui/icons-material/Search';
+import InputBase from '@mui/material/InputBase';
 
 const CatalogPage: FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -37,11 +38,12 @@ const CatalogPage: FC = () => {
                     sx={{
                         fontWeight: 700,
                         textAlign: 'center',
-                        mb: 4,
+                        mb: { xs: 2.5, sm: 3 },
                         background:
                             'linear-gradient(45deg, #FF6B6B 30%, #FF8E53 90%)',
                         backgroundClip: 'text',
                         textFillColor: 'transparent',
+                        fontSize: { xs: '1.75rem', sm: '2.25rem' },
                     }}
                 >
                     Recipe Catalog
@@ -50,20 +52,66 @@ const CatalogPage: FC = () => {
                 <Paper
                     elevation={0}
                     sx={{
-                        p: 2,
-                        mb: 4,
-                        borderRadius: 3,
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                        p: { xs: 1, sm: 1.5 },
+                        mb: { xs: 3, sm: 4 },
+                        borderRadius: 2,
+                        boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 2,
+                        gap: 1,
+                        border: '1.5px solid',
+                        borderColor: 'divider',
+                        '&:focus-within': {
+                            borderColor: 'primary.main',
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                        },
                     }}
                 >
-                    <SearchBar
-                        value={searchQuery}
-                        onChange={setSearchQuery}
-                        placeholder="Search recipes by name, tags, or ingredients..."
+                    <SearchIcon
+                        sx={{
+                            ml: { xs: 1, sm: 1.5 },
+                            fontSize: { xs: 20, sm: 22 },
+                            color: searchQuery
+                                ? 'primary.main'
+                                : 'text.secondary',
+                        }}
                     />
+                    <InputBase
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search recipes by name, tags, or ingredients..."
+                        fullWidth
+                        sx={{
+                            flex: 1,
+                            '& input': {
+                                py: { xs: 1, sm: 1.25 },
+                                fontSize: { xs: '0.9rem', sm: '1rem' },
+                                '&::placeholder': {
+                                    color: 'text.secondary',
+                                    opacity: 0.8,
+                                },
+                            },
+                        }}
+                    />
+                    {searchQuery && (
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                px: { xs: 1.5, sm: 2 },
+                                py: '2px',
+                                bgcolor: 'action.hover',
+                                borderRadius: 1,
+                                fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                                color: 'text.secondary',
+                                userSelect: 'none',
+                            }}
+                        >
+                            {filteredRecipes.length}{' '}
+                            {filteredRecipes.length === 1
+                                ? 'result'
+                                : 'results'}
+                        </Typography>
+                    )}
                 </Paper>
 
                 <Grid container spacing={3}>
