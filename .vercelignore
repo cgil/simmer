@@ -1,0 +1,17 @@
+.git
+.env
+.env.*
+node_modules
+.vscode
+*.log
+.DS_Store
+coverage
+.vitest
+__tests__
+*.test.*
+*.spec.*
+README.md
+.gitignore
+.eslintrc*
+.prettier*
+.editorconfig
