@@ -32,6 +32,8 @@ const EditRecipePage: FC = () => {
     const [instructions, setInstructions] = useState(
         recipe?.instructions || []
     );
+    const [ingredients, setIngredients] = useState(recipe?.ingredients || []);
+    const [notes, setNotes] = useState(recipe?.notes || []);
 
     if (!recipe) {
         navigate('/');
@@ -75,6 +77,71 @@ const EditRecipePage: FC = () => {
             }
         }
         setAnchorEl(null);
+    };
+
+    const handleAddIngredient = () => {
+        const newIngredient = {
+            id: `new-${Date.now()}`,
+            name: '',
+            quantity: null,
+            unit: null,
+        };
+        setIngredients([...ingredients, newIngredient]);
+    };
+
+    const handleAddStep = (sectionIndex: number) => {
+        const newInstructions = [...instructions];
+        newInstructions[sectionIndex].steps.push('');
+        setInstructions(newInstructions);
+    };
+
+    const handleAddSection = () => {
+        setInstructions([
+            ...instructions,
+            {
+                section_title: 'New Section',
+                steps: [''],
+            },
+        ]);
+    };
+
+    const handleAddNote = () => {
+        setNotes([...notes, '']);
+    };
+
+    const handleDeleteNote = (index: number) => {
+        const newNotes = notes.filter((_, i) => i !== index);
+        setNotes(newNotes);
+    };
+
+    const handleNoteChange = (index: number, value: string) => {
+        const newNotes = [...notes];
+        newNotes[index] = value;
+        setNotes(newNotes);
+    };
+
+    const handleDeleteIngredient = (ingredientId: string) => {
+        setIngredients(ingredients.filter((ing) => ing.id !== ingredientId));
+    };
+
+    const handleDeleteSection = (sectionIndex: number) => {
+        setInstructions(
+            instructions.filter((_, index) => index !== sectionIndex)
+        );
+    };
+
+    const handleDeleteStep = (sectionIndex: number, stepIndex: number) => {
+        const newInstructions = [...instructions];
+        newInstructions[sectionIndex].steps = newInstructions[
+            sectionIndex
+        ].steps.filter((_, index) => index !== stepIndex);
+
+        // If this was the last step, delete the section
+        if (newInstructions[sectionIndex].steps.length === 0) {
+            handleDeleteSection(sectionIndex);
+        } else {
+            setInstructions(newInstructions);
+        }
     };
 
     const headerContent = (
@@ -165,7 +232,7 @@ const EditRecipePage: FC = () => {
                                     Ingredients
                                 </Typography>
                                 <Stack spacing={2}>
-                                    {recipe.ingredients.map((ingredient) => (
+                                    {ingredients.map((ingredient) => (
                                         <Box
                                             key={ingredient.id}
                                             sx={{
@@ -197,6 +264,11 @@ const EditRecipePage: FC = () => {
                                             <IconButton
                                                 color="error"
                                                 size="small"
+                                                onClick={() =>
+                                                    handleDeleteIngredient(
+                                                        ingredient.id
+                                                    )
+                                                }
                                                 sx={{ mt: 1 }}
                                             >
                                                 <DeleteIcon />
@@ -205,6 +277,7 @@ const EditRecipePage: FC = () => {
                                     ))}
                                     <Button
                                         startIcon={<AddIcon />}
+                                        onClick={handleAddIngredient}
                                         sx={{ alignSelf: 'flex-start' }}
                                     >
                                         Add Ingredient
@@ -223,15 +296,33 @@ const EditRecipePage: FC = () => {
                                     {instructions.map(
                                         (section, sectionIndex) => (
                                             <Box key={section.section_title}>
-                                                <TextField
-                                                    fullWidth
-                                                    size="small"
-                                                    label="Section Title"
-                                                    value={
-                                                        section.section_title
-                                                    }
-                                                    sx={{ mb: 2 }}
-                                                />
+                                                <Box
+                                                    sx={{
+                                                        display: 'flex',
+                                                        gap: 2,
+                                                        mb: 2,
+                                                    }}
+                                                >
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        label="Section Title"
+                                                        value={
+                                                            section.section_title
+                                                        }
+                                                    />
+                                                    <IconButton
+                                                        color="error"
+                                                        size="small"
+                                                        onClick={() =>
+                                                            handleDeleteSection(
+                                                                sectionIndex
+                                                            )
+                                                        }
+                                                    >
+                                                        <DeleteIcon />
+                                                    </IconButton>
+                                                </Box>
                                                 <Stack spacing={2}>
                                                     {section.steps.map(
                                                         (step, stepIndex) => (
@@ -321,6 +412,12 @@ const EditRecipePage: FC = () => {
                                                                 <IconButton
                                                                     color="error"
                                                                     size="small"
+                                                                    onClick={() =>
+                                                                        handleDeleteStep(
+                                                                            sectionIndex,
+                                                                            stepIndex
+                                                                        )
+                                                                    }
                                                                     sx={{
                                                                         mt: 1,
                                                                     }}
@@ -332,6 +429,11 @@ const EditRecipePage: FC = () => {
                                                     )}
                                                     <Button
                                                         startIcon={<AddIcon />}
+                                                        onClick={() =>
+                                                            handleAddStep(
+                                                                sectionIndex
+                                                            )
+                                                        }
                                                         sx={{
                                                             alignSelf:
                                                                 'flex-start',
@@ -346,6 +448,7 @@ const EditRecipePage: FC = () => {
                                     )}
                                     <Button
                                         startIcon={<AddIcon />}
+                                        onClick={handleAddSection}
                                         sx={{ alignSelf: 'flex-start' }}
                                     >
                                         Add Section
@@ -361,9 +464,9 @@ const EditRecipePage: FC = () => {
                                     Notes
                                 </Typography>
                                 <Stack spacing={2}>
-                                    {recipe.notes.map((note) => (
+                                    {notes.map((note, index) => (
                                         <Box
-                                            key={note}
+                                            key={index}
                                             sx={{
                                                 display: 'flex',
                                                 gap: 2,
@@ -374,11 +477,20 @@ const EditRecipePage: FC = () => {
                                                 fullWidth
                                                 size="small"
                                                 multiline
-                                                defaultValue={note}
+                                                value={note}
+                                                onChange={(e) =>
+                                                    handleNoteChange(
+                                                        index,
+                                                        e.target.value
+                                                    )
+                                                }
                                             />
                                             <IconButton
                                                 color="error"
                                                 size="small"
+                                                onClick={() =>
+                                                    handleDeleteNote(index)
+                                                }
                                                 sx={{ mt: 1 }}
                                             >
                                                 <DeleteIcon />
@@ -387,6 +499,7 @@ const EditRecipePage: FC = () => {
                                     ))}
                                     <Button
                                         startIcon={<AddIcon />}
+                                        onClick={handleAddNote}
                                         sx={{ alignSelf: 'flex-start' }}
                                     >
                                         Add Note
