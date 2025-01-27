@@ -1,26 +1,22 @@
 export interface Recipe {
-    id: string;
+    id?: string;
     title: string;
     description: string;
     images: string[];
     servings: number;
-    ingredients: IngredientSection[];
+    ingredients: Ingredient[];
     instructions: InstructionSection[];
     notes: string[];
     tags: string[];
     time_estimate?: TimeEstimate;
 }
 
-export interface IngredientSection {
-    section_title: string;
-    items: Ingredient[];
-}
-
 export interface Ingredient {
+    id: string;
     name: string;
     quantity: number | null;
     unit: string | null;
-    notes?: string;
+    notes?: string | null;
 }
 
 export interface InstructionSection {
@@ -29,7 +25,7 @@ export interface InstructionSection {
 }
 
 export interface TimeEstimate {
-    prep: number; // minutes
-    cook: number; // minutes
-    total: number; // minutes
+    prep: number;
+    cook: number;
+    total: number;
 }

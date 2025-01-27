@@ -2,7 +2,6 @@ import { FC, useState } from 'react';
 import { Grid, Typography, Box, Paper, Chip } from '@mui/material';
 import AppLayout from '../../components/layout/AppLayout';
 import { MOCK_RECIPES } from '../../mocks/recipes';
-import { IngredientSection } from '../../types';
 import { Card, CardMedia, CardContent } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
@@ -21,10 +20,8 @@ const CatalogPage: FC = () => {
             recipe.tags.some((tag: string) =>
                 tag.toLowerCase().includes(searchQuery.toLowerCase())
             ) ||
-            recipe.ingredients.some((section: IngredientSection) =>
-                section.items.some((item) =>
-                    item.name.toLowerCase().includes(searchQuery.toLowerCase())
-                )
+            recipe.ingredients.some((item) =>
+                item.name.toLowerCase().includes(searchQuery.toLowerCase())
             )
     );
 
@@ -141,7 +138,11 @@ const CatalogPage: FC = () => {
                             columns={{ xs: 1, sm: 2, md: 3, lg: 4, xl: 5 }}
                         >
                             {filteredRecipes.map((recipe) => (
-                                <Grid item xs={1} key={recipe.id}>
+                                <Grid
+                                    item
+                                    xs={1}
+                                    key={recipe.title + recipe.id}
+                                >
                                     <Card
                                         onClick={() =>
                                             navigate(`/recipe/${recipe.id}`)
