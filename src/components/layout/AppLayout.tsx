@@ -9,7 +9,7 @@ import {
     useMediaQuery,
     Button,
 } from '@mui/material';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import AddIcon from '@mui/icons-material/Add';
 
@@ -28,6 +28,7 @@ const AppLayout: FC<AppLayoutProps> = ({
 }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const navigate = useNavigate();
 
     return (
         <Box
@@ -104,10 +105,9 @@ const AppLayout: FC<AppLayoutProps> = ({
 
                         {showAddButton && (
                             <Button
-                                component={Link}
-                                to="/recipe/new"
                                 variant="outlined"
                                 color="primary"
+                                onClick={() => navigate('/recipe/new')}
                                 startIcon={
                                     <AddIcon
                                         sx={{

@@ -11,6 +11,8 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import theme from './theme/theme';
 import CatalogPage from './pages/catalog/CatalogPage';
 import RecipePage from './pages/recipe/RecipePage';
+import NewRecipePage from './pages/recipe/NewRecipePage';
+import EditRecipePage from './pages/recipe/EditRecipePage';
 
 const App: FC = () => {
     return (
@@ -19,6 +21,8 @@ const App: FC = () => {
             <Router>
                 <Routes>
                     <Route path="/" element={<CatalogPage />} />
+                    <Route path="/recipe/new" element={<NewRecipePage />} />
+                    <Route path="/recipe/edit" element={<EditRecipePage />} />
                     <Route path="/recipe/:id" element={<RecipePage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
