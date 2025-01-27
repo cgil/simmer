@@ -512,11 +512,16 @@ const EditRecipePage: FC = () => {
                                         sx={{
                                             alignSelf: 'flex-start',
                                             color: 'text.secondary',
-                                            borderRadius: 2,
+                                            borderRadius: 1,
                                             py: 1.25,
                                             px: 2.5,
                                             minHeight: 40,
                                             bgcolor: '#FFF9C4',
+                                            border: '1px solid rgba(0,0,0,0.08)',
+                                            borderBottom:
+                                                '2px solid rgba(0,0,0,0.12)',
+                                            fontFamily: "'Kalam', cursive",
+                                            fontSize: '1rem',
                                             '&:hover': {
                                                 bgcolor: '#FFF59D',
                                             },
@@ -864,11 +869,17 @@ const EditRecipePage: FC = () => {
                                                                 'flex-start',
                                                             ml: 4,
                                                             color: 'text.secondary',
-                                                            borderRadius: 2,
+                                                            borderRadius: 1,
                                                             py: 1.25,
                                                             px: 2.5,
                                                             minHeight: 40,
                                                             bgcolor: '#f8f9fa',
+                                                            border: '1px solid rgba(0,0,0,0.08)',
+                                                            borderBottom:
+                                                                '2px solid rgba(0,0,0,0.12)',
+                                                            fontFamily:
+                                                                "'Kalam', cursive",
+                                                            fontSize: '1rem',
                                                             '&:hover': {
                                                                 bgcolor:
                                                                     '#f5f5f5',
@@ -893,11 +904,16 @@ const EditRecipePage: FC = () => {
                                             sx={{
                                                 alignSelf: 'flex-start',
                                                 color: 'text.secondary',
-                                                borderRadius: 2,
+                                                borderRadius: 1,
                                                 py: 1.25,
                                                 px: 2.5,
                                                 minHeight: 40,
                                                 bgcolor: '#f8f9fa',
+                                                border: '1px solid rgba(0,0,0,0.08)',
+                                                borderBottom:
+                                                    '2px solid rgba(0,0,0,0.12)',
+                                                fontFamily: "'Kalam', cursive",
+                                                fontSize: '1rem',
                                                 '&:hover': {
                                                     bgcolor: '#f5f5f5',
                                                 },
@@ -1032,11 +1048,16 @@ const EditRecipePage: FC = () => {
                                         sx={{
                                             alignSelf: 'flex-start',
                                             color: 'text.secondary',
-                                            borderRadius: 2,
+                                            borderRadius: 1,
                                             py: 1.25,
                                             px: 2.5,
                                             minHeight: 40,
                                             bgcolor: '#f8f9fa',
+                                            border: '1px solid rgba(0,0,0,0.08)',
+                                            borderBottom:
+                                                '2px solid rgba(0,0,0,0.12)',
+                                            fontFamily: "'Kalam', cursive",
+                                            fontSize: '1rem',
                                             '&:hover': {
                                                 bgcolor: '#f5f5f5',
                                             },
