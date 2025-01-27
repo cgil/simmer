@@ -341,6 +341,11 @@ const EditRecipePage: FC = () => {
                                                     '& .MuiInputBase-input': {
                                                         fontSize: '1rem',
                                                     },
+                                                    '& .MuiInputBase-input::placeholder':
+                                                        {
+                                                            fontSize:
+                                                                '0.875rem',
+                                                        },
                                                 }}
                                             />
                                             <IconButton
