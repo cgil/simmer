@@ -396,7 +396,7 @@ const EditRecipePage: FC = () => {
                                                     step: 0.25,
                                                 }}
                                                 sx={{
-                                                    width: 140,
+                                                    width: 160,
                                                     '& .MuiInputBase-input': {
                                                         fontSize: '1rem',
                                                         textAlign: 'right',
@@ -796,7 +796,7 @@ const EditRecipePage: FC = () => {
                                                                                 '&:hover':
                                                                                     {
                                                                                         bgcolor:
-                                                                                            '#f8f9fa',
+                                                                                            '#eeeeee',
                                                                                     },
                                                                             }}
                                                                         >
