@@ -48,6 +48,7 @@ const AppLayout: FC<AppLayoutProps> = ({
                     borderBottom: '1px solid',
                     borderColor: 'divider',
                     width: '100%',
+                    borderRadius: 0,
                 }}
             >
                 <Container maxWidth={false} disableGutters>

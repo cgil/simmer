@@ -87,6 +87,7 @@ const RecipePage: FC = () => {
                             sx={{
                                 textAlign: 'center',
                                 mb: 4,
+                                mt: 4,
                                 maxWidth: 800,
                                 mx: 'auto',
                             }}
@@ -136,10 +137,6 @@ const RecipePage: FC = () => {
                                         size={isMobile ? 'small' : 'medium'}
                                         sx={{
                                             borderRadius: '16px',
-                                            '&:hover': {
-                                                transform: 'translateY(-2px)',
-                                                transition: 'transform 0.2s',
-                                            },
                                         }}
                                     />
                                 ))}
@@ -222,10 +219,6 @@ const RecipePage: FC = () => {
                                 height: '100%',
                                 borderRadius: 4,
                                 boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                                transition: 'transform 0.2s',
-                                '&:hover': {
-                                    transform: 'translateY(-4px)',
-                                },
                             }}
                         >
                             <Stack spacing={3}>
@@ -466,10 +459,6 @@ const RecipePage: FC = () => {
                                 height: '100%',
                                 borderRadius: 4,
                                 boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                                transition: 'transform 0.2s',
-                                '&:hover': {
-                                    transform: 'translateY(-4px)',
-                                },
                             }}
                         >
                             <Typography

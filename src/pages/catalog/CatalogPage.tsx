@@ -154,12 +154,12 @@ const CatalogPage: FC = () => {
                                             borderRadius: { xs: 2, sm: 3 },
                                             overflow: 'hidden',
                                             boxShadow:
-                                                '0 4px 20px rgba(0,0,0,0.08)',
-                                            transition: 'all 0.3s ease',
+                                                '0 2px 8px rgba(0,0,0,0.04)',
+                                            transition: 'all 0.15s ease-in-out',
                                             '&:hover': {
-                                                transform: 'translateY(-8px)',
+                                                transform: 'translateY(-2px)',
                                                 boxShadow:
-                                                    '0 12px 30px rgba(0,0,0,0.12)',
+                                                    '0 4px 12px rgba(0,0,0,0.06)',
                                             },
                                         }}
                                     >
