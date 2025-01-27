@@ -15,9 +15,9 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddIcon from '@mui/icons-material/Add';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
+import FontAwesomeIcon from '../../components/icons/FontAwesomeIcon';
 import CarrotPlusIcon from '../../components/icons/CarrotPlusIcon';
 import AppLayout from '../../components/layout/AppLayout';
 import { Recipe } from '../../types';
@@ -467,18 +467,39 @@ const EditRecipePage: FC = () => {
                                                     transition: 'all 0.2s',
                                                     width: 32,
                                                     height: 32,
-                                                    bgcolor:
-                                                        'rgba(0, 0, 0, 0.02)',
+                                                    bgcolor: '#f5f5f5',
                                                     '&:hover': {
                                                         transform:
-                                                            'translateX(-10px) scale(1.1)',
-                                                        bgcolor:
-                                                            'rgba(211, 47, 47, 0.08)',
+                                                            'translateY(-1px)',
+                                                        bgcolor: '#eeeeee',
+                                                        '&::before': {
+                                                            opacity: 1,
+                                                        },
+                                                    },
+                                                    '&::before': {
+                                                        content: '""',
+                                                        position: 'absolute',
+                                                        top: 0,
+                                                        left: 0,
+                                                        right: 0,
+                                                        bottom: 0,
+                                                        boxShadow:
+                                                            '0 4px 8px rgba(0,0,0,0.1)',
+                                                        opacity: 0,
+                                                        transition:
+                                                            'opacity 0.2s ease-in-out',
+                                                        borderRadius: '50%',
+                                                    },
+                                                    '& svg': {
+                                                        color: '#9e9e9e',
+                                                        transition:
+                                                            'color 0.2s',
                                                     },
                                                 }}
                                             >
-                                                <DeleteOutlineIcon
-                                                    sx={{ fontSize: 20 }}
+                                                <FontAwesomeIcon
+                                                    icon="fa-solid fa-eraser"
+                                                    sx={{ fontSize: 18 }}
                                                 />
                                             </IconButton>
                                         </Box>
@@ -495,12 +516,9 @@ const EditRecipePage: FC = () => {
                                             py: 1.25,
                                             px: 2.5,
                                             minHeight: 40,
+                                            bgcolor: '#FFF9C4',
                                             '&:hover': {
-                                                color: 'primary.main',
-                                                '@media (hover: hover)': {
-                                                    bgcolor:
-                                                        'rgba(0, 0, 0, 0.03)',
-                                                },
+                                                bgcolor: '#FFF59D',
                                             },
                                         }}
                                     >
@@ -613,19 +631,43 @@ const EditRecipePage: FC = () => {
                                                                 'all 0.2s',
                                                             width: 32,
                                                             height: 32,
-                                                            bgcolor:
-                                                                'rgba(0, 0, 0, 0.02)',
+                                                            bgcolor: '#f5f5f5',
                                                             '&:hover': {
                                                                 transform:
-                                                                    'translateX(-10px) scale(1.1)',
+                                                                    'translateY(-1px)',
                                                                 bgcolor:
-                                                                    'rgba(211, 47, 47, 0.08)',
+                                                                    '#eeeeee',
+                                                                '&::before': {
+                                                                    opacity: 1,
+                                                                },
+                                                            },
+                                                            '&::before': {
+                                                                content: '""',
+                                                                position:
+                                                                    'absolute',
+                                                                top: 0,
+                                                                left: 0,
+                                                                right: 0,
+                                                                bottom: 0,
+                                                                boxShadow:
+                                                                    '0 4px 8px rgba(0,0,0,0.1)',
+                                                                opacity: 0,
+                                                                transition:
+                                                                    'opacity 0.2s ease-in-out',
+                                                                borderRadius:
+                                                                    '50%',
+                                                            },
+                                                            '& svg': {
+                                                                color: '#9e9e9e',
+                                                                transition:
+                                                                    'color 0.2s',
                                                             },
                                                         }}
                                                     >
-                                                        <DeleteOutlineIcon
+                                                        <FontAwesomeIcon
+                                                            icon="fa-solid fa-eraser"
                                                             sx={{
-                                                                fontSize: 20,
+                                                                fontSize: 18,
                                                             }}
                                                         />
                                                     </IconButton>
@@ -748,13 +790,13 @@ const EditRecipePage: FC = () => {
                                                                                 width: 32,
                                                                                 height: 32,
                                                                                 mt: 1,
-                                                                                color: 'primary.main',
+                                                                                color: 'text.secondary',
                                                                                 bgcolor:
-                                                                                    'rgba(0, 0, 0, 0.02)',
+                                                                                    '#f8f9fa',
                                                                                 '&:hover':
                                                                                     {
                                                                                         bgcolor:
-                                                                                            'rgba(0, 0, 0, 0.06)',
+                                                                                            '#f8f9fa',
                                                                                     },
                                                                             }}
                                                                         >
@@ -778,19 +820,24 @@ const EditRecipePage: FC = () => {
                                                                                 height: 32,
                                                                                 mt: 1,
                                                                                 bgcolor:
-                                                                                    'rgba(0, 0, 0, 0.02)',
+                                                                                    '#f5f5f5',
                                                                                 '&:hover':
                                                                                     {
-                                                                                        transform:
-                                                                                            'scale(1.1)',
                                                                                         bgcolor:
-                                                                                            'rgba(211, 47, 47, 0.08)',
+                                                                                            '#eeeeee',
+                                                                                    },
+                                                                                '& svg':
+                                                                                    {
+                                                                                        color: '#9e9e9e',
+                                                                                        transition:
+                                                                                            'color 0.2s',
                                                                                     },
                                                                             }}
                                                                         >
-                                                                            <DeleteOutlineIcon
+                                                                            <FontAwesomeIcon
+                                                                                icon="fa-solid fa-eraser"
                                                                                 sx={{
-                                                                                    fontSize: 20,
+                                                                                    fontSize: 18,
                                                                                 }}
                                                                             />
                                                                         </IconButton>
@@ -821,13 +868,10 @@ const EditRecipePage: FC = () => {
                                                             py: 1.25,
                                                             px: 2.5,
                                                             minHeight: 40,
+                                                            bgcolor: '#f8f9fa',
                                                             '&:hover': {
-                                                                color: 'primary.main',
-                                                                '@media (hover: hover)':
-                                                                    {
-                                                                        bgcolor:
-                                                                            'rgba(0, 0, 0, 0.03)',
-                                                                    },
+                                                                bgcolor:
+                                                                    '#f5f5f5',
                                                             },
                                                         }}
                                                     >
@@ -853,12 +897,9 @@ const EditRecipePage: FC = () => {
                                                 py: 1.25,
                                                 px: 2.5,
                                                 minHeight: 40,
+                                                bgcolor: '#f8f9fa',
                                                 '&:hover': {
-                                                    color: 'primary.main',
-                                                    '@media (hover: hover)': {
-                                                        bgcolor:
-                                                            'rgba(0, 0, 0, 0.03)',
-                                                    },
+                                                    bgcolor: '#f5f5f5',
                                                 },
                                             }}
                                         >
@@ -963,18 +1004,22 @@ const EditRecipePage: FC = () => {
                                                     transition: 'all 0.2s',
                                                     width: 32,
                                                     height: 32,
-                                                    bgcolor:
-                                                        'rgba(0, 0, 0, 0.02)',
+                                                    bgcolor: '#f5f5f5',
                                                     '&:hover': {
                                                         transform:
-                                                            'translateX(-10px) scale(1.1)',
-                                                        bgcolor:
-                                                            'rgba(211, 47, 47, 0.08)',
+                                                            'translateX(-10px) rotate(-8deg)',
+                                                        bgcolor: '#eeeeee',
+                                                    },
+                                                    '& svg': {
+                                                        color: '#9e9e9e',
+                                                        transition:
+                                                            'color 0.2s',
                                                     },
                                                 }}
                                             >
-                                                <DeleteOutlineIcon
-                                                    sx={{ fontSize: 20 }}
+                                                <FontAwesomeIcon
+                                                    icon="fa-solid fa-eraser"
+                                                    sx={{ fontSize: 18 }}
                                                 />
                                             </IconButton>
                                         </Box>
@@ -988,11 +1033,12 @@ const EditRecipePage: FC = () => {
                                             alignSelf: 'flex-start',
                                             color: 'text.secondary',
                                             borderRadius: 2,
-                                            py: 1,
-                                            px: 2,
+                                            py: 1.25,
+                                            px: 2.5,
+                                            minHeight: 40,
+                                            bgcolor: '#f8f9fa',
                                             '&:hover': {
-                                                color: 'primary.main',
-                                                bgcolor: 'primary.lighter',
+                                                bgcolor: '#f5f5f5',
                                             },
                                         }}
                                     >
@@ -1017,15 +1063,24 @@ const EditRecipePage: FC = () => {
                         maxHeight: 300,
                         width: 250,
                         mt: 1,
-                        boxShadow: (theme) => theme.shadows[3],
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                         borderRadius: 2,
                         border: '1px solid',
                         borderColor: 'divider',
+                        bgcolor: '#f5f5f5',
+                        backgroundImage: `
+                            repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(66, 66, 66, 0.05) 31px, rgba(66, 66, 66, 0.05) 32px)
+                        `,
                         '& .MuiMenuItem-root': {
                             fontSize: '1rem',
                             py: 1.5,
+                            borderBottom: '1px solid',
+                            borderColor: 'rgba(0, 0, 0, 0.05)',
+                            transition: 'all 0.2s',
                             '&:hover': {
-                                bgcolor: 'primary.lighter',
+                                bgcolor: '#fff',
+                                transform: 'translateX(4px)',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
                             },
                         },
                     },
