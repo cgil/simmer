@@ -200,64 +200,167 @@ const EditRecipePage: FC = () => {
                 sx={{
                     maxWidth: 1400,
                     pb: { xs: 4, sm: 6, md: 8 },
-                    bgcolor: 'background.paper',
+                    bgcolor: '#FFFFFF',
                     minHeight: '100vh',
+                    position: 'relative',
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        boxShadow: 'inset 0 0 50px rgba(0,0,0,0.08)',
+                        pointerEvents: 'none',
+                    },
+                    // Paper texture overlay
+                    '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        opacity: 1,
+                        pointerEvents: 'none',
+                        backgroundImage: `
+                            radial-gradient(circle at 50% 50%, rgba(25, 25, 25, 0.07) 0.5px, transparent 0.5px),
+                            radial-gradient(circle at 50% 50%, rgba(25, 25, 25, 0.04) 1px, transparent 1px)
+                        `,
+                        backgroundSize: '6px 6px, 14px 14px',
+                        backgroundPosition: '0 0',
+                        mixBlendMode: 'multiply',
+                        filter: 'opacity(1)',
+                    },
                 }}
             >
-                <Box sx={{ py: { xs: 2, sm: 3 } }}>
+                <Box
+                    sx={{
+                        py: { xs: 2, sm: 3 },
+                        position: 'relative',
+                        zIndex: 1,
+                        '& .MuiTextField-root': {
+                            position: 'relative',
+                            zIndex: 2,
+                        },
+                    }}
+                >
                     {/* Title Section */}
                     <Box sx={{ mb: { xs: 3, sm: 4 } }}>
-                        <TextField
-                            fullWidth
-                            placeholder="Give your recipe a name..."
-                            defaultValue={recipe.title}
-                            variant="standard"
+                        <Box
                             sx={{
-                                mb: 2,
-                                '& .MuiInputBase-input': {
-                                    fontSize: { xs: '2rem', sm: '2.5rem' },
-                                    fontWeight: 700,
-                                    lineHeight: 1.2,
-                                    pb: 1,
+                                position: 'relative',
+                                bgcolor: '#FFFFFF',
+                                p: { xs: 2, sm: 3 },
+                                borderRadius: 1,
+                                boxShadow: `
+                                    0 1px 2px rgba(0,0,0,0.05),
+                                    0 3px 6px rgba(0,0,0,0.02),
+                                    0 1px 8px rgba(0,0,0,0.02)
+                                `,
+                                '&::before': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: '100%',
+                                    background: 'rgba(255,255,255,0.6)',
+                                    backdropFilter: 'blur(4px)',
+                                    borderRadius: 1,
+                                    zIndex: 0,
                                 },
-                                '& .MuiInput-underline:before': {
-                                    borderBottomColor: 'transparent',
-                                },
-                                '& .MuiInput-underline:hover:before': {
-                                    borderBottomColor: 'divider',
+                                '& > *': {
+                                    position: 'relative',
+                                    zIndex: 1,
                                 },
                             }}
-                        />
-                        <TextField
-                            fullWidth
-                            placeholder="Add a description..."
-                            defaultValue={recipe.description}
-                            multiline
-                            rows={2}
-                            variant="standard"
-                            sx={{
-                                '& .MuiInputBase-input': {
-                                    fontSize: '1.25rem',
-                                    lineHeight: 1.5,
-                                    color: 'text.secondary',
-                                },
-                                '& .MuiInput-underline:before': {
-                                    borderBottomColor: 'transparent',
-                                },
-                            }}
-                        />
+                        >
+                            <TextField
+                                fullWidth
+                                placeholder="Give your recipe a name..."
+                                defaultValue={recipe.title}
+                                variant="standard"
+                                sx={{
+                                    mb: 2,
+                                    '& .MuiInputBase-input': {
+                                        fontFamily: "'Kalam', cursive",
+                                        fontSize: { xs: '2.5rem', sm: '3rem' },
+                                        fontWeight: 700,
+                                        lineHeight: 1.2,
+                                        pb: 1,
+                                        textShadow:
+                                            '1px 1px 1px rgba(0,0,0,0.05)',
+                                    },
+                                    '& .MuiInput-underline:before': {
+                                        borderBottomColor: 'transparent',
+                                    },
+                                }}
+                            />
+                            <TextField
+                                fullWidth
+                                placeholder="Add a description..."
+                                defaultValue={recipe.description}
+                                multiline
+                                rows={2}
+                                variant="standard"
+                                sx={{
+                                    '& .MuiInputBase-input': {
+                                        fontFamily: "'Inter', sans-serif",
+                                        fontSize: '1.25rem',
+                                        lineHeight: 1.5,
+                                        color: 'text.secondary',
+                                    },
+                                    '& .MuiInput-underline:before': {
+                                        borderBottomColor: 'transparent',
+                                    },
+                                }}
+                            />
+                        </Box>
                     </Box>
 
                     <Grid container spacing={{ xs: 4, md: 6 }}>
                         {/* Ingredients Section */}
                         <Grid item xs={12} md={5}>
-                            <Box>
+                            <Box
+                                sx={{
+                                    position: 'relative',
+                                    bgcolor: '#FFFFFF',
+                                    p: { xs: 2, sm: 3 },
+                                    borderRadius: 1,
+                                    boxShadow: `
+                                        0 1px 2px rgba(0,0,0,0.05),
+                                        0 3px 6px rgba(0,0,0,0.02),
+                                        0 1px 8px rgba(0,0,0,0.02)
+                                    `,
+                                    '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: '100%',
+                                        background: 'rgba(255,255,255,0.6)',
+                                        backdropFilter: 'blur(4px)',
+                                        borderRadius: 1,
+                                        zIndex: 0,
+                                    },
+                                    '& > *': {
+                                        position: 'relative',
+                                        zIndex: 1,
+                                    },
+                                }}
+                            >
                                 <Typography
                                     variant="h2"
                                     sx={{
                                         mb: 3,
-                                        fontSize: '1.5rem',
+                                        fontSize: '2rem',
                                         fontWeight: 700,
+                                        fontFamily: "'Kalam', cursive",
+                                        textShadow:
+                                            '1px 1px 1px rgba(0,0,0,0.05)',
+                                        color: 'primary.main',
                                     }}
                                 >
                                     Ingredients
@@ -409,13 +512,45 @@ const EditRecipePage: FC = () => {
 
                         {/* Instructions Section */}
                         <Grid item xs={12} md={7}>
-                            <Box>
+                            <Box
+                                sx={{
+                                    position: 'relative',
+                                    bgcolor: '#FFFFFF',
+                                    p: { xs: 2, sm: 3 },
+                                    borderRadius: 1,
+                                    boxShadow: `
+                                        0 1px 2px rgba(0,0,0,0.05),
+                                        0 3px 6px rgba(0,0,0,0.02),
+                                        0 1px 8px rgba(0,0,0,0.02)
+                                    `,
+                                    '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: '100%',
+                                        background: 'rgba(255,255,255,0.6)',
+                                        backdropFilter: 'blur(4px)',
+                                        borderRadius: 1,
+                                        zIndex: 0,
+                                    },
+                                    '& > *': {
+                                        position: 'relative',
+                                        zIndex: 1,
+                                    },
+                                }}
+                            >
                                 <Typography
                                     variant="h2"
                                     sx={{
                                         mb: 3,
-                                        fontSize: '1.5rem',
+                                        fontSize: '2rem',
                                         fontWeight: 700,
+                                        fontFamily: "'Kalam', cursive",
+                                        textShadow:
+                                            '1px 1px 1px rgba(0,0,0,0.05)',
+                                        color: 'primary.main',
                                     }}
                                 >
                                     Instructions
@@ -451,9 +586,13 @@ const EditRecipePage: FC = () => {
                                                         sx={{
                                                             '& .MuiInputBase-input':
                                                                 {
+                                                                    fontFamily:
+                                                                        "'Kalam', cursive",
                                                                     fontSize:
-                                                                        '1.25rem',
-                                                                    fontWeight: 600,
+                                                                        '1.5rem',
+                                                                    fontWeight: 700,
+                                                                    textShadow:
+                                                                        '1px 1px 1px rgba(0,0,0,0.05)',
                                                                 },
                                                         }}
                                                     />
@@ -732,13 +871,45 @@ const EditRecipePage: FC = () => {
 
                         {/* Notes Section */}
                         <Grid item xs={12}>
-                            <Box>
+                            <Box
+                                sx={{
+                                    position: 'relative',
+                                    bgcolor: '#FFFFFF',
+                                    p: { xs: 2, sm: 3 },
+                                    borderRadius: 1,
+                                    boxShadow: `
+                                        0 1px 2px rgba(0,0,0,0.05),
+                                        0 3px 6px rgba(0,0,0,0.02),
+                                        0 1px 8px rgba(0,0,0,0.02)
+                                    `,
+                                    '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: '100%',
+                                        background: 'rgba(255,255,255,0.6)',
+                                        backdropFilter: 'blur(4px)',
+                                        borderRadius: 1,
+                                        zIndex: 0,
+                                    },
+                                    '& > *': {
+                                        position: 'relative',
+                                        zIndex: 1,
+                                    },
+                                }}
+                            >
                                 <Typography
                                     variant="h2"
                                     sx={{
                                         mb: 3,
-                                        fontSize: '1.5rem',
+                                        fontSize: '2rem',
                                         fontWeight: 700,
+                                        fontFamily: "'Kalam', cursive",
+                                        textShadow:
+                                            '1px 1px 1px rgba(0,0,0,0.05)',
+                                        color: 'primary.main',
                                     }}
                                 >
                                     Notes
