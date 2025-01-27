@@ -5,19 +5,20 @@ import {
     Container,
     Typography,
     Button,
-    Paper,
     TextField,
     Grid,
     IconButton,
     Stack,
     Menu,
     MenuItem,
+    Divider,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
-import DeleteIcon from '@mui/icons-material/Delete';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddIcon from '@mui/icons-material/Add';
 import AddLinkIcon from '@mui/icons-material/AddLink';
+import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import AppLayout from '../../components/layout/AppLayout';
 import { Recipe } from '../../types';
 
@@ -194,44 +195,74 @@ const EditRecipePage: FC = () => {
 
     return (
         <AppLayout headerContent={headerContent} showIcon={false}>
-            <Container maxWidth="lg">
-                <Box sx={{ py: { xs: 3, sm: 4 } }}>
-                    <Paper
-                        elevation={0}
-                        sx={{
-                            p: { xs: 2.5, sm: 4 },
-                            bgcolor: '#F8F7FA',
-                            border: '1px solid',
-                            borderColor: 'divider',
-                        }}
-                    >
-                        <Grid container spacing={4}>
-                            <Grid item xs={12}>
-                                <TextField
-                                    fullWidth
-                                    label="Recipe Title"
-                                    defaultValue={recipe.title}
-                                    variant="outlined"
-                                    sx={{ mb: 3 }}
-                                />
-                                <TextField
-                                    fullWidth
-                                    label="Description"
-                                    defaultValue={recipe.description}
-                                    multiline
-                                    rows={3}
-                                    variant="outlined"
-                                />
-                            </Grid>
+            <Container
+                maxWidth={false}
+                sx={{
+                    maxWidth: 1400,
+                    pb: { xs: 4, sm: 6, md: 8 },
+                    bgcolor: 'background.paper',
+                    minHeight: '100vh',
+                }}
+            >
+                <Box sx={{ py: { xs: 2, sm: 3 } }}>
+                    {/* Title Section */}
+                    <Box sx={{ mb: { xs: 3, sm: 4 } }}>
+                        <TextField
+                            fullWidth
+                            placeholder="Give your recipe a name..."
+                            defaultValue={recipe.title}
+                            variant="standard"
+                            sx={{
+                                mb: 2,
+                                '& .MuiInputBase-input': {
+                                    fontSize: { xs: '2rem', sm: '2.5rem' },
+                                    fontWeight: 700,
+                                    lineHeight: 1.2,
+                                    pb: 1,
+                                },
+                                '& .MuiInput-underline:before': {
+                                    borderBottomColor: 'transparent',
+                                },
+                                '& .MuiInput-underline:hover:before': {
+                                    borderBottomColor: 'divider',
+                                },
+                            }}
+                        />
+                        <TextField
+                            fullWidth
+                            placeholder="Add a description..."
+                            defaultValue={recipe.description}
+                            multiline
+                            rows={2}
+                            variant="standard"
+                            sx={{
+                                '& .MuiInputBase-input': {
+                                    fontSize: '1.25rem',
+                                    lineHeight: 1.5,
+                                    color: 'text.secondary',
+                                },
+                                '& .MuiInput-underline:before': {
+                                    borderBottomColor: 'transparent',
+                                },
+                            }}
+                        />
+                    </Box>
 
-                            <Grid item xs={12} md={6}>
+                    <Grid container spacing={{ xs: 4, md: 6 }}>
+                        {/* Ingredients Section */}
+                        <Grid item xs={12} md={5}>
+                            <Box>
                                 <Typography
-                                    variant="h6"
-                                    sx={{ mb: 2, fontWeight: 600 }}
+                                    variant="h2"
+                                    sx={{
+                                        mb: 3,
+                                        fontSize: '1.5rem',
+                                        fontWeight: 700,
+                                    }}
                                 >
                                     Ingredients
                                 </Typography>
-                                <Stack spacing={2}>
+                                <Stack spacing={3}>
                                     {ingredients.map((ingredient) => (
                                         <Box
                                             key={ingredient.id}
@@ -239,29 +270,57 @@ const EditRecipePage: FC = () => {
                                                 display: 'flex',
                                                 gap: 2,
                                                 alignItems: 'flex-start',
+                                                position: 'relative',
+                                                '&:hover': {
+                                                    '& .delete-button': {
+                                                        opacity: 1,
+                                                        transform:
+                                                            'translateX(0)',
+                                                    },
+                                                },
                                             }}
                                         >
                                             <TextField
                                                 size="small"
-                                                label="Quantity"
+                                                placeholder="Amount"
                                                 defaultValue={
                                                     ingredient.quantity
                                                 }
-                                                sx={{ width: 100 }}
+                                                variant="standard"
+                                                sx={{
+                                                    width: 80,
+                                                    '& .MuiInputBase-input': {
+                                                        fontSize: '1rem',
+                                                        textAlign: 'right',
+                                                    },
+                                                }}
                                             />
                                             <TextField
                                                 size="small"
-                                                label="Unit"
+                                                placeholder="unit"
                                                 defaultValue={ingredient.unit}
-                                                sx={{ width: 100 }}
+                                                variant="standard"
+                                                sx={{
+                                                    width: 70,
+                                                    '& .MuiInputBase-input': {
+                                                        fontSize: '1rem',
+                                                    },
+                                                }}
                                             />
                                             <TextField
                                                 size="small"
-                                                label="Ingredient"
+                                                placeholder="ingredient name"
                                                 defaultValue={ingredient.name}
+                                                variant="standard"
                                                 fullWidth
+                                                sx={{
+                                                    '& .MuiInputBase-input': {
+                                                        fontSize: '1rem',
+                                                    },
+                                                }}
                                             />
                                             <IconButton
+                                                className="delete-button"
                                                 color="error"
                                                 size="small"
                                                 onClick={() =>
@@ -269,49 +328,109 @@ const EditRecipePage: FC = () => {
                                                         ingredient.id
                                                     )
                                                 }
-                                                sx={{ mt: 1 }}
+                                                sx={{
+                                                    opacity: 0,
+                                                    transform:
+                                                        'translateX(-10px)',
+                                                    transition: 'all 0.2s',
+                                                    width: 32,
+                                                    height: 32,
+                                                    bgcolor:
+                                                        'rgba(0, 0, 0, 0.02)',
+                                                    '&:hover': {
+                                                        transform:
+                                                            'translateX(-10px) scale(1.1)',
+                                                        bgcolor:
+                                                            'rgba(211, 47, 47, 0.08)',
+                                                    },
+                                                }}
                                             >
-                                                <DeleteIcon />
+                                                <DeleteOutlineIcon
+                                                    sx={{ fontSize: 20 }}
+                                                />
                                             </IconButton>
                                         </Box>
                                     ))}
                                     <Button
-                                        startIcon={<AddIcon />}
+                                        startIcon={
+                                            <AddIcon sx={{ fontSize: 20 }} />
+                                        }
                                         onClick={handleAddIngredient}
-                                        sx={{ alignSelf: 'flex-start' }}
+                                        sx={{
+                                            alignSelf: 'flex-start',
+                                            color: 'text.secondary',
+                                            borderRadius: 2,
+                                            py: 1.25,
+                                            px: 2.5,
+                                            minHeight: 40,
+                                            '&:hover': {
+                                                color: 'primary.main',
+                                                bgcolor: 'primary.lighter',
+                                                '@media (hover: hover)': {
+                                                    bgcolor:
+                                                        'rgba(0, 0, 0, 0.03)',
+                                                },
+                                            },
+                                        }}
                                     >
                                         Add Ingredient
                                     </Button>
                                 </Stack>
-                            </Grid>
+                            </Box>
+                        </Grid>
 
-                            <Grid item xs={12} md={6}>
+                        {/* Instructions Section */}
+                        <Grid item xs={12} md={7}>
+                            <Box>
                                 <Typography
-                                    variant="h6"
-                                    sx={{ mb: 2, fontWeight: 600 }}
+                                    variant="h2"
+                                    sx={{
+                                        mb: 3,
+                                        fontSize: '1.5rem',
+                                        fontWeight: 700,
+                                    }}
                                 >
                                     Instructions
                                 </Typography>
-                                <Stack spacing={2}>
+                                <Stack spacing={4}>
                                     {instructions.map(
                                         (section, sectionIndex) => (
-                                            <Box key={section.section_title}>
+                                            <Box
+                                                key={section.section_title}
+                                                sx={{
+                                                    position: 'relative',
+                                                    '&:hover .delete-section': {
+                                                        opacity: 1,
+                                                        transform:
+                                                            'translateX(0)',
+                                                    },
+                                                }}
+                                            >
                                                 <Box
                                                     sx={{
                                                         display: 'flex',
                                                         gap: 2,
-                                                        mb: 2,
+                                                        mb: 3,
                                                     }}
                                                 >
                                                     <TextField
                                                         fullWidth
-                                                        size="small"
-                                                        label="Section Title"
+                                                        placeholder="Section name (optional)"
                                                         value={
                                                             section.section_title
                                                         }
+                                                        variant="standard"
+                                                        sx={{
+                                                            '& .MuiInputBase-input':
+                                                                {
+                                                                    fontSize:
+                                                                        '1.25rem',
+                                                                    fontWeight: 600,
+                                                                },
+                                                        }}
                                                     />
                                                     <IconButton
+                                                        className="delete-section"
                                                         color="error"
                                                         size="small"
                                                         onClick={() =>
@@ -319,11 +438,32 @@ const EditRecipePage: FC = () => {
                                                                 sectionIndex
                                                             )
                                                         }
+                                                        sx={{
+                                                            opacity: 0,
+                                                            transform:
+                                                                'translateX(-10px)',
+                                                            transition:
+                                                                'all 0.2s',
+                                                            width: 32,
+                                                            height: 32,
+                                                            bgcolor:
+                                                                'rgba(0, 0, 0, 0.02)',
+                                                            '&:hover': {
+                                                                transform:
+                                                                    'translateX(-10px) scale(1.1)',
+                                                                bgcolor:
+                                                                    'rgba(211, 47, 47, 0.08)',
+                                                            },
+                                                        }}
                                                     >
-                                                        <DeleteIcon />
+                                                        <DeleteOutlineIcon
+                                                            sx={{
+                                                                fontSize: 20,
+                                                            }}
+                                                        />
                                                     </IconButton>
                                                 </Box>
-                                                <Stack spacing={2}>
+                                                <Stack spacing={3}>
                                                     {section.steps.map(
                                                         (step, stepIndex) => (
                                                             <Box
@@ -334,12 +474,24 @@ const EditRecipePage: FC = () => {
                                                                     gap: 2,
                                                                     alignItems:
                                                                         'flex-start',
+                                                                    position:
+                                                                        'relative',
+                                                                    '&:hover .step-actions':
+                                                                        {
+                                                                            opacity: 1,
+                                                                            transform:
+                                                                                'translateX(0)',
+                                                                        },
                                                                 }}
                                                             >
                                                                 <Typography
                                                                     sx={{
                                                                         mt: 1,
-                                                                        minWidth: 24,
+                                                                        minWidth: 28,
+                                                                        color: 'text.secondary',
+                                                                        fontWeight: 500,
+                                                                        fontSize:
+                                                                            '1rem',
                                                                     }}
                                                                 >
                                                                     {stepIndex +
@@ -356,11 +508,12 @@ const EditRecipePage: FC = () => {
                                                                 >
                                                                     <TextField
                                                                         fullWidth
-                                                                        size="small"
                                                                         multiline
+                                                                        placeholder="Describe this step..."
                                                                         value={
                                                                             step
                                                                         }
+                                                                        variant="standard"
                                                                         inputProps={{
                                                                             'data-section-index':
                                                                                 sectionIndex,
@@ -392,43 +545,101 @@ const EditRecipePage: FC = () => {
                                                                                 ]
                                                                             )
                                                                         }
-                                                                    />
-                                                                    <IconButton
-                                                                        size="small"
-                                                                        onClick={(
-                                                                            e
-                                                                        ) =>
-                                                                            setAnchorEl(
-                                                                                e.currentTarget
-                                                                            )
-                                                                        }
                                                                         sx={{
-                                                                            mt: 1,
+                                                                            '& .MuiInputBase-input':
+                                                                                {
+                                                                                    fontSize:
+                                                                                        '1rem',
+                                                                                    lineHeight: 1.6,
+                                                                                },
+                                                                        }}
+                                                                    />
+                                                                    <Box
+                                                                        className="step-actions"
+                                                                        sx={{
+                                                                            display:
+                                                                                'flex',
+                                                                            gap: 1,
+                                                                            opacity: 0,
+                                                                            transform:
+                                                                                'translateX(-10px)',
+                                                                            transition:
+                                                                                'all 0.2s',
+                                                                            ml: 1,
                                                                         }}
                                                                     >
-                                                                        <AddLinkIcon />
-                                                                    </IconButton>
+                                                                        <IconButton
+                                                                            size="small"
+                                                                            onClick={(
+                                                                                e
+                                                                            ) =>
+                                                                                setAnchorEl(
+                                                                                    e.currentTarget
+                                                                                )
+                                                                            }
+                                                                            sx={{
+                                                                                width: 32,
+                                                                                height: 32,
+                                                                                mt: 1,
+                                                                                color: 'primary.main',
+                                                                                bgcolor:
+                                                                                    'rgba(0, 0, 0, 0.02)',
+                                                                                '&:hover':
+                                                                                    {
+                                                                                        bgcolor:
+                                                                                            'rgba(0, 0, 0, 0.06)',
+                                                                                    },
+                                                                            }}
+                                                                        >
+                                                                            <AddLinkIcon
+                                                                                sx={{
+                                                                                    fontSize: 20,
+                                                                                }}
+                                                                            />
+                                                                        </IconButton>
+                                                                        <IconButton
+                                                                            color="error"
+                                                                            size="small"
+                                                                            onClick={() =>
+                                                                                handleDeleteStep(
+                                                                                    sectionIndex,
+                                                                                    stepIndex
+                                                                                )
+                                                                            }
+                                                                            sx={{
+                                                                                width: 32,
+                                                                                height: 32,
+                                                                                mt: 1,
+                                                                                bgcolor:
+                                                                                    'rgba(0, 0, 0, 0.02)',
+                                                                                '&:hover':
+                                                                                    {
+                                                                                        transform:
+                                                                                            'scale(1.1)',
+                                                                                        bgcolor:
+                                                                                            'rgba(211, 47, 47, 0.08)',
+                                                                                    },
+                                                                            }}
+                                                                        >
+                                                                            <DeleteOutlineIcon
+                                                                                sx={{
+                                                                                    fontSize: 20,
+                                                                                }}
+                                                                            />
+                                                                        </IconButton>
+                                                                    </Box>
                                                                 </Box>
-                                                                <IconButton
-                                                                    color="error"
-                                                                    size="small"
-                                                                    onClick={() =>
-                                                                        handleDeleteStep(
-                                                                            sectionIndex,
-                                                                            stepIndex
-                                                                        )
-                                                                    }
-                                                                    sx={{
-                                                                        mt: 1,
-                                                                    }}
-                                                                >
-                                                                    <DeleteIcon />
-                                                                </IconButton>
                                                             </Box>
                                                         )
                                                     )}
                                                     <Button
-                                                        startIcon={<AddIcon />}
+                                                        startIcon={
+                                                            <AddIcon
+                                                                sx={{
+                                                                    fontSize: 20,
+                                                                }}
+                                                            />
+                                                        }
                                                         onClick={() =>
                                                             handleAddStep(
                                                                 sectionIndex
@@ -438,6 +649,19 @@ const EditRecipePage: FC = () => {
                                                             alignSelf:
                                                                 'flex-start',
                                                             ml: 4,
+                                                            color: 'text.secondary',
+                                                            borderRadius: 2,
+                                                            py: 1.25,
+                                                            px: 2.5,
+                                                            minHeight: 40,
+                                                            '&:hover': {
+                                                                color: 'primary.main',
+                                                                '@media (hover: hover)':
+                                                                    {
+                                                                        bgcolor:
+                                                                            'rgba(0, 0, 0, 0.03)',
+                                                                    },
+                                                            },
                                                         }}
                                                     >
                                                         Add Step
@@ -446,24 +670,52 @@ const EditRecipePage: FC = () => {
                                             </Box>
                                         )
                                     )}
-                                    <Button
-                                        startIcon={<AddIcon />}
-                                        onClick={handleAddSection}
-                                        sx={{ alignSelf: 'flex-start' }}
-                                    >
-                                        Add Section
-                                    </Button>
+                                    <Box sx={{ mt: 2 }}>
+                                        <Divider sx={{ mb: 3 }} />
+                                        <Button
+                                            startIcon={
+                                                <PlaylistAddIcon
+                                                    sx={{ fontSize: 22 }}
+                                                />
+                                            }
+                                            onClick={handleAddSection}
+                                            sx={{
+                                                alignSelf: 'flex-start',
+                                                color: 'text.secondary',
+                                                borderRadius: 2,
+                                                py: 1.25,
+                                                px: 2.5,
+                                                minHeight: 40,
+                                                '&:hover': {
+                                                    color: 'primary.main',
+                                                    '@media (hover: hover)': {
+                                                        bgcolor:
+                                                            'rgba(0, 0, 0, 0.03)',
+                                                    },
+                                                },
+                                            }}
+                                        >
+                                            Add New Section
+                                        </Button>
+                                    </Box>
                                 </Stack>
-                            </Grid>
+                            </Box>
+                        </Grid>
 
-                            <Grid item xs={12}>
+                        {/* Notes Section */}
+                        <Grid item xs={12}>
+                            <Box>
                                 <Typography
-                                    variant="h6"
-                                    sx={{ mb: 2, fontWeight: 600 }}
+                                    variant="h2"
+                                    sx={{
+                                        mb: 3,
+                                        fontSize: '1.5rem',
+                                        fontWeight: 700,
+                                    }}
                                 >
                                     Notes
                                 </Typography>
-                                <Stack spacing={2}>
+                                <Stack spacing={3}>
                                     {notes.map((note, index) => (
                                         <Box
                                             key={index}
@@ -471,43 +723,86 @@ const EditRecipePage: FC = () => {
                                                 display: 'flex',
                                                 gap: 2,
                                                 alignItems: 'flex-start',
+                                                position: 'relative',
+                                                '&:hover .delete-button': {
+                                                    opacity: 1,
+                                                    transform: 'translateX(0)',
+                                                },
                                             }}
                                         >
                                             <TextField
                                                 fullWidth
-                                                size="small"
                                                 multiline
+                                                placeholder="Add a note..."
                                                 value={note}
+                                                variant="standard"
                                                 onChange={(e) =>
                                                     handleNoteChange(
                                                         index,
                                                         e.target.value
                                                     )
                                                 }
+                                                sx={{
+                                                    '& .MuiInputBase-input': {
+                                                        fontSize: '1rem',
+                                                        lineHeight: 1.6,
+                                                    },
+                                                }}
                                             />
                                             <IconButton
+                                                className="delete-button"
                                                 color="error"
                                                 size="small"
                                                 onClick={() =>
                                                     handleDeleteNote(index)
                                                 }
-                                                sx={{ mt: 1 }}
+                                                sx={{
+                                                    mt: 1,
+                                                    opacity: 0,
+                                                    transform:
+                                                        'translateX(-10px)',
+                                                    transition: 'all 0.2s',
+                                                    width: 32,
+                                                    height: 32,
+                                                    bgcolor:
+                                                        'rgba(0, 0, 0, 0.02)',
+                                                    '&:hover': {
+                                                        transform:
+                                                            'translateX(-10px) scale(1.1)',
+                                                        bgcolor:
+                                                            'rgba(211, 47, 47, 0.08)',
+                                                    },
+                                                }}
                                             >
-                                                <DeleteIcon />
+                                                <DeleteOutlineIcon
+                                                    sx={{ fontSize: 20 }}
+                                                />
                                             </IconButton>
                                         </Box>
                                     ))}
                                     <Button
-                                        startIcon={<AddIcon />}
+                                        startIcon={
+                                            <AddIcon sx={{ fontSize: 20 }} />
+                                        }
                                         onClick={handleAddNote}
-                                        sx={{ alignSelf: 'flex-start' }}
+                                        sx={{
+                                            alignSelf: 'flex-start',
+                                            color: 'text.secondary',
+                                            borderRadius: 2,
+                                            py: 1,
+                                            px: 2,
+                                            '&:hover': {
+                                                color: 'primary.main',
+                                                bgcolor: 'primary.lighter',
+                                            },
+                                        }}
                                     >
                                         Add Note
                                     </Button>
                                 </Stack>
-                            </Grid>
+                            </Box>
                         </Grid>
-                    </Paper>
+                    </Grid>
                 </Box>
             </Container>
             <Menu
@@ -518,11 +813,35 @@ const EditRecipePage: FC = () => {
                     vertical: 'bottom',
                     horizontal: 'left',
                 }}
+                PaperProps={{
+                    sx: {
+                        maxHeight: 300,
+                        width: 250,
+                        mt: 1,
+                        boxShadow: (theme) => theme.shadows[3],
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        '& .MuiMenuItem-root': {
+                            fontSize: '1rem',
+                            py: 1.5,
+                            '&:hover': {
+                                bgcolor: 'primary.lighter',
+                            },
+                        },
+                    },
+                }}
             >
                 {recipe.ingredients.map((ingredient) => (
                     <MenuItem
                         key={ingredient.id}
                         onClick={() => handleIngredientClick(ingredient)}
+                        sx={{
+                            py: 1.5,
+                            '&:hover': {
+                                bgcolor: 'primary.lighter',
+                            },
+                        }}
                     >
                         {ingredient.name}
                     </MenuItem>
