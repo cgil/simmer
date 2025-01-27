@@ -35,6 +35,9 @@ const AppLayout: FC<AppLayoutProps> = ({
                 display: 'flex',
                 flexDirection: 'column',
                 minHeight: '100vh',
+                width: '100vw',
+                maxWidth: '100%',
+                overflow: 'hidden',
             }}
         >
             <AppBar
@@ -44,14 +47,16 @@ const AppLayout: FC<AppLayoutProps> = ({
                     bgcolor: 'background.paper',
                     borderBottom: '1px solid',
                     borderColor: 'divider',
+                    width: '100%',
                 }}
             >
-                <Container maxWidth="xl">
+                <Container maxWidth={false} disableGutters>
                     <Toolbar
                         disableGutters
                         sx={{
                             height: { xs: 56, sm: 64 },
                             gap: { xs: 1, sm: 2 },
+                            px: { xs: 2, sm: 3, md: 4 },
                         }}
                     >
                         <Box
@@ -145,11 +150,13 @@ const AppLayout: FC<AppLayoutProps> = ({
             <Box
                 component="main"
                 sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
                     flexGrow: 1,
                     width: '100%',
+                    minWidth: '100%',
+                    position: 'relative',
                     bgcolor: 'background.default',
-                    px: { xs: 2, sm: 3 },
-                    py: { xs: 3, sm: 4 },
                 }}
             >
                 {children}

@@ -32,10 +32,13 @@ const CatalogPage: FC = () => {
         <AppLayout showAddButton>
             <Box
                 sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
                     width: '100%',
-                    maxWidth: '100%',
+                    minWidth: '100%',
                     px: { xs: 2, sm: 3, md: 4 },
-                    mx: 'auto',
+                    py: { xs: 3, sm: 4 },
+                    flex: 1,
                 }}
             >
                 <Typography
@@ -68,7 +71,7 @@ const CatalogPage: FC = () => {
                         gap: 1,
                         border: '1.5px solid',
                         borderColor: 'divider',
-                        maxWidth: '100%',
+                        width: '100%',
                         '&:focus-within': {
                             borderColor: 'primary.main',
                             boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
@@ -122,231 +125,259 @@ const CatalogPage: FC = () => {
                     )}
                 </Paper>
 
-                <Grid
-                    container
-                    spacing={{ xs: 2, sm: 3 }}
-                    columns={{ xs: 1, sm: 2, md: 3, lg: 4, xl: 5 }}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        flex: 1,
+                        width: '100%',
+                        minWidth: '100%',
+                    }}
                 >
-                    {filteredRecipes.map((recipe) => (
-                        <Grid item xs={1} key={recipe.id}>
-                            <Card
-                                onClick={() => navigate(`/recipe/${recipe.id}`)}
-                                sx={{
-                                    height: '100%',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    cursor: 'pointer',
-                                    borderRadius: { xs: 2, sm: 3 },
-                                    overflow: 'hidden',
-                                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                                    transition: 'all 0.3s ease',
-                                    '&:hover': {
-                                        transform: 'translateY(-8px)',
-                                        boxShadow:
-                                            '0 12px 30px rgba(0,0,0,0.12)',
-                                    },
-                                }}
-                            >
-                                <CardMedia
-                                    component="img"
-                                    height="180"
-                                    image={recipe.images[0]}
-                                    alt={recipe.title}
-                                    sx={{
-                                        objectFit: 'cover',
-                                    }}
-                                />
-                                <CardContent
-                                    sx={{
-                                        flexGrow: 1,
-                                        p: { xs: 2, sm: 3 },
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                    }}
-                                >
-                                    <Typography
-                                        variant="h6"
-                                        component="h2"
-                                        gutterBottom
+                    {filteredRecipes.length > 0 ? (
+                        <Grid
+                            container
+                            spacing={{ xs: 2, sm: 3 }}
+                            columns={{ xs: 1, sm: 2, md: 3, lg: 4, xl: 5 }}
+                        >
+                            {filteredRecipes.map((recipe) => (
+                                <Grid item xs={1} key={recipe.id}>
+                                    <Card
+                                        onClick={() =>
+                                            navigate(`/recipe/${recipe.id}`)
+                                        }
                                         sx={{
-                                            fontWeight: 600,
-                                            fontSize: {
-                                                xs: '1.1rem',
-                                                sm: '1.25rem',
-                                            },
-                                            mb: 1,
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            display: '-webkit-box',
-                                            WebkitLineClamp: 2,
-                                            WebkitBoxOrient: 'vertical',
-                                        }}
-                                    >
-                                        {recipe.title}
-                                    </Typography>
-                                    <Typography
-                                        color="text.secondary"
-                                        sx={{
-                                            mb: 2,
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            display: '-webkit-box',
-                                            WebkitLineClamp: 2,
-                                            WebkitBoxOrient: 'vertical',
-                                            fontSize: {
-                                                xs: '0.875rem',
-                                                sm: '1rem',
-                                            },
-                                            minHeight: {
-                                                xs: '40px',
-                                                sm: '48px',
-                                            },
-                                        }}
-                                    >
-                                        {recipe.description}
-                                    </Typography>
-                                    <Box
-                                        sx={{
+                                            height: '100%',
                                             display: 'flex',
-                                            gap: 0.75,
-                                            flexWrap: 'wrap',
-                                            mb: 'auto',
-                                            mt: 1,
+                                            flexDirection: 'column',
+                                            cursor: 'pointer',
+                                            borderRadius: { xs: 2, sm: 3 },
+                                            overflow: 'hidden',
+                                            boxShadow:
+                                                '0 4px 20px rgba(0,0,0,0.08)',
+                                            transition: 'all 0.3s ease',
+                                            '&:hover': {
+                                                transform: 'translateY(-8px)',
+                                                boxShadow:
+                                                    '0 12px 30px rgba(0,0,0,0.12)',
+                                            },
                                         }}
                                     >
-                                        {recipe.tags.slice(0, 3).map((tag) => (
-                                            <Chip
-                                                key={tag}
-                                                label={tag}
-                                                size="small"
-                                                color="secondary"
-                                                sx={{
-                                                    fontSize: '0.75rem',
-                                                    height: '24px',
-                                                }}
-                                            />
-                                        ))}
-                                        {recipe.tags.length > 3 && (
-                                            <Chip
-                                                label={`+${
-                                                    recipe.tags.length - 3
-                                                }`}
-                                                size="small"
-                                                variant="outlined"
-                                                sx={{
-                                                    fontSize: '0.75rem',
-                                                    height: '24px',
-                                                }}
-                                            />
-                                        )}
-                                    </Box>
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: { xs: 1.5, sm: 2 },
-                                            mt: 2,
-                                            pt: 2,
-                                            borderTop: '1px solid',
-                                            borderColor: 'divider',
-                                        }}
-                                    >
-                                        <Box
+                                        <CardMedia
+                                            component="img"
+                                            height="180"
+                                            image={recipe.images[0]}
+                                            alt={recipe.title}
                                             sx={{
+                                                objectFit: 'cover',
+                                            }}
+                                        />
+                                        <CardContent
+                                            sx={{
+                                                flexGrow: 1,
+                                                p: { xs: 2, sm: 3 },
                                                 display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 0.5,
+                                                flexDirection: 'column',
                                             }}
                                         >
-                                            <RestaurantIcon
+                                            <Typography
+                                                variant="h6"
+                                                component="h2"
+                                                gutterBottom
                                                 sx={{
+                                                    fontWeight: 600,
                                                     fontSize: {
-                                                        xs: '1rem',
+                                                        xs: '1.1rem',
                                                         sm: '1.25rem',
                                                     },
-                                                    color: 'action.active',
+                                                    mb: 1,
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    display: '-webkit-box',
+                                                    WebkitLineClamp: 2,
+                                                    WebkitBoxOrient: 'vertical',
                                                 }}
-                                            />
+                                            >
+                                                {recipe.title}
+                                            </Typography>
                                             <Typography
-                                                variant="body2"
                                                 color="text.secondary"
                                                 sx={{
+                                                    mb: 2,
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    display: '-webkit-box',
+                                                    WebkitLineClamp: 2,
+                                                    WebkitBoxOrient: 'vertical',
                                                     fontSize: {
-                                                        xs: '0.75rem',
-                                                        sm: '0.875rem',
+                                                        xs: '0.875rem',
+                                                        sm: '1rem',
+                                                    },
+                                                    minHeight: {
+                                                        xs: '40px',
+                                                        sm: '48px',
                                                     },
                                                 }}
                                             >
-                                                {recipe.servings} servings
+                                                {recipe.description}
                                             </Typography>
-                                        </Box>
-                                        {recipe.time_estimate && (
+                                            <Box
+                                                sx={{
+                                                    display: 'flex',
+                                                    gap: 0.75,
+                                                    flexWrap: 'wrap',
+                                                    mb: 'auto',
+                                                    mt: 1,
+                                                }}
+                                            >
+                                                {recipe.tags
+                                                    .slice(0, 3)
+                                                    .map((tag) => (
+                                                        <Chip
+                                                            key={tag}
+                                                            label={tag}
+                                                            size="small"
+                                                            color="secondary"
+                                                            sx={{
+                                                                fontSize:
+                                                                    '0.75rem',
+                                                                height: '24px',
+                                                            }}
+                                                        />
+                                                    ))}
+                                                {recipe.tags.length > 3 && (
+                                                    <Chip
+                                                        label={`+${
+                                                            recipe.tags.length -
+                                                            3
+                                                        }`}
+                                                        size="small"
+                                                        variant="outlined"
+                                                        sx={{
+                                                            fontSize: '0.75rem',
+                                                            height: '24px',
+                                                        }}
+                                                    />
+                                                )}
+                                            </Box>
                                             <Box
                                                 sx={{
                                                     display: 'flex',
                                                     alignItems: 'center',
-                                                    gap: 0.5,
+                                                    gap: { xs: 1.5, sm: 2 },
+                                                    mt: 2,
+                                                    pt: 2,
+                                                    borderTop: '1px solid',
+                                                    borderColor: 'divider',
                                                 }}
                                             >
-                                                <AccessTimeIcon
+                                                <Box
                                                     sx={{
-                                                        fontSize: {
-                                                            xs: '1rem',
-                                                            sm: '1.25rem',
-                                                        },
-                                                        color: 'action.active',
-                                                    }}
-                                                />
-                                                <Typography
-                                                    variant="body2"
-                                                    color="text.secondary"
-                                                    sx={{
-                                                        fontSize: {
-                                                            xs: '0.75rem',
-                                                            sm: '0.875rem',
-                                                        },
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 0.5,
                                                     }}
                                                 >
-                                                    {recipe.time_estimate.total}{' '}
-                                                    mins
-                                                </Typography>
+                                                    <RestaurantIcon
+                                                        sx={{
+                                                            fontSize: {
+                                                                xs: '1rem',
+                                                                sm: '1.25rem',
+                                                            },
+                                                            color: 'action.active',
+                                                        }}
+                                                    />
+                                                    <Typography
+                                                        variant="body2"
+                                                        color="text.secondary"
+                                                        sx={{
+                                                            fontSize: {
+                                                                xs: '0.75rem',
+                                                                sm: '0.875rem',
+                                                            },
+                                                        }}
+                                                    >
+                                                        {recipe.servings}{' '}
+                                                        servings
+                                                    </Typography>
+                                                </Box>
+                                                {recipe.time_estimate && (
+                                                    <Box
+                                                        sx={{
+                                                            display: 'flex',
+                                                            alignItems:
+                                                                'center',
+                                                            gap: 0.5,
+                                                        }}
+                                                    >
+                                                        <AccessTimeIcon
+                                                            sx={{
+                                                                fontSize: {
+                                                                    xs: '1rem',
+                                                                    sm: '1.25rem',
+                                                                },
+                                                                color: 'action.active',
+                                                            }}
+                                                        />
+                                                        <Typography
+                                                            variant="body2"
+                                                            color="text.secondary"
+                                                            sx={{
+                                                                fontSize: {
+                                                                    xs: '0.75rem',
+                                                                    sm: '0.875rem',
+                                                                },
+                                                            }}
+                                                        >
+                                                            {
+                                                                recipe
+                                                                    .time_estimate
+                                                                    .total
+                                                            }{' '}
+                                                            mins
+                                                        </Typography>
+                                                    </Box>
+                                                )}
                                             </Box>
-                                        )}
-                                    </Box>
-                                </CardContent>
-                            </Card>
+                                        </CardContent>
+                                    </Card>
+                                </Grid>
+                            ))}
                         </Grid>
-                    ))}
-                </Grid>
-
-                {filteredRecipes.length === 0 && (
-                    <Box
-                        sx={{
-                            textAlign: 'center',
-                            py: { xs: 6, sm: 8 },
-                            px: 2,
-                        }}
-                    >
-                        <Typography
-                            variant="h6"
-                            color="text.secondary"
+                    ) : (
+                        <Box
                             sx={{
-                                mb: 2,
-                                fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                py: { xs: 6, sm: 8 },
+                                flex: 1,
+                                width: '100%',
+                                minHeight: '50vh',
                             }}
                         >
-                            No recipes found
-                        </Typography>
-                        <Typography
-                            color="text.secondary"
-                            sx={{
-                                fontSize: { xs: '0.875rem', sm: '1rem' },
-                            }}
-                        >
-                            Try adjusting your search terms
-                        </Typography>
-                    </Box>
-                )}
+                            <Typography
+                                variant="h6"
+                                color="text.secondary"
+                                sx={{
+                                    mb: 2,
+                                    fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                                }}
+                            >
+                                No recipes found
+                            </Typography>
+                            <Typography
+                                color="text.secondary"
+                                sx={{
+                                    fontSize: { xs: '0.875rem', sm: '1rem' },
+                                }}
+                            >
+                                Try adjusting your search terms
+                            </Typography>
+                        </Box>
+                    )}
+                </Box>
             </Box>
         </AppLayout>
     );
