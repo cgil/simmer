@@ -137,7 +137,6 @@ const EditRecipePage: FC = () => {
             sectionIndex
         ].steps.filter((_, index) => index !== stepIndex);
 
-        // If this was the last step, delete the section
         if (newInstructions[sectionIndex].steps.length === 0) {
             handleDeleteSection(sectionIndex);
         } else {
@@ -200,7 +199,7 @@ const EditRecipePage: FC = () => {
                 sx={{
                     maxWidth: 1400,
                     pb: { xs: 4, sm: 6, md: 8 },
-                    bgcolor: '#FFFFFF',
+                    bgcolor: 'paper.light',
                     minHeight: '100vh',
                     position: 'relative',
                     '&::before': {
@@ -210,7 +209,7 @@ const EditRecipePage: FC = () => {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        boxShadow: 'inset 0 0 50px rgba(0,0,0,0.08)',
+                        boxShadow: 'inset 0 0 50px rgba(62, 28, 0, 0.08)',
                         pointerEvents: 'none',
                     },
                     // Paper texture overlay
@@ -224,8 +223,8 @@ const EditRecipePage: FC = () => {
                         opacity: 1,
                         pointerEvents: 'none',
                         backgroundImage: `
-                            radial-gradient(circle at 50% 50%, rgba(25, 25, 25, 0.07) 0.5px, transparent 0.5px),
-                            radial-gradient(circle at 50% 50%, rgba(25, 25, 25, 0.04) 1px, transparent 1px)
+                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.07) 0.5px, transparent 0.5px),
+                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.04) 1px, transparent 1px)
                         `,
                         backgroundSize: '6px 6px, 14px 14px',
                         backgroundPosition: '0 0',
@@ -250,7 +249,7 @@ const EditRecipePage: FC = () => {
                         <Box
                             sx={{
                                 position: 'relative',
-                                bgcolor: '#FFFFFF',
+                                bgcolor: 'background.paper',
                                 p: { xs: 2, sm: 3 },
                                 borderRadius: 1,
                                 boxShadow: `
@@ -273,6 +272,10 @@ const EditRecipePage: FC = () => {
                                 '& > *': {
                                     position: 'relative',
                                     zIndex: 1,
+                                },
+                                '& .MuiInputBase-input': {
+                                    color: 'text.primary',
+                                    fontFamily: "'Inter', sans-serif",
                                 },
                             }}
                         >
@@ -325,7 +328,7 @@ const EditRecipePage: FC = () => {
                             <Box
                                 sx={{
                                     position: 'relative',
-                                    bgcolor: '#FFFFFF',
+                                    bgcolor: 'background.paper',
                                     p: { xs: 2, sm: 3 },
                                     borderRadius: 1,
                                     boxShadow: `
@@ -352,15 +355,11 @@ const EditRecipePage: FC = () => {
                                 }}
                             >
                                 <Typography
-                                    variant="h2"
+                                    variant="h4"
                                     sx={{
-                                        mb: 3,
-                                        fontSize: '2rem',
-                                        fontWeight: 700,
-                                        fontFamily: "'Kalam', cursive",
-                                        textShadow:
-                                            '1px 1px 1px rgba(0,0,0,0.05)',
                                         color: 'primary.main',
+                                        fontFamily: "'Kalam', cursive",
+                                        mb: 2,
                                     }}
                                 >
                                     Ingredients
@@ -467,11 +466,11 @@ const EditRecipePage: FC = () => {
                                                     transition: 'all 0.2s',
                                                     width: 32,
                                                     height: 32,
-                                                    bgcolor: '#f5f5f5',
+                                                    bgcolor: 'paper.light',
                                                     '&:hover': {
                                                         transform:
                                                             'translateY(-1px)',
-                                                        bgcolor: '#eeeeee',
+                                                        bgcolor: 'paper.dark',
                                                         '&::before': {
                                                             opacity: 1,
                                                         },
@@ -491,7 +490,7 @@ const EditRecipePage: FC = () => {
                                                         borderRadius: '50%',
                                                     },
                                                     '& svg': {
-                                                        color: '#9e9e9e',
+                                                        color: 'text.disabled',
                                                         transition:
                                                             'color 0.2s',
                                                     },
@@ -511,19 +510,22 @@ const EditRecipePage: FC = () => {
                                         onClick={handleAddIngredient}
                                         sx={{
                                             alignSelf: 'flex-start',
-                                            color: 'text.secondary',
+                                            color: 'text.primary',
                                             borderRadius: 1,
                                             py: 1.25,
                                             px: 2.5,
                                             minHeight: 40,
-                                            bgcolor: '#FFF9C4',
-                                            border: '1px solid rgba(0,0,0,0.08)',
-                                            borderBottom:
-                                                '2px solid rgba(0,0,0,0.12)',
+                                            bgcolor: 'secondary.main',
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                            borderBottom: '2px solid',
+                                            borderBottomColor: 'divider',
                                             fontFamily: "'Kalam', cursive",
                                             fontSize: '1rem',
+                                            transition: 'all 0.15s ease-in-out',
                                             '&:hover': {
-                                                bgcolor: '#FFF59D',
+                                                bgcolor: 'secondary.light',
+                                                borderColor: 'primary.light',
                                             },
                                         }}
                                     >
@@ -538,7 +540,7 @@ const EditRecipePage: FC = () => {
                             <Box
                                 sx={{
                                     position: 'relative',
-                                    bgcolor: '#FFFFFF',
+                                    bgcolor: 'background.paper',
                                     p: { xs: 2, sm: 3 },
                                     borderRadius: 1,
                                     boxShadow: `
@@ -565,15 +567,11 @@ const EditRecipePage: FC = () => {
                                 }}
                             >
                                 <Typography
-                                    variant="h2"
+                                    variant="h4"
                                     sx={{
-                                        mb: 3,
-                                        fontSize: '2rem',
-                                        fontWeight: 700,
-                                        fontFamily: "'Kalam', cursive",
-                                        textShadow:
-                                            '1px 1px 1px rgba(0,0,0,0.05)',
                                         color: 'primary.main',
+                                        fontFamily: "'Kalam', cursive",
+                                        mb: 2,
                                     }}
                                 >
                                     Instructions
@@ -636,12 +634,13 @@ const EditRecipePage: FC = () => {
                                                                 'all 0.2s',
                                                             width: 32,
                                                             height: 32,
-                                                            bgcolor: '#f5f5f5',
+                                                            bgcolor:
+                                                                'paper.light',
                                                             '&:hover': {
                                                                 transform:
                                                                     'translateY(-1px)',
                                                                 bgcolor:
-                                                                    '#eeeeee',
+                                                                    'paper.dark',
                                                                 '&::before': {
                                                                     opacity: 1,
                                                                 },
@@ -663,7 +662,7 @@ const EditRecipePage: FC = () => {
                                                                     '50%',
                                                             },
                                                             '& svg': {
-                                                                color: '#9e9e9e',
+                                                                color: 'text.disabled',
                                                                 transition:
                                                                     'color 0.2s',
                                                             },
@@ -797,11 +796,11 @@ const EditRecipePage: FC = () => {
                                                                                 mt: 1,
                                                                                 color: 'text.secondary',
                                                                                 bgcolor:
-                                                                                    '#f8f9fa',
+                                                                                    'paper.light',
                                                                                 '&:hover':
                                                                                     {
                                                                                         bgcolor:
-                                                                                            '#eeeeee',
+                                                                                            'paper.dark',
                                                                                     },
                                                                             }}
                                                                         >
@@ -825,15 +824,15 @@ const EditRecipePage: FC = () => {
                                                                                 height: 32,
                                                                                 mt: 1,
                                                                                 bgcolor:
-                                                                                    '#f5f5f5',
+                                                                                    'paper.light',
                                                                                 '&:hover':
                                                                                     {
                                                                                         bgcolor:
-                                                                                            '#eeeeee',
+                                                                                            'paper.dark',
                                                                                     },
                                                                                 '& svg':
                                                                                     {
-                                                                                        color: '#9e9e9e',
+                                                                                        color: 'text.disabled',
                                                                                         transition:
                                                                                             'color 0.2s',
                                                                                     },
@@ -868,21 +867,30 @@ const EditRecipePage: FC = () => {
                                                             alignSelf:
                                                                 'flex-start',
                                                             ml: 4,
-                                                            color: 'text.secondary',
+                                                            color: 'text.primary',
                                                             borderRadius: 1,
                                                             py: 1.25,
                                                             px: 2.5,
                                                             minHeight: 40,
-                                                            bgcolor: '#f8f9fa',
-                                                            border: '1px solid rgba(0,0,0,0.08)',
+                                                            bgcolor:
+                                                                'paper.main',
+                                                            border: '1px solid',
+                                                            borderColor:
+                                                                'divider',
                                                             borderBottom:
-                                                                '2px solid rgba(0,0,0,0.12)',
+                                                                '2px solid',
+                                                            borderBottomColor:
+                                                                'divider',
                                                             fontFamily:
                                                                 "'Kalam', cursive",
                                                             fontSize: '1rem',
+                                                            transition:
+                                                                'all 0.15s ease-in-out',
                                                             '&:hover': {
                                                                 bgcolor:
-                                                                    '#f5f5f5',
+                                                                    'paper.main',
+                                                                borderColor:
+                                                                    'primary.light',
                                                             },
                                                         }}
                                                     >
@@ -903,19 +911,24 @@ const EditRecipePage: FC = () => {
                                             onClick={handleAddSection}
                                             sx={{
                                                 alignSelf: 'flex-start',
-                                                color: 'text.secondary',
+                                                color: 'text.primary',
                                                 borderRadius: 1,
                                                 py: 1.25,
                                                 px: 2.5,
                                                 minHeight: 40,
-                                                bgcolor: '#f8f9fa',
-                                                border: '1px solid rgba(0,0,0,0.08)',
-                                                borderBottom:
-                                                    '2px solid rgba(0,0,0,0.12)',
+                                                bgcolor: 'paper.main',
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                borderBottom: '2px solid',
+                                                borderBottomColor: 'divider',
                                                 fontFamily: "'Kalam', cursive",
                                                 fontSize: '1rem',
+                                                transition:
+                                                    'all 0.15s ease-in-out',
                                                 '&:hover': {
-                                                    bgcolor: '#f5f5f5',
+                                                    bgcolor: 'paper.main',
+                                                    borderColor:
+                                                        'primary.light',
                                                 },
                                             }}
                                         >
@@ -931,7 +944,7 @@ const EditRecipePage: FC = () => {
                             <Box
                                 sx={{
                                     position: 'relative',
-                                    bgcolor: '#FFFFFF',
+                                    bgcolor: 'background.paper',
                                     p: { xs: 2, sm: 3 },
                                     borderRadius: 1,
                                     boxShadow: `
@@ -958,15 +971,11 @@ const EditRecipePage: FC = () => {
                                 }}
                             >
                                 <Typography
-                                    variant="h2"
+                                    variant="h6"
                                     sx={{
-                                        mb: 3,
-                                        fontSize: '2rem',
-                                        fontWeight: 700,
-                                        fontFamily: "'Kalam', cursive",
-                                        textShadow:
-                                            '1px 1px 1px rgba(0,0,0,0.05)',
                                         color: 'primary.main',
+                                        fontFamily: "'Kalam', cursive",
+                                        mb: 2,
                                     }}
                                 >
                                     Notes
@@ -1020,14 +1029,14 @@ const EditRecipePage: FC = () => {
                                                     transition: 'all 0.2s',
                                                     width: 32,
                                                     height: 32,
-                                                    bgcolor: '#f5f5f5',
+                                                    bgcolor: 'paper.light',
                                                     '&:hover': {
                                                         transform:
                                                             'translateX(-10px) rotate(-8deg)',
-                                                        bgcolor: '#eeeeee',
+                                                        bgcolor: 'paper.dark',
                                                     },
                                                     '& svg': {
-                                                        color: '#9e9e9e',
+                                                        color: 'text.disabled',
                                                         transition:
                                                             'color 0.2s',
                                                     },
@@ -1047,19 +1056,22 @@ const EditRecipePage: FC = () => {
                                         onClick={handleAddNote}
                                         sx={{
                                             alignSelf: 'flex-start',
-                                            color: 'text.secondary',
+                                            color: 'text.primary',
                                             borderRadius: 1,
                                             py: 1.25,
                                             px: 2.5,
                                             minHeight: 40,
-                                            bgcolor: '#f8f9fa',
-                                            border: '1px solid rgba(0,0,0,0.08)',
-                                            borderBottom:
-                                                '2px solid rgba(0,0,0,0.12)',
+                                            bgcolor: 'paper.main',
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                            borderBottom: '2px solid',
+                                            borderBottomColor: 'divider',
                                             fontFamily: "'Kalam', cursive",
                                             fontSize: '1rem',
+                                            transition: 'all 0.15s ease-in-out',
                                             '&:hover': {
-                                                bgcolor: '#f5f5f5',
+                                                bgcolor: 'paper.main',
+                                                borderColor: 'primary.light',
                                             },
                                         }}
                                     >
@@ -1084,24 +1096,24 @@ const EditRecipePage: FC = () => {
                         maxHeight: 300,
                         width: 250,
                         mt: 1,
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        boxShadow: '0 4px 12px rgba(62, 28, 0, 0.15)',
                         borderRadius: 2,
                         border: '1px solid',
                         borderColor: 'divider',
-                        bgcolor: '#f5f5f5',
+                        bgcolor: 'paper.light',
                         backgroundImage: `
-                            repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(66, 66, 66, 0.05) 31px, rgba(66, 66, 66, 0.05) 32px)
+                            repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(62, 28, 0, 0.05) 31px, rgba(62, 28, 0, 0.05) 32px)
                         `,
                         '& .MuiMenuItem-root': {
                             fontSize: '1rem',
                             py: 1.5,
                             borderBottom: '1px solid',
-                            borderColor: 'rgba(0, 0, 0, 0.05)',
+                            borderColor: 'divider',
                             transition: 'all 0.2s',
                             '&:hover': {
-                                bgcolor: '#fff',
+                                bgcolor: 'paper.main',
                                 transform: 'translateX(4px)',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                                boxShadow: '0 2px 4px rgba(62, 28, 0, 0.05)',
                             },
                         },
                     },
