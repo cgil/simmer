@@ -17,8 +17,8 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddIcon from '@mui/icons-material/Add';
-import AddLinkIcon from '@mui/icons-material/AddLink';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
+import FontAwesomeIcon from '../../components/icons/FontAwesomeIcon';
 import AppLayout from '../../components/layout/AppLayout';
 import { Recipe } from '../../types';
 
@@ -287,11 +287,25 @@ const EditRecipePage: FC = () => {
                                                     ingredient.quantity
                                                 }
                                                 variant="standard"
+                                                type="number"
+                                                inputProps={{
+                                                    min: 0,
+                                                    step: 0.25,
+                                                }}
                                                 sx={{
-                                                    width: 80,
+                                                    width: 130,
                                                     '& .MuiInputBase-input': {
                                                         fontSize: '1rem',
                                                         textAlign: 'right',
+                                                        '&::-webkit-inner-spin-button':
+                                                            {
+                                                                opacity: 0,
+                                                                marginLeft: 1,
+                                                            },
+                                                        '&:hover::-webkit-inner-spin-button':
+                                                            {
+                                                                opacity: 1,
+                                                            },
                                                     },
                                                 }}
                                             />
@@ -301,7 +315,7 @@ const EditRecipePage: FC = () => {
                                                 defaultValue={ingredient.unit}
                                                 variant="standard"
                                                 sx={{
-                                                    width: 70,
+                                                    width: 160,
                                                     '& .MuiInputBase-input': {
                                                         fontSize: '1rem',
                                                     },
@@ -353,7 +367,10 @@ const EditRecipePage: FC = () => {
                                     ))}
                                     <Button
                                         startIcon={
-                                            <AddIcon sx={{ fontSize: 20 }} />
+                                            <FontAwesomeIcon
+                                                icon="fa-solid fa-carrot"
+                                                sx={{ fontSize: 20 }}
+                                            />
                                         }
                                         onClick={handleAddIngredient}
                                         sx={{
@@ -365,7 +382,6 @@ const EditRecipePage: FC = () => {
                                             minHeight: 40,
                                             '&:hover': {
                                                 color: 'primary.main',
-                                                bgcolor: 'primary.lighter',
                                                 '@media (hover: hover)': {
                                                     bgcolor:
                                                         'rgba(0, 0, 0, 0.03)',
@@ -591,7 +607,8 @@ const EditRecipePage: FC = () => {
                                                                                     },
                                                                             }}
                                                                         >
-                                                                            <AddLinkIcon
+                                                                            <FontAwesomeIcon
+                                                                                icon="fa-solid fa-carrot"
                                                                                 sx={{
                                                                                     fontSize: 20,
                                                                                 }}
