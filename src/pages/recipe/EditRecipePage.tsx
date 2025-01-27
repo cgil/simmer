@@ -1,4 +1,4 @@
-import { FC } from 'react';
+import { FC, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
     Box,
@@ -10,11 +10,14 @@ import {
     Grid,
     IconButton,
     Stack,
+    Menu,
+    MenuItem,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import AddLinkIcon from '@mui/icons-material/AddLink';
 import AppLayout from '../../components/layout/AppLayout';
 import { Recipe } from '../../types';
 
@@ -22,6 +25,13 @@ const EditRecipePage: FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const recipe = location.state?.recipe as Recipe;
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const [activeStepIndex, setActiveStepIndex] = useState<
+        [number, number] | null
+    >(null);
+    const [instructions, setInstructions] = useState(
+        recipe?.instructions || []
+    );
 
     if (!recipe) {
         navigate('/');
@@ -31,6 +41,40 @@ const EditRecipePage: FC = () => {
     const handleSave = () => {
         // TODO: Implement save functionality
         navigate('/');
+    };
+
+    const handleIngredientClick = (ingredient: Recipe['ingredients'][0]) => {
+        if (activeStepIndex) {
+            const [sectionIndex, stepIndex] = activeStepIndex;
+            const newInstructions = [...instructions];
+            const currentStep = newInstructions[sectionIndex].steps[stepIndex];
+            const textToInsert = `[INGREDIENT=${ingredient.id}]`;
+
+            // Get the active textarea element
+            const textarea = document.querySelector(
+                `[data-section-index="${sectionIndex}"][data-step-index="${stepIndex}"]`
+            ) as HTMLTextAreaElement;
+
+            if (textarea) {
+                const start = textarea.selectionStart || 0;
+                const end = textarea.selectionEnd || 0;
+
+                newInstructions[sectionIndex].steps[stepIndex] =
+                    currentStep.substring(0, start) +
+                    textToInsert +
+                    currentStep.substring(end);
+
+                setInstructions(newInstructions);
+
+                // Restore focus and move cursor after the inserted text
+                setTimeout(() => {
+                    textarea.focus();
+                    const newPosition = start + textToInsert.length;
+                    textarea.setSelectionRange(newPosition, newPosition);
+                }, 0);
+            }
+        }
+        setAnchorEl(null);
     };
 
     const headerContent = (
@@ -176,69 +220,130 @@ const EditRecipePage: FC = () => {
                                     Instructions
                                 </Typography>
                                 <Stack spacing={2}>
-                                    {recipe.instructions.map((section) => (
-                                        <Box key={section.section_title}>
-                                            <TextField
-                                                fullWidth
-                                                size="small"
-                                                label="Section Title"
-                                                defaultValue={
-                                                    section.section_title
-                                                }
-                                                sx={{ mb: 2 }}
-                                            />
-                                            <Stack spacing={2}>
-                                                {section.steps.map(
-                                                    (step, stepIndex) => (
-                                                        <Box
-                                                            key={stepIndex}
-                                                            sx={{
-                                                                display: 'flex',
-                                                                gap: 2,
-                                                                alignItems:
-                                                                    'flex-start',
-                                                            }}
-                                                        >
-                                                            <Typography
+                                    {instructions.map(
+                                        (section, sectionIndex) => (
+                                            <Box key={section.section_title}>
+                                                <TextField
+                                                    fullWidth
+                                                    size="small"
+                                                    label="Section Title"
+                                                    value={
+                                                        section.section_title
+                                                    }
+                                                    sx={{ mb: 2 }}
+                                                />
+                                                <Stack spacing={2}>
+                                                    {section.steps.map(
+                                                        (step, stepIndex) => (
+                                                            <Box
+                                                                key={stepIndex}
                                                                 sx={{
-                                                                    mt: 1,
-                                                                    minWidth: 24,
+                                                                    display:
+                                                                        'flex',
+                                                                    gap: 2,
+                                                                    alignItems:
+                                                                        'flex-start',
                                                                 }}
                                                             >
-                                                                {stepIndex + 1}.
-                                                            </Typography>
-                                                            <TextField
-                                                                fullWidth
-                                                                size="small"
-                                                                multiline
-                                                                defaultValue={
-                                                                    step
-                                                                }
-                                                            />
-                                                            <IconButton
-                                                                color="error"
-                                                                size="small"
-                                                                sx={{
-                                                                    mt: 1,
-                                                                }}
-                                                            >
-                                                                <DeleteIcon />
-                                                            </IconButton>
-                                                        </Box>
-                                                    )
-                                                )}
-                                                <Button
-                                                    startIcon={<AddIcon />}
-                                                    sx={{
-                                                        alignSelf: 'flex-start',
-                                                        ml: 4,
-                                                    }}
-                                                >
-                                                    Add Step
-                                                </Button>
-                                            </Stack>
-                                        </Box>
-                                    ))}
+                                                                <Typography
+                                                                    sx={{
+                                                                        mt: 1,
+                                                                        minWidth: 24,
+                                                                    }}
+                                                                >
+                                                                    {stepIndex +
+                                                                        1}
+                                                                    .
+                                                                </Typography>
+                                                                <Box
+                                                                    sx={{
+                                                                        display:
+                                                                            'flex',
+                                                                        gap: 1,
+                                                                        flex: 1,
+                                                                    }}
+                                                                >
+                                                                    <TextField
+                                                                        fullWidth
+                                                                        size="small"
+                                                                        multiline
+                                                                        value={
+                                                                            step
+                                                                        }
+                                                                        inputProps={{
+                                                                            'data-section-index':
+                                                                                sectionIndex,
+                                                                            'data-step-index':
+                                                                                stepIndex,
+                                                                        }}
+                                                                        onChange={(
+                                                                            e
+                                                                        ) => {
+                                                                            const newInstructions =
+                                                                                [
+                                                                                    ...instructions,
+                                                                                ];
+                                                                            newInstructions[
+                                                                                sectionIndex
+                                                                            ].steps[
+                                                                                stepIndex
+                                                                            ] =
+                                                                                e.target.value;
+                                                                            setInstructions(
+                                                                                newInstructions
+                                                                            );
+                                                                        }}
+                                                                        onFocus={() =>
+                                                                            setActiveStepIndex(
+                                                                                [
+                                                                                    sectionIndex,
+                                                                                    stepIndex,
+                                                                                ]
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        onClick={(
+                                                                            e
+                                                                        ) =>
+                                                                            setAnchorEl(
+                                                                                e.currentTarget
+                                                                            )
+                                                                        }
+                                                                        sx={{
+                                                                            mt: 1,
+                                                                        }}
+                                                                    >
+                                                                        <AddLinkIcon />
+                                                                    </IconButton>
+                                                                </Box>
+                                                                <IconButton
+                                                                    color="error"
+                                                                    size="small"
+                                                                    sx={{
+                                                                        mt: 1,
+                                                                    }}
+                                                                >
+                                                                    <DeleteIcon />
+                                                                </IconButton>
+                                                            </Box>
+                                                        )
+                                                    )}
+                                                    <Button
+                                                        startIcon={<AddIcon />}
+                                                        sx={{
+                                                            alignSelf:
+                                                                'flex-start',
+                                                            ml: 4,
+                                                        }}
+                                                    >
+                                                        Add Step
+                                                    </Button>
+                                                </Stack>
+                                            </Box>
+                                        )
+                                    )}
                                     <Button
                                         startIcon={<AddIcon />}
                                         sx={{ alignSelf: 'flex-start' }}
@@ -292,6 +397,24 @@ const EditRecipePage: FC = () => {
                     </Paper>
                 </Box>
             </Container>
+            <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={() => setAnchorEl(null)}
+                anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'left',
+                }}
+            >
+                {recipe.ingredients.map((ingredient) => (
+                    <MenuItem
+                        key={ingredient.id}
+                        onClick={() => handleIngredientClick(ingredient)}
+                    >
+                        {ingredient.name}
+                    </MenuItem>
+                ))}
+            </Menu>
         </AppLayout>
     );
 };
