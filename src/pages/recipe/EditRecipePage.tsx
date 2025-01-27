@@ -18,7 +18,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddIcon from '@mui/icons-material/Add';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
-import FontAwesomeIcon from '../../components/icons/FontAwesomeIcon';
+import CarrotPlusIcon from '../../components/icons/CarrotPlusIcon';
 import AppLayout from '../../components/layout/AppLayout';
 import { Recipe } from '../../types';
 
@@ -282,7 +282,7 @@ const EditRecipePage: FC = () => {
                                         >
                                             <TextField
                                                 size="small"
-                                                placeholder="Amount"
+                                                placeholder="amount"
                                                 defaultValue={
                                                     ingredient.quantity
                                                 }
@@ -293,7 +293,7 @@ const EditRecipePage: FC = () => {
                                                     step: 0.25,
                                                 }}
                                                 sx={{
-                                                    width: 130,
+                                                    width: 140,
                                                     '& .MuiInputBase-input': {
                                                         fontSize: '1rem',
                                                         textAlign: 'right',
@@ -307,6 +307,11 @@ const EditRecipePage: FC = () => {
                                                                 opacity: 1,
                                                             },
                                                     },
+                                                    '& .MuiInputBase-input::placeholder':
+                                                        {
+                                                            fontSize:
+                                                                '0.875rem',
+                                                        },
                                                 }}
                                             />
                                             <TextField
@@ -319,6 +324,11 @@ const EditRecipePage: FC = () => {
                                                     '& .MuiInputBase-input': {
                                                         fontSize: '1rem',
                                                     },
+                                                    '& .MuiInputBase-input::placeholder':
+                                                        {
+                                                            fontSize:
+                                                                '0.875rem',
+                                                        },
                                                 }}
                                             />
                                             <TextField
@@ -367,10 +377,7 @@ const EditRecipePage: FC = () => {
                                     ))}
                                     <Button
                                         startIcon={
-                                            <FontAwesomeIcon
-                                                icon="fa-solid fa-carrot"
-                                                sx={{ fontSize: 20 }}
-                                            />
+                                            <CarrotPlusIcon fontSize={20} />
                                         }
                                         onClick={handleAddIngredient}
                                         sx={{
@@ -607,11 +614,10 @@ const EditRecipePage: FC = () => {
                                                                                     },
                                                                             }}
                                                                         >
-                                                                            <FontAwesomeIcon
-                                                                                icon="fa-solid fa-carrot"
-                                                                                sx={{
-                                                                                    fontSize: 20,
-                                                                                }}
+                                                                            <CarrotPlusIcon
+                                                                                fontSize={
+                                                                                    20
+                                                                                }
                                                                             />
                                                                         </IconButton>
                                                                         <IconButton
