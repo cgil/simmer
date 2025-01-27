@@ -16,6 +16,7 @@ import AppLayout from '../../components/layout/AppLayout';
 import { MOCK_RECIPES } from '../../mocks/recipes';
 import IngredientsList from './components/IngredientsList';
 import CookingInstructions from './components/CookingInstructions';
+import RecipeGallery from './components/RecipeGallery';
 
 const RecipePage: FC = () => {
     const { id } = useParams();
@@ -152,8 +153,9 @@ const RecipePage: FC = () => {
                                         bgcolor: 'background.paper',
                                         p: 1.5,
                                         px: 2.5,
-                                        borderRadius: 2,
-                                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                        borderRadius: 0,
+                                        border: '1px solid',
+                                        borderColor: 'divider',
                                     }}
                                 >
                                     <RestaurantIcon color="primary" />
@@ -170,9 +172,9 @@ const RecipePage: FC = () => {
                                             bgcolor: 'background.paper',
                                             p: 1.5,
                                             px: 2.5,
-                                            borderRadius: 2,
-                                            boxShadow:
-                                                '0 2px 8px rgba(0,0,0,0.1)',
+                                            borderRadius: 0,
+                                            border: '1px solid',
+                                            borderColor: 'divider',
                                         }}
                                     >
                                         <AccessTimeIcon color="primary" />
@@ -186,23 +188,11 @@ const RecipePage: FC = () => {
                     </Grid>
 
                     {/* Image Section */}
-                    {recipe.images[0] && (
-                        <Grid item xs={12}>
-                            <Box
-                                component="img"
-                                src={recipe.images[0]}
-                                alt={recipe.title}
-                                sx={{
-                                    width: '100%',
-                                    maxHeight: 500,
-                                    objectFit: 'cover',
-                                    borderRadius: 4,
-                                    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-                                    mb: 4,
-                                }}
-                            />
-                        </Grid>
-                    )}
+                    <Grid item xs={12}>
+                        <Box sx={{ bgcolor: '#F8F7FA' }}>
+                            <RecipeGallery images={recipe.images} />
+                        </Box>
+                    </Grid>
 
                     {/* Ingredients Section */}
                     <Grid item xs={12} md={4}>
