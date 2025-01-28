@@ -341,7 +341,11 @@ const EditRecipePage: FC = () => {
                     </Box>
 
                     {/* Time Estimate and Tags Section */}
-                    <Grid container spacing={{ xs: 4, md: 6 }}>
+                    <Grid
+                        container
+                        spacing={{ xs: 4, md: 6 }}
+                        sx={{ mb: { xs: 4, md: 6 } }}
+                    >
                         <Grid item xs={12} md={5}>
                             <TimeEstimateForm
                                 timeEstimate={timeEstimate}
