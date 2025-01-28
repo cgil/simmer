@@ -20,7 +20,9 @@ import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import FontAwesomeIcon from '../../components/icons/FontAwesomeIcon';
 import CarrotPlusIcon from '../../components/icons/CarrotPlusIcon';
 import AppLayout from '../../components/layout/AppLayout';
-import { Recipe } from '../../types';
+import { Recipe, TimeEstimate } from '../../types';
+import TimeEstimateForm from './components/TimeEstimateForm';
+import TagInput from './components/TagInput';
 
 const EditRecipePage: FC = () => {
     const location = useLocation();
@@ -35,6 +37,12 @@ const EditRecipePage: FC = () => {
     );
     const [ingredients, setIngredients] = useState(recipe?.ingredients || []);
     const [notes, setNotes] = useState(recipe?.notes || []);
+    const [timeEstimate, setTimeEstimate] = useState<TimeEstimate | undefined>(
+        recipe?.time_estimate
+    );
+    const [tags, setTags] = useState<string[]>(recipe?.tags || []);
+    const [title, setTitle] = useState(recipe?.title || '');
+    const [description, setDescription] = useState(recipe?.description || '');
 
     if (!recipe) {
         navigate('/');
@@ -42,6 +50,16 @@ const EditRecipePage: FC = () => {
     }
 
     const handleSave = () => {
+        const updatedRecipe: Recipe = {
+            ...recipe,
+            title,
+            description,
+            ingredients,
+            instructions,
+            notes,
+            time_estimate: timeEstimate,
+            tags,
+        };
         // TODO: Implement save functionality
         navigate('/');
     };
@@ -197,7 +215,6 @@ const EditRecipePage: FC = () => {
             <Container
                 maxWidth={false}
                 sx={{
-                    maxWidth: 1400,
                     pb: { xs: 4, sm: 6, md: 8 },
                     bgcolor: 'paper.light',
                     minHeight: '100vh',
@@ -212,7 +229,6 @@ const EditRecipePage: FC = () => {
                         boxShadow: 'inset 0 0 50px rgba(62, 28, 0, 0.08)',
                         pointerEvents: 'none',
                     },
-                    // Paper texture overlay
                     '&::after': {
                         content: '""',
                         position: 'absolute',
@@ -282,7 +298,8 @@ const EditRecipePage: FC = () => {
                             <TextField
                                 fullWidth
                                 placeholder="Give your recipe a name..."
-                                defaultValue={recipe.title}
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
                                 variant="standard"
                                 sx={{
                                     mb: 2,
@@ -303,7 +320,8 @@ const EditRecipePage: FC = () => {
                             <TextField
                                 fullWidth
                                 placeholder="Add a description..."
-                                defaultValue={recipe.description}
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
                                 multiline
                                 rows={2}
                                 variant="standard"
@@ -321,6 +339,23 @@ const EditRecipePage: FC = () => {
                             />
                         </Box>
                     </Box>
+
+                    {/* Time Estimate and Tags Section */}
+                    <Grid
+                        container
+                        spacing={{ xs: 4, md: 6 }}
+                        sx={{ mb: { xs: 4, md: 6 } }}
+                    >
+                        <Grid item xs={12} md={5}>
+                            <TimeEstimateForm
+                                timeEstimate={timeEstimate}
+                                onChange={setTimeEstimate}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={7}>
+                            <TagInput tags={tags} onChange={setTags} />
+                        </Grid>
+                    </Grid>
 
                     <Grid container spacing={{ xs: 4, md: 6 }}>
                         {/* Ingredients Section */}
@@ -452,7 +487,6 @@ const EditRecipePage: FC = () => {
                                             />
                                             <IconButton
                                                 className="delete-button"
-                                                color="error"
                                                 size="small"
                                                 onClick={() =>
                                                     handleDeleteIngredient(
@@ -475,22 +509,8 @@ const EditRecipePage: FC = () => {
                                                             opacity: 1,
                                                         },
                                                     },
-                                                    '&::before': {
-                                                        content: '""',
-                                                        position: 'absolute',
-                                                        top: 0,
-                                                        left: 0,
-                                                        right: 0,
-                                                        bottom: 0,
-                                                        boxShadow:
-                                                            '0 4px 8px rgba(0,0,0,0.1)',
-                                                        opacity: 0,
-                                                        transition:
-                                                            'opacity 0.2s ease-in-out',
-                                                        borderRadius: '50%',
-                                                    },
                                                     '& svg': {
-                                                        color: 'text.disabled',
+                                                        color: 'error.main',
                                                         transition:
                                                             'color 0.2s',
                                                     },
@@ -619,7 +639,6 @@ const EditRecipePage: FC = () => {
                                                     />
                                                     <IconButton
                                                         className="delete-section"
-                                                        color="error"
                                                         size="small"
                                                         onClick={() =>
                                                             handleDeleteSection(
@@ -645,24 +664,8 @@ const EditRecipePage: FC = () => {
                                                                     opacity: 1,
                                                                 },
                                                             },
-                                                            '&::before': {
-                                                                content: '""',
-                                                                position:
-                                                                    'absolute',
-                                                                top: 0,
-                                                                left: 0,
-                                                                right: 0,
-                                                                bottom: 0,
-                                                                boxShadow:
-                                                                    '0 4px 8px rgba(0,0,0,0.1)',
-                                                                opacity: 0,
-                                                                transition:
-                                                                    'opacity 0.2s ease-in-out',
-                                                                borderRadius:
-                                                                    '50%',
-                                                            },
                                                             '& svg': {
-                                                                color: 'text.disabled',
+                                                                color: 'error.main',
                                                                 transition:
                                                                     'color 0.2s',
                                                             },
@@ -811,7 +814,6 @@ const EditRecipePage: FC = () => {
                                                                             />
                                                                         </IconButton>
                                                                         <IconButton
-                                                                            color="error"
                                                                             size="small"
                                                                             onClick={() =>
                                                                                 handleDeleteStep(
@@ -832,7 +834,7 @@ const EditRecipePage: FC = () => {
                                                                                     },
                                                                                 '& svg':
                                                                                     {
-                                                                                        color: 'text.disabled',
+                                                                                        color: 'error.main',
                                                                                         transition:
                                                                                             'color 0.2s',
                                                                                     },
@@ -1016,7 +1018,6 @@ const EditRecipePage: FC = () => {
                                             />
                                             <IconButton
                                                 className="delete-button"
-                                                color="error"
                                                 size="small"
                                                 onClick={() =>
                                                     handleDeleteNote(index)
@@ -1036,7 +1037,7 @@ const EditRecipePage: FC = () => {
                                                         bgcolor: 'paper.dark',
                                                     },
                                                     '& svg': {
-                                                        color: 'text.disabled',
+                                                        color: 'error.main',
                                                         transition:
                                                             'color 0.2s',
                                                     },
@@ -1087,35 +1088,10 @@ const EditRecipePage: FC = () => {
                 anchorEl={anchorEl}
                 open={Boolean(anchorEl)}
                 onClose={() => setAnchorEl(null)}
-                anchorOrigin={{
-                    vertical: 'bottom',
-                    horizontal: 'left',
-                }}
                 PaperProps={{
                     sx: {
                         maxHeight: 300,
-                        width: 250,
-                        mt: 1,
-                        boxShadow: '0 4px 12px rgba(62, 28, 0, 0.15)',
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        bgcolor: 'paper.light',
-                        backgroundImage: `
-                            repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(62, 28, 0, 0.05) 31px, rgba(62, 28, 0, 0.05) 32px)
-                        `,
-                        '& .MuiMenuItem-root': {
-                            fontSize: '1rem',
-                            py: 1.5,
-                            borderBottom: '1px solid',
-                            borderColor: 'divider',
-                            transition: 'all 0.2s',
-                            '&:hover': {
-                                bgcolor: 'paper.main',
-                                transform: 'translateX(4px)',
-                                boxShadow: '0 2px 4px rgba(62, 28, 0, 0.05)',
-                            },
-                        },
+                        width: 200,
                     },
                 }}
             >

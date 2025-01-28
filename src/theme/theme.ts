@@ -14,6 +14,12 @@ declare module '@mui/material/styles' {
             dark: string;
             contrastText: string;
         };
+        error: {
+            main: string;
+            light: string;
+            dark: string;
+            contrastText: string;
+        };
     }
     interface PaletteOptions {
         accent?: {
@@ -56,6 +62,12 @@ const theme = createTheme({
             light: '#ffffff',
             dark: '#f7f4f1',
             contrastText: '#2C3E50',
+        },
+        error: {
+            main: '#FBE9E7', // Soft paper red
+            light: '#FFF3F2',
+            dark: '#F4D5D3',
+            contrastText: '#943734',
         },
         background: {
             default: '#FFFCF9',
