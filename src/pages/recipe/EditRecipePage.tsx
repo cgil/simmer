@@ -341,11 +341,7 @@ const EditRecipePage: FC = () => {
                     </Box>
 
                     {/* Time Estimate and Tags Section */}
-                    <Grid
-                        container
-                        spacing={{ xs: 4, md: 6 }}
-                        sx={{ mb: { xs: 4, md: 6 } }}
-                    >
+                    <Grid container spacing={{ xs: 4, md: 6 }}>
                         <Grid item xs={12} md={5}>
                             <TimeEstimateForm
                                 timeEstimate={timeEstimate}
@@ -545,7 +541,7 @@ const EditRecipePage: FC = () => {
                                             transition: 'all 0.15s ease-in-out',
                                             '&:hover': {
                                                 bgcolor: 'secondary.light',
-                                                borderColor: 'primary.light',
+                                                borderColor: '#3d526a45',
                                             },
                                         }}
                                     >
@@ -892,7 +888,7 @@ const EditRecipePage: FC = () => {
                                                                 bgcolor:
                                                                     'paper.main',
                                                                 borderColor:
-                                                                    'primary.light',
+                                                                    '#3d526a45',
                                                             },
                                                         }}
                                                     >
@@ -929,8 +925,7 @@ const EditRecipePage: FC = () => {
                                                     'all 0.15s ease-in-out',
                                                 '&:hover': {
                                                     bgcolor: 'paper.main',
-                                                    borderColor:
-                                                        'primary.light',
+                                                    borderColor: '#3d526a45',
                                                 },
                                             }}
                                         >
@@ -1072,7 +1067,7 @@ const EditRecipePage: FC = () => {
                                             transition: 'all 0.15s ease-in-out',
                                             '&:hover': {
                                                 bgcolor: 'paper.main',
-                                                borderColor: 'primary.light',
+                                                borderColor: '#3d526a45',
                                             },
                                         }}
                                     >
