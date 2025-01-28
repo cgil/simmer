@@ -23,6 +23,10 @@ import AppLayout from '../../components/layout/AppLayout';
 import { Recipe, TimeEstimate } from '../../types';
 import TimeEstimateForm from './components/TimeEstimateForm';
 import TagInput from './components/TagInput';
+import ImageIcon from '@mui/icons-material/Image';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
 const EditRecipePage: FC = () => {
     const location = useLocation();
@@ -43,6 +47,7 @@ const EditRecipePage: FC = () => {
     const [tags, setTags] = useState<string[]>(recipe?.tags || []);
     const [title, setTitle] = useState(recipe?.title || '');
     const [description, setDescription] = useState(recipe?.description || '');
+    const [images, setImages] = useState<string[]>(recipe?.images || []);
 
     if (!recipe) {
         navigate('/');
@@ -59,6 +64,7 @@ const EditRecipePage: FC = () => {
             notes,
             time_estimate: timeEstimate,
             tags,
+            images,
         };
         // TODO: Implement save functionality
         navigate('/');
@@ -160,6 +166,14 @@ const EditRecipePage: FC = () => {
         } else {
             setInstructions(newInstructions);
         }
+    };
+
+    const handleMoveImage = (fromIndex: number, toIndex: number) => {
+        if (toIndex < 0 || toIndex >= images.length) return;
+        const newImages = [...images];
+        const [movedImage] = newImages.splice(fromIndex, 1);
+        newImages.splice(toIndex, 0, movedImage);
+        setImages(newImages);
     };
 
     const headerContent = (
@@ -337,6 +351,229 @@ const EditRecipePage: FC = () => {
                                     },
                                 }}
                             />
+                        </Box>
+                    </Box>
+
+                    {/* Images Section */}
+                    <Box sx={{ mb: { xs: 3, sm: 4 } }}>
+                        <Box
+                            sx={{
+                                position: 'relative',
+                                bgcolor: 'background.paper',
+                                p: { xs: 2, sm: 3 },
+                                borderRadius: 1,
+                                boxShadow: `
+                                    0 1px 2px rgba(0,0,0,0.05),
+                                    0 3px 6px rgba(0,0,0,0.02),
+                                    0 1px 8px rgba(0,0,0,0.02)
+                                `,
+                                '&::before': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: '100%',
+                                    background: 'rgba(255,255,255,0.6)',
+                                    backdropFilter: 'blur(4px)',
+                                    borderRadius: 1,
+                                    zIndex: 0,
+                                },
+                                '& > *': {
+                                    position: 'relative',
+                                    zIndex: 1,
+                                },
+                            }}
+                        >
+                            <Typography
+                                variant="h6"
+                                gutterBottom
+                                sx={{
+                                    fontWeight: 600,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    color: 'text.primary',
+                                    mb: 2,
+                                    fontFamily: "'Kalam', cursive",
+                                }}
+                            >
+                                <ImageIcon />
+                                Recipe Images
+                            </Typography>
+
+                            <Box
+                                sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: {
+                                        xs: '1fr',
+                                        sm: 'repeat(3, 1fr)',
+                                        md: 'repeat(4, 1fr)',
+                                    },
+                                    gap: 2,
+                                }}
+                            >
+                                {images.map((imageUrl, index) => (
+                                    <Box
+                                        key={index}
+                                        sx={{
+                                            position: 'relative',
+                                            aspectRatio: '4/3',
+                                            borderRadius: 1,
+                                            overflow: 'hidden',
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                            '&:hover .image-actions': {
+                                                opacity: 1,
+                                            },
+                                        }}
+                                    >
+                                        <Box
+                                            component="img"
+                                            src={imageUrl}
+                                            alt={`Recipe image ${index + 1}`}
+                                            sx={{
+                                                width: '100%',
+                                                height: '100%',
+                                                objectFit: 'cover',
+                                            }}
+                                        />
+                                        <Box
+                                            className="image-actions"
+                                            sx={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                right: 0,
+                                                bottom: 0,
+                                                bgcolor: 'rgba(0, 0, 0, 0.3)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: 1,
+                                                opacity: 0,
+                                                transition:
+                                                    'opacity 0.2s ease-in-out',
+                                            }}
+                                        >
+                                            <IconButton
+                                                onClick={() =>
+                                                    handleMoveImage(
+                                                        index,
+                                                        index - 1
+                                                    )
+                                                }
+                                                disabled={index === 0}
+                                                size="small"
+                                                sx={{
+                                                    color: 'white',
+                                                    bgcolor:
+                                                        'rgba(0, 0, 0, 0.5)',
+                                                    '&:hover': {
+                                                        bgcolor:
+                                                            'rgba(0, 0, 0, 0.7)',
+                                                    },
+                                                    '&.Mui-disabled': {
+                                                        opacity: 0.3,
+                                                    },
+                                                }}
+                                            >
+                                                <ArrowBackIcon fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                                onClick={() => {
+                                                    const newImages = [
+                                                        ...images,
+                                                    ];
+                                                    newImages.splice(index, 1);
+                                                    setImages(newImages);
+                                                }}
+                                                size="small"
+                                                sx={{
+                                                    color: 'white',
+                                                    bgcolor:
+                                                        'rgba(0, 0, 0, 0.5)',
+                                                    '&:hover': {
+                                                        bgcolor:
+                                                            'rgba(0, 0, 0, 0.7)',
+                                                    },
+                                                }}
+                                            >
+                                                <DeleteOutlineIcon fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                                onClick={() =>
+                                                    handleMoveImage(
+                                                        index,
+                                                        index + 1
+                                                    )
+                                                }
+                                                disabled={
+                                                    index === images.length - 1
+                                                }
+                                                size="small"
+                                                sx={{
+                                                    color: 'white',
+                                                    bgcolor:
+                                                        'rgba(0, 0, 0, 0.5)',
+                                                    '&:hover': {
+                                                        bgcolor:
+                                                            'rgba(0, 0, 0, 0.7)',
+                                                    },
+                                                    '&.Mui-disabled': {
+                                                        opacity: 0.3,
+                                                    },
+                                                }}
+                                            >
+                                                <ArrowForwardIcon fontSize="small" />
+                                            </IconButton>
+                                        </Box>
+                                    </Box>
+                                ))}
+                                <Box
+                                    sx={{
+                                        aspectRatio: '4/3',
+                                        border: '2px dashed',
+                                        borderColor: 'divider',
+                                        borderRadius: 1,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease-in-out',
+                                        '&:hover': {
+                                            borderColor: 'primary.main',
+                                            bgcolor: 'rgba(0, 0, 0, 0.02)',
+                                        },
+                                    }}
+                                    onClick={() => {
+                                        // TODO: Implement image upload functionality
+                                    }}
+                                >
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            gap: 1,
+                                            color: 'text.secondary',
+                                        }}
+                                    >
+                                        <AddPhotoAlternateIcon
+                                            sx={{ fontSize: 24 }}
+                                        />
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                fontFamily:
+                                                    "'Inter', sans-serif",
+                                            }}
+                                        >
+                                            Add Image
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Box>
                         </Box>
                     </Box>
 
