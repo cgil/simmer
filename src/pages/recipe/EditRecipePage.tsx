@@ -1,4 +1,4 @@
-import { FC, useState } from 'react';
+import { FC, useState, useRef, DragEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
     Box,
@@ -27,6 +27,7 @@ import ImageIcon from '@mui/icons-material/Image';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import NotebookButton from '../../components/common/NotebookButton';
 
 const EditRecipePage: FC = () => {
     const location = useLocation();
@@ -48,6 +49,8 @@ const EditRecipePage: FC = () => {
     const [title, setTitle] = useState(recipe?.title || '');
     const [description, setDescription] = useState(recipe?.description || '');
     const [images, setImages] = useState<string[]>(recipe?.images || []);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isDragging, setIsDragging] = useState(false);
 
     if (!recipe) {
         navigate('/');
@@ -174,6 +177,42 @@ const EditRecipePage: FC = () => {
         const [movedImage] = newImages.splice(fromIndex, 1);
         newImages.splice(toIndex, 0, movedImage);
         setImages(newImages);
+    };
+
+    const handleImageUpload = (files: FileList | null) => {
+        if (!files) return;
+
+        Array.from(files).forEach((file) => {
+            if (!file.type.startsWith('image/')) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const result = e.target?.result;
+                if (typeof result === 'string') {
+                    setImages((prev) => [...prev, result]);
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        handleImageUpload(e.dataTransfer.files);
     };
 
     const headerContent = (
@@ -411,8 +450,38 @@ const EditRecipePage: FC = () => {
                                         md: 'repeat(4, 1fr)',
                                     },
                                     gap: 2,
+                                    position: 'relative',
                                 }}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
                             >
+                                {isDragging && (
+                                    <Box
+                                        sx={{
+                                            position: 'absolute',
+                                            inset: 0,
+                                            bgcolor: 'rgba(0, 0, 0, 0.05)',
+                                            border: '2px dashed',
+                                            borderColor: 'primary.main',
+                                            borderRadius: 1,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            zIndex: 2,
+                                        }}
+                                    >
+                                        <Typography
+                                            variant="h6"
+                                            sx={{
+                                                color: 'primary.contrastText',
+                                                fontFamily: "'Kalam', cursive",
+                                            }}
+                                        >
+                                            Drop images here
+                                        </Typography>
+                                    </Box>
+                                )}
                                 {images.map((imageUrl, index) => (
                                     <Box
                                         key={index}
@@ -546,10 +615,20 @@ const EditRecipePage: FC = () => {
                                             bgcolor: 'rgba(0, 0, 0, 0.02)',
                                         },
                                     }}
-                                    onClick={() => {
-                                        // TODO: Implement image upload functionality
-                                    }}
+                                    onClick={() =>
+                                        fileInputRef.current?.click()
+                                    }
                                 >
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        onChange={(e) =>
+                                            handleImageUpload(e.target.files)
+                                        }
+                                        style={{ display: 'none' }}
+                                    />
                                     <Box
                                         sx={{
                                             display: 'flex',
@@ -567,9 +646,12 @@ const EditRecipePage: FC = () => {
                                             sx={{
                                                 fontFamily:
                                                     "'Inter', sans-serif",
+                                                textAlign: 'center',
                                             }}
                                         >
-                                            Add Image
+                                            Click to add or
+                                            <br />
+                                            drag images here
                                         </Typography>
                                     </Box>
                                 </Box>
@@ -760,34 +842,15 @@ const EditRecipePage: FC = () => {
                                             </IconButton>
                                         </Box>
                                     ))}
-                                    <Button
+                                    <NotebookButton
                                         startIcon={
                                             <CarrotPlusIcon fontSize={20} />
                                         }
                                         onClick={handleAddIngredient}
-                                        sx={{
-                                            alignSelf: 'flex-start',
-                                            color: 'text.primary',
-                                            borderRadius: 1,
-                                            py: 1.25,
-                                            px: 2.5,
-                                            minHeight: 40,
-                                            bgcolor: 'secondary.main',
-                                            border: '1px solid',
-                                            borderColor: 'divider',
-                                            borderBottom: '2px solid',
-                                            borderBottomColor: 'divider',
-                                            fontFamily: "'Kalam', cursive",
-                                            fontSize: '1rem',
-                                            transition: 'all 0.15s ease-in-out',
-                                            '&:hover': {
-                                                bgcolor: 'secondary.light',
-                                                borderColor: '#3d526a45',
-                                            },
-                                        }}
+                                        buttonStyle="primary"
                                     >
                                         Add Ingredient
-                                    </Button>
+                                    </NotebookButton>
                                 </Stack>
                             </Box>
                         </Grid>
@@ -1089,7 +1152,7 @@ const EditRecipePage: FC = () => {
                                                             </Box>
                                                         )
                                                     )}
-                                                    <Button
+                                                    <NotebookButton
                                                         startIcon={
                                                             <AddIcon
                                                                 sx={{
@@ -1102,76 +1165,28 @@ const EditRecipePage: FC = () => {
                                                                 sectionIndex
                                                             )
                                                         }
-                                                        sx={{
-                                                            alignSelf:
-                                                                'flex-start',
-                                                            ml: 4,
-                                                            color: 'text.primary',
-                                                            borderRadius: 1,
-                                                            py: 1.25,
-                                                            px: 2.5,
-                                                            minHeight: 40,
-                                                            bgcolor:
-                                                                'paper.main',
-                                                            border: '1px solid',
-                                                            borderColor:
-                                                                'divider',
-                                                            borderBottom:
-                                                                '2px solid',
-                                                            borderBottomColor:
-                                                                'divider',
-                                                            fontFamily:
-                                                                "'Kalam', cursive",
-                                                            fontSize: '1rem',
-                                                            transition:
-                                                                'all 0.15s ease-in-out',
-                                                            '&:hover': {
-                                                                bgcolor:
-                                                                    'paper.main',
-                                                                borderColor:
-                                                                    '#3d526a45',
-                                                            },
-                                                        }}
+                                                        buttonStyle="primary"
+                                                        sx={{ ml: 4 }}
                                                     >
                                                         Add Step
-                                                    </Button>
+                                                    </NotebookButton>
                                                 </Stack>
                                             </Box>
                                         )
                                     )}
                                     <Box sx={{ mt: 2 }}>
                                         <Divider sx={{ mb: 3 }} />
-                                        <Button
+                                        <NotebookButton
                                             startIcon={
                                                 <PlaylistAddIcon
                                                     sx={{ fontSize: 22 }}
                                                 />
                                             }
                                             onClick={handleAddSection}
-                                            sx={{
-                                                alignSelf: 'flex-start',
-                                                color: 'text.primary',
-                                                borderRadius: 1,
-                                                py: 1.25,
-                                                px: 2.5,
-                                                minHeight: 40,
-                                                bgcolor: 'paper.main',
-                                                border: '1px solid',
-                                                borderColor: 'divider',
-                                                borderBottom: '2px solid',
-                                                borderBottomColor: 'divider',
-                                                fontFamily: "'Kalam', cursive",
-                                                fontSize: '1rem',
-                                                transition:
-                                                    'all 0.15s ease-in-out',
-                                                '&:hover': {
-                                                    bgcolor: 'paper.main',
-                                                    borderColor: '#3d526a45',
-                                                },
-                                            }}
+                                            buttonStyle="primary"
                                         >
                                             Add New Section
-                                        </Button>
+                                        </NotebookButton>
                                     </Box>
                                 </Stack>
                             </Box>
@@ -1286,34 +1301,15 @@ const EditRecipePage: FC = () => {
                                             </IconButton>
                                         </Box>
                                     ))}
-                                    <Button
+                                    <NotebookButton
                                         startIcon={
                                             <AddIcon sx={{ fontSize: 20 }} />
                                         }
                                         onClick={handleAddNote}
-                                        sx={{
-                                            alignSelf: 'flex-start',
-                                            color: 'text.primary',
-                                            borderRadius: 1,
-                                            py: 1.25,
-                                            px: 2.5,
-                                            minHeight: 40,
-                                            bgcolor: 'paper.main',
-                                            border: '1px solid',
-                                            borderColor: 'divider',
-                                            borderBottom: '2px solid',
-                                            borderBottomColor: 'divider',
-                                            fontFamily: "'Kalam', cursive",
-                                            fontSize: '1rem',
-                                            transition: 'all 0.15s ease-in-out',
-                                            '&:hover': {
-                                                bgcolor: 'paper.main',
-                                                borderColor: '#3d526a45',
-                                            },
-                                        }}
+                                        buttonStyle="primary"
                                     >
                                         Add Note
-                                    </Button>
+                                    </NotebookButton>
                                 </Stack>
                             </Box>
                         </Grid>
