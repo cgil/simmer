@@ -1,151 +1,328 @@
-# Simmer – Technical Architecture Document (TypeScript)
+# Simmer Architecture Document
 
-This document is a technical and architectural summary for the application. It should be used to inform decisions although it is not always completely up to date. It should be used as a reference and starting point when working on new problems to ensure we adhere to creating a consistent application.
+This document outlines the technical architecture and implementation details of the Simmer recipe management application.
 
----
+## 1. Technology Stack
 
-## 1. Overview
+### 1.1. Frontend
 
--   **Front End**:
-    -   React + TypeScript, bundled with Vite
-    -   Material UI for layout and components
-    -   React Router for navigation
--   **Back End / Database**:
-    -   [Supabase](https://supabase.com/) with a PostgreSQL database
-    -   Supabase Auth for user authentication (single account)
-    -   No RPC usage; we'll use the Supabase client directly for queries
--   **AI Extraction**:
-    -   [OpenAI API](https://openai.com/) to parse recipe data from HTML
+-   **Framework**: React with TypeScript
+-   **Build Tool**: Vite
+-   **UI Framework**: Material-UI (MUI)
+-   **State Management**: React Context
+-   **Routing**: React Router
+-   **Styling**: MUI styled-components with custom theme
 
-### Key Principles
+### 1.2. Backend & Data
 
--   **Simplicity**: Avoid unnecessary complexity.
--   **Single Page Application**: All major functionality handled by React + Supabase on the client side.
--   **Secure Calls to OpenAI**: Typically done via a serverless function or Supabase Edge Function to keep the API key hidden.
+-   **Database**: Supabase (PostgreSQL)
+-   **Storage**: Supabase Storage for images
+-   **AI Integration**: OpenAI API for recipe extraction
+-   **Authentication**: Supabase Auth
 
 ---
 
-## 2. High-Level Architecture
+## 2. Design System Implementation
 
-1. **User** interacts with the React SPA (pages: login, catalog, recipe detail, etc.).
-2. **React** fetches and stores data in Supabase (CRUD operations).
-3. **AI Extraction** is triggered from the front end, but the actual call to OpenAI can be routed through a serverless/edge function to hide the API key.
-4. **Supabase** manages user auth, the `recipes` table, and optional file storage.
+### 2.1. Theme Configuration
+
+```typescript
+// Theme constants
+const COLORS = {
+    primary: {
+        main: '#2C3E50', // Ink-like navy
+        light: '#34495E',
+        dark: '#1A252F',
+    },
+    secondary: {
+        main: '#F1C40F', // Warm yellow
+        light: '#F4D03F',
+        dark: '#D4AC0D',
+    },
+    paper: {
+        light: '#F8F7FA',
+        main: '#FFFFFF',
+    },
+};
+
+const FONTS = {
+    heading: 'Kalam',
+    body: 'Inter',
+};
+
+const TRANSITIONS = {
+    duration: '0.2s',
+    timing: 'ease',
+};
+```
+
+### 2.2. Component Base Styles
+
+```typescript
+// Paper-like container base styles
+const paperStyles = {
+    backgroundColor: 'paper.light',
+    borderRadius: 2,
+    padding: 3,
+    position: 'relative',
+    '&::before': {
+        content: '""',
+        position: 'absolute',
+        inset: 0,
+        backdropFilter: 'blur(8px)',
+        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+        zIndex: 0,
+    },
+};
+
+// Typography base styles
+const typographyStyles = {
+    h1: {
+        fontFamily: FONTS.heading,
+        color: 'primary.main',
+    },
+    body1: {
+        fontFamily: FONTS.body,
+        color: 'text.primary',
+    },
+};
+```
 
 ---
 
-## 3. Front-End Architecture
+## 3. Component Architecture
 
-### 3.1. Tech Stack
-
--   **React (TypeScript)**: Ensures type safety.
--   **Vite**: Fast dev/build tooling.
--   **Material UI**: Pre-built UI components and theming.
--   **React Router**: Defines app routes.
-
-### 3.2. Directory Structure (Proposed)
+### 3.1. Layout Components
 
 ```
 src/
-├── components/       # Reusable UI components
-├── pages/           # Route-level components
-├── services/        # API and data services
-├── hooks/           # Custom React hooks
-├── utils/           # Helper functions
-├── types/           # TypeScript interfaces
-└── theme/           # Material UI theme config
+  components/
+    layout/
+      AppLayout.tsx       # Main app wrapper with header
+      PageContainer.tsx   # Standard page container
+      RecipeLayout.tsx    # Recipe page specific layout
 ```
 
-### 3.3. App Routes
+### 3.2. Feature Components
 
-| Path               | Component         | Description                                             |
-| ------------------ | ----------------- | ------------------------------------------------------- |
-| `/login`           | `<Login />`       | Handles Supabase Auth sign-in.                          |
-| `/catalog`         | `<Catalog />`     | Displays list/grid of saved recipes, includes search.   |
-| `/add`             | `<AddRecipe/>`    | Form to paste URL, trigger AI extraction, preview data. |
-| `/recipe/:id`      | `<RecipeDetail/>` | Detailed view of recipe with serving-size scaling.      |
-| `/recipe/:id/cook` | `<CookingMode/>`  | Step-by-step instructions in large, readable format.    |
-| `*` (catch-all)    | `<NotFound/>`     | Renders a 404-style page if no match is found.          |
+```
+src/
+  features/
+    recipe/
+      components/
+        RecipeCard.tsx
+        RecipeGallery.tsx
+        CookingInstructions.tsx
+        RecipeNotes.tsx
+      hooks/
+        useRecipe.ts
+        useRecipeForm.ts
+    import/
+      components/
+        ImportForm.tsx
+      hooks/
+        useRecipeImport.ts
+```
+
+### 3.3. Shared Components
+
+```
+src/
+  components/
+    common/
+      Button.tsx
+      TextField.tsx
+      Paper.tsx
+      Typography.tsx
+```
 
 ---
 
-## 4. Database Schema (Supabase)
+## 4. Data Models
 
-**Table: `recipes`**
+### 4.1. Recipe Schema
 
 ```sql
-CREATE TABLE recipes (
-    id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id     uuid NOT NULL,   -- references auth.users.id
-    title       text NOT NULL,
-    image_url   text,
-    ingredients jsonb NOT NULL,  -- e.g. [{ "item": "Flour", "quantity": 2, "unit": "cups"}, ...]
-    instructions jsonb NOT NULL, -- e.g. ["Step 1: ...", "Step 2: ...", ...]
-    tags        text[] DEFAULT '{}',
-    created_at  timestamptz DEFAULT now()
+create table recipes (
+  id uuid primary key default uuid_generate_v4(),
+  title text not null,
+  description text,
+  servings integer,
+  prep_time text,
+  cook_time text,
+  total_time text,
+  created_at timestamp with time zone default now(),
+  updated_at timestamp with time zone default now()
+);
+
+create table recipe_images (
+  id uuid primary key default uuid_generate_v4(),
+  recipe_id uuid references recipes(id) on delete cascade,
+  url text not null,
+  position integer default 0,
+  created_at timestamp with time zone default now()
+);
+
+create table recipe_ingredients (
+  id uuid primary key default uuid_generate_v4(),
+  recipe_id uuid references recipes(id) on delete cascade,
+  name text not null,
+  quantity decimal,
+  unit text,
+  notes text,
+  position integer default 0
+);
+
+create table recipe_instructions (
+  id uuid primary key default uuid_generate_v4(),
+  recipe_id uuid references recipes(id) on delete cascade,
+  section_title text,
+  step_number integer not null,
+  content text not null
+);
+
+create table recipe_notes (
+  id uuid primary key default uuid_generate_v4(),
+  recipe_id uuid references recipes(id) on delete cascade,
+  content text not null,
+  position integer default 0
 );
 ```
 
--   ingredients and instructions are stored as JSON for flexibility (TypeScript interfaces manage structure on the client).
--   tags is a text array for quick filtering.
--   For a single-user scenario, `user_id` can be constant or your shared login's ID.
+---
+
+## 5. API Integration
+
+### 5.1. OpenAI Recipe Extraction
+
+```typescript
+interface ExtractedRecipe {
+    title: string;
+    description?: string;
+    servings?: number;
+    prepTime?: string;
+    cookTime?: string;
+    totalTime?: string;
+    ingredients: {
+        name: string;
+        quantity?: number;
+        unit?: string;
+        notes?: string;
+    }[];
+    instructions: {
+        sectionTitle?: string;
+        steps: string[];
+    }[];
+    notes?: string[];
+}
+
+async function extractRecipe(url: string): Promise<ExtractedRecipe> {
+    // Implementation details for OpenAI API call
+}
+```
+
+### 5.2. Supabase Integration
+
+```typescript
+// Database types
+interface Recipe {
+    id: string;
+    title: string;
+    description?: string;
+    servings?: number;
+    prep_time?: string;
+    cook_time?: string;
+    total_time?: string;
+    created_at: string;
+    updated_at: string;
+    images?: RecipeImage[];
+    ingredients?: RecipeIngredient[];
+    instructions?: RecipeInstruction[];
+    notes?: RecipeNote[];
+}
+
+// Database queries
+const recipeQueries = {
+    getRecipe: (id: string) =>
+        supabase
+            .from('recipes')
+            .select(
+                `
+      *,
+      images (*),
+      ingredients (*),
+      instructions (*),
+      notes (*)
+    `
+            )
+            .eq('id', id)
+            .single(),
+
+    // Additional query implementations
+};
+```
 
 ---
 
-## 5. Services & Data Flows
+## 6. Performance Considerations
 
-### 5.1. Adding a New Recipe
+### 6.1. Image Optimization
 
-1. User pastes a recipe URL into /add.
-2. Front End calls a serverless function (or Supabase Edge Function) to:
-3. Fetch the webpage HTML.
-4. Call OpenAI with a prompt to parse out title, ingredients, instructions, etc.
-5. OpenAI returns structured JSON.
-6. Front End shows a preview form. User can edit fields before saving.
-7. Front End sends the final data to Supabase via recipeService.createRecipe().
+-   Automatic image resizing on upload
+-   Lazy loading for recipe images
+-   Responsive image sizes
+-   WebP format support
 
-### 5.2. Viewing & Searching Recipes
+### 6.2. State Management
 
-1. `/catalog`: The front end uses recipeService.getRecipes() to fetch all recipes or to filter by search term.
-2. Recipes appear as cards with title, thumbnail (image_url), and tags.
-3. Search can be implemented client-side (basic filtering) or via a query to Supabase with a like/ilike condition.
+-   Context-based state management for UI
+-   Efficient data caching
+-   Optimistic updates for better UX
 
-### 5.3. Cooking Mode
+### 6.3. Loading States
 
-1. User opens /recipe/:id.
-2. Front End fetches recipe data from Supabase.
-3. Serving Size changes recalculate ingredient amounts on the fly in the client.
-4. User clicks "Cook Now" => navigates to /recipe/:id/cook.
-5. CookingMode displays instructions step by step.
+-   Skeleton loaders for recipe cards
+-   Progressive image loading
+-   Smooth transitions between states
 
 ---
 
-## 6. Deployment
+## 7. Security
 
-### Front End
+### 7.1. Authentication
 
--   Deploy as static files on Vercel, Netlify, or a similar host.
--   Built via vite build.
+-   Supabase authentication
+-   Protected routes
+-   Secure session management
 
-### Supabase
+### 7.2. Data Access
 
--   Hosted instance on Supabase.com.
--   Manages auth and database.
-
-### Serverless/Edge Function (For AI Key Security)
-
--   Optionally use Vercel/Netlify Functions, or Supabase Edge Functions.
--   Stores OpenAI API key in environment variables.
--   Endpoint: POST /api/extract => { url: string } => returns structured recipe.
+-   Row Level Security (RLS) policies
+-   Secure API endpoints
+-   Input validation
 
 ---
 
-## 7. Libraries & Utilities
+## 8. Testing Strategy
 
--   **TypeScript**: Ensures type safety across front end code and data models.
--   **React + Vite**: Core SPA framework and bundler.
--   **Material UI**: UI components (forms, buttons, layout).
--   **React Router**: Defines routes (/login, /catalog, etc.).
--   **Supabase JS Client**: Auth, CRUD (direct usage, no RPC).
--   **OpenAI Node/JS Library**: In a serverless function or direct REST fetch.
--   **Axios or Fetch**: For internal HTTP requests if needed.
+### 8.1. Unit Tests
+
+-   Component testing with React Testing Library
+-   Hook testing
+-   Utility function testing
+
+### 8.2. Integration Tests
+
+-   API integration tests
+-   Database query tests
+-   User flow tests
+
+### 8.3. E2E Tests
+
+-   Critical user journeys
+-   Cross-browser testing
+-   Mobile responsiveness
+
+---
+
+This architecture document will be updated as the application evolves. It serves as a reference for technical decisions and implementation details.
