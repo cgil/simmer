@@ -43,7 +43,6 @@ const NewRecipePage: FC = () => {
             const importedRecipe = MOCK_RECIPES[0];
 
             // Navigate to edit mode with the imported recipe
-            // TODO: Replace with actual route when edit mode is implemented
             navigate('/recipe/edit', { state: { recipe: importedRecipe } });
         } catch {
             setError('Please enter a valid URL');
@@ -71,7 +70,7 @@ const NewRecipePage: FC = () => {
                 sx={{
                     fontWeight: 500,
                     fontSize: { xs: '1rem', sm: '1.125rem' },
-                    fontFamily: 'Inter, system-ui, sans-serif',
+                    fontFamily: "'Inter', sans-serif",
                 }}
             >
                 Back
@@ -81,61 +80,84 @@ const NewRecipePage: FC = () => {
 
     return (
         <AppLayout headerContent={headerContent}>
-            <Container maxWidth="lg" sx={{ height: '100%' }}>
-                <Box
-                    sx={{
-                        display: 'flex',
-                        minHeight: {
-                            xs: 'calc(100vh - 120px)',
-                            sm: 'calc(100vh - 140px)',
-                        },
-                        py: { xs: 3, sm: 4, md: 6 },
-                    }}
+            <Box
+                sx={{
+                    position: 'relative',
+                    bgcolor: 'paper.light',
+                    minHeight: '100vh',
+                    px: { xs: 2, sm: 3, md: 4 },
+                    py: { xs: 3, sm: 4 },
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        boxShadow: 'inset 0 0 50px rgba(62, 28, 0, 0.08)',
+                        pointerEvents: 'none',
+                    },
+                    '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        opacity: 1,
+                        pointerEvents: 'none',
+                        backgroundImage: `
+                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.07) 0.5px, transparent 0.5px),
+                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.04) 1px, transparent 1px)
+                        `,
+                        backgroundSize: '6px 6px, 14px 14px',
+                        backgroundPosition: '0 0',
+                        mixBlendMode: 'multiply',
+                        filter: 'opacity(1)',
+                    },
+                }}
+            >
+                <Container
+                    maxWidth="md"
+                    sx={{ position: 'relative', zIndex: 1 }}
                 >
                     <Box
                         sx={{
                             display: 'flex',
                             flexDirection: 'column',
-                            width: '100%',
-                            maxWidth: 600,
-                            mx: 'auto',
-                            px: { xs: 2, sm: 3 },
+                            alignItems: 'center',
+                            py: { xs: 4, sm: 6, md: 8 },
                         }}
                     >
-                        <Box sx={{ mb: { xs: 4, sm: 6 } }}>
-                            <Typography
-                                variant={isMobile ? 'h4' : 'h3'}
-                                component="h1"
-                                gutterBottom
-                                sx={{
-                                    fontWeight: 700,
-                                    textAlign: 'center',
-                                    background:
-                                        'linear-gradient(45deg, #FF6B6B 30%, #FF8E53 90%)',
-                                    backgroundClip: 'text',
-                                    textFillColor: 'transparent',
-                                    mb: 2,
-                                }}
-                            >
-                                Import Your Recipe
-                            </Typography>
-                            <Typography
-                                color="text.secondary"
-                                sx={{
-                                    textAlign: 'center',
-                                    fontSize: {
-                                        xs: '1rem',
-                                        sm: '1.125rem',
-                                    },
-                                    maxWidth: 450,
-                                    mx: 'auto',
-                                    lineHeight: 1.6,
-                                }}
-                            >
-                                Transform any recipe from the web into your
-                                personal collection with just a URL.
-                            </Typography>
-                        </Box>
+                        <Typography
+                            variant={isMobile ? 'h4' : 'h3'}
+                            component="h1"
+                            gutterBottom
+                            sx={{
+                                fontWeight: 700,
+                                color: 'primary.main',
+                                textAlign: 'center',
+                                fontFamily: "'Kalam', cursive",
+                                mb: 2,
+                            }}
+                        >
+                            Import Your Recipe
+                        </Typography>
+                        <Typography
+                            color="text.secondary"
+                            sx={{
+                                textAlign: 'center',
+                                fontSize: { xs: '1rem', sm: '1.125rem' },
+                                maxWidth: 450,
+                                mx: 'auto',
+                                mb: 6,
+                                lineHeight: 1.6,
+                                fontFamily: "'Inter', sans-serif",
+                            }}
+                        >
+                            Transform any recipe from the web into your personal
+                            collection with just a URL.
+                        </Typography>
 
                         <Paper
                             component="form"
@@ -144,12 +166,25 @@ const NewRecipePage: FC = () => {
                             sx={{
                                 width: '100%',
                                 p: { xs: 2.5, sm: 4 },
-                                bgcolor: '#F8F7FA',
-                                border: '1px solid',
-                                borderColor: error ? 'error.main' : 'divider',
-                                transition: 'all 0.2s ease-in-out',
-                                '&:hover': {
-                                    borderColor: 'primary.main',
+                                borderRadius: 1,
+                                position: 'relative',
+                                bgcolor: 'background.paper',
+                                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                                '&::before': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: '100%',
+                                    background: 'rgba(255,255,255,0.6)',
+                                    backdropFilter: 'blur(4px)',
+                                    borderRadius: 1,
+                                    zIndex: 0,
+                                },
+                                '& > *': {
+                                    position: 'relative',
+                                    zIndex: 1,
                                 },
                             }}
                         >
@@ -181,10 +216,13 @@ const NewRecipePage: FC = () => {
                                     ),
                                     sx: {
                                         bgcolor: 'background.paper',
+                                        fontFamily: "'Inter', sans-serif",
+                                        fontSize: '1rem',
                                         '& .MuiOutlinedInput-notchedOutline': {
                                             borderColor: error
                                                 ? 'error.main'
                                                 : 'divider',
+                                            borderWidth: 1,
                                         },
                                         '&:hover .MuiOutlinedInput-notchedOutline':
                                             {
@@ -205,19 +243,31 @@ const NewRecipePage: FC = () => {
                                 disabled={isLoading}
                                 sx={{
                                     height: 48,
-                                    textTransform: 'none',
-                                    fontSize: '1rem',
+                                    bgcolor: 'secondary.main',
+                                    color: 'text.primary',
                                     fontWeight: 600,
+                                    fontSize: '1rem',
+                                    fontFamily: "'Kalam', cursive",
+                                    textTransform: 'none',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    borderBottom: '2px solid',
+                                    borderBottomColor: 'divider',
                                     boxShadow: 'none',
+                                    transition: 'all 0.2s ease',
                                     '&:hover': {
-                                        boxShadow: 'none',
+                                        bgcolor: 'secondary.light',
+                                        transform: 'translateY(-1px)',
+                                        borderColor: 'rgba(44, 62, 80, 0.15)',
+                                        boxShadow:
+                                            '0 1px 3px rgba(44, 62, 80, 0.1)',
                                     },
                                 }}
                             >
                                 {isLoading ? (
                                     <CircularProgress
                                         size={24}
-                                        color="inherit"
+                                        sx={{ color: 'text.primary' }}
                                     />
                                 ) : (
                                     'Import Recipe'
@@ -225,8 +275,8 @@ const NewRecipePage: FC = () => {
                             </Button>
                         </Paper>
                     </Box>
-                </Box>
-            </Container>
+                </Container>
+            </Box>
         </AppLayout>
     );
 };
