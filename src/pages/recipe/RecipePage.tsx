@@ -9,7 +9,6 @@ import {
     useTheme,
     useMediaQuery,
     Paper,
-    Stack,
 } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -19,6 +18,7 @@ import { MOCK_RECIPES } from '../../mocks/recipes';
 import IngredientsList from './components/IngredientsList';
 import CookingInstructions from './components/CookingInstructions';
 import RecipeGallery from './components/RecipeGallery';
+import RecipeNotes from './components/RecipeNotes';
 
 const RecipePage: FC = () => {
     const { id } = useParams();
@@ -187,6 +187,8 @@ const RecipePage: FC = () => {
                                         sx={{
                                             borderRadius: '16px',
                                             fontFamily: "'Inter', sans-serif",
+                                            boxShadow:
+                                                '0 4px 20px rgba(0,0,0,0.08)',
                                         }}
                                     />
                                 ))}
@@ -211,6 +213,8 @@ const RecipePage: FC = () => {
                                         borderRadius: 1,
                                         position: 'relative',
                                         bgcolor: 'background.paper',
+                                        boxShadow:
+                                            '0 4px 20px rgba(0,0,0,0.08)',
                                         '&::before': {
                                             content: '""',
                                             position: 'absolute',
@@ -251,6 +255,8 @@ const RecipePage: FC = () => {
                                             borderRadius: 1,
                                             position: 'relative',
                                             bgcolor: 'background.paper',
+                                            boxShadow:
+                                                '0 4px 20px rgba(0,0,0,0.08)',
                                             '&::before': {
                                                 content: '""',
                                                 position: 'absolute',
@@ -414,38 +420,7 @@ const RecipePage: FC = () => {
                                     },
                                 }}
                             >
-                                <Typography
-                                    variant="h6"
-                                    sx={{
-                                        color: 'primary.main',
-                                        fontFamily: "'Kalam', cursive",
-                                        mb: 2,
-                                    }}
-                                >
-                                    Notes
-                                </Typography>
-                                <Stack spacing={2}>
-                                    {recipe.notes.map((note, index) => (
-                                        <Typography
-                                            key={index}
-                                            variant="body1"
-                                            sx={{
-                                                color: 'text.secondary',
-                                                fontFamily:
-                                                    "'Inter', sans-serif",
-                                                fontSize: '1rem',
-                                                lineHeight: 1.6,
-                                                '&::before': {
-                                                    content: '"•"',
-                                                    marginRight: '8px',
-                                                    color: 'primary.main',
-                                                },
-                                            }}
-                                        >
-                                            {note}
-                                        </Typography>
-                                    ))}
-                                </Stack>
+                                <RecipeNotes recipe={recipe} />
                             </Paper>
                         </Grid>
                     )}

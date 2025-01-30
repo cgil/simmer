@@ -130,7 +130,6 @@ const AppLayout: FC<AppLayoutProps> = ({
                                     <AddIcon
                                         sx={{
                                             fontSize: { xs: 20, sm: 22 },
-                                            transition: 'transform 0.2s ease',
                                         }}
                                     />
                                 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, IconButton, useTheme, useMediaQuery } from '@mui/material';
+import { Paper, Box, IconButton, useTheme, useMediaQuery } from '@mui/material';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 
@@ -39,7 +39,16 @@ const RecipeGallery: React.FC<RecipeGalleryProps> = ({ images }) => {
     };
 
     return (
-        <Box sx={{ position: 'relative', mb: 4 }}>
+        <Paper
+            elevation={0}
+            sx={{
+                height: '100%',
+                borderRadius: 4,
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                position: 'relative',
+                mb: 4,
+            }}
+        >
             {/* Main Image */}
             <Box
                 component="img"
@@ -130,7 +139,7 @@ const RecipeGallery: React.FC<RecipeGalleryProps> = ({ images }) => {
                     ))}
                 </Box>
             )}
-        </Box>
+        </Paper>
     );
 };
 

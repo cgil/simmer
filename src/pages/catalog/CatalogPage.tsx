@@ -71,7 +71,7 @@ const CatalogPage: FC = () => {
                 <Paper
                     elevation={0}
                     sx={{
-                        p: { xs: 2, sm: 3 },
+                        p: { xs: 1, sm: 2 },
                         mb: { xs: 3, sm: 4 },
                         borderRadius: 1,
                         boxShadow: `
