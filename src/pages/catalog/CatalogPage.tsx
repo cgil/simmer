@@ -36,42 +36,72 @@ const CatalogPage: FC = () => {
                     px: { xs: 2, sm: 3, md: 4 },
                     py: { xs: 3, sm: 4 },
                     flex: 1,
+                    bgcolor: 'paper.light',
+                    position: 'relative',
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        boxShadow: 'inset 0 0 50px rgba(62, 28, 0, 0.08)',
+                        pointerEvents: 'none',
+                    },
+                    '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        opacity: 1,
+                        pointerEvents: 'none',
+                        backgroundImage: `
+                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.07) 0.5px, transparent 0.5px),
+                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.04) 1px, transparent 1px)
+                        `,
+                        backgroundSize: '6px 6px, 14px 14px',
+                        backgroundPosition: '0 0',
+                        mixBlendMode: 'multiply',
+                        filter: 'opacity(1)',
+                    },
                 }}
             >
-                <Typography
-                    variant="h3"
-                    component="h1"
-                    gutterBottom
-                    sx={{
-                        fontWeight: 700,
-                        textAlign: 'center',
-                        mb: { xs: 2.5, sm: 3 },
-                        background:
-                            'linear-gradient(45deg, #FF6B6B 30%, #FF8E53 90%)',
-                        backgroundClip: 'text',
-                        textFillColor: 'transparent',
-                        fontSize: { xs: '1.75rem', sm: '2.25rem' },
-                    }}
-                >
-                    Recipe Catalog
-                </Typography>
-
                 <Paper
                     elevation={0}
                     sx={{
-                        p: { xs: 1, sm: 1.5 },
+                        p: { xs: 2, sm: 3 },
                         mb: { xs: 3, sm: 4 },
-                        borderRadius: 2,
-                        boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+                        borderRadius: 1,
+                        boxShadow: `
+                            0 1px 2px rgba(0,0,0,0.05),
+                            0 3px 6px rgba(0,0,0,0.02),
+                            0 1px 8px rgba(0,0,0,0.02)
+                        `,
                         display: 'flex',
                         alignItems: 'center',
                         gap: 1,
-                        border: '1.5px solid',
+                        border: '1px solid',
                         borderColor: 'divider',
                         width: '100%',
-                        '&:focus-within': {
-                            borderColor: 'primary.main',
-                            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                        position: 'relative',
+                        bgcolor: 'background.paper',
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '100%',
+                            background: 'rgba(255,255,255,0.6)',
+                            backdropFilter: 'blur(4px)',
+                            borderRadius: 1,
+                            zIndex: 0,
+                        },
+                        '& > *': {
+                            position: 'relative',
+                            zIndex: 1,
                         },
                     }}
                 >
@@ -94,6 +124,7 @@ const CatalogPage: FC = () => {
                             '& input': {
                                 py: { xs: 1, sm: 1.25 },
                                 fontSize: { xs: '0.9rem', sm: '1rem' },
+                                fontFamily: "'Inter', sans-serif",
                                 '&::placeholder': {
                                     color: 'text.secondary',
                                     opacity: 0.8,
@@ -107,17 +138,18 @@ const CatalogPage: FC = () => {
                             sx={{
                                 px: { xs: 1.5, sm: 2 },
                                 py: '2px',
-                                bgcolor: 'action.hover',
+                                bgcolor: 'secondary.light',
                                 borderRadius: 1,
                                 fontSize: { xs: '0.75rem', sm: '0.8rem' },
-                                color: 'text.secondary',
+                                color: 'text.primary',
+                                fontFamily: "'Inter', sans-serif",
                                 userSelect: 'none',
                             }}
                         >
                             {filteredRecipes.length}{' '}
                             {filteredRecipes.length === 1
-                                ? 'result'
-                                : 'results'}
+                                ? 'recipe'
+                                : 'recipes'}
                         </Typography>
                     )}
                 </Paper>
@@ -129,13 +161,15 @@ const CatalogPage: FC = () => {
                         flex: 1,
                         width: '100%',
                         minWidth: '100%',
+                        position: 'relative',
+                        zIndex: 1,
                     }}
                 >
                     {filteredRecipes.length > 0 ? (
                         <Grid
                             container
                             spacing={{ xs: 2, sm: 3 }}
-                            columns={{ xs: 1, sm: 2, md: 3, lg: 4, xl: 5 }}
+                            columns={{ xs: 1, sm: 2, md: 3, lg: 4 }}
                         >
                             {filteredRecipes.map((recipe) => (
                                 <Grid
@@ -152,15 +186,41 @@ const CatalogPage: FC = () => {
                                             display: 'flex',
                                             flexDirection: 'column',
                                             cursor: 'pointer',
-                                            borderRadius: { xs: 2, sm: 3 },
+                                            borderRadius: 1,
                                             overflow: 'hidden',
-                                            boxShadow:
-                                                '0 2px 8px rgba(0,0,0,0.04)',
+                                            boxShadow: `
+                                                0 1px 2px rgba(0,0,0,0.05),
+                                                0 3px 6px rgba(0,0,0,0.02),
+                                                0 1px 8px rgba(0,0,0,0.02)
+                                            `,
                                             transition: 'all 0.15s ease-in-out',
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                            bgcolor: 'background.paper',
+                                            position: 'relative',
+                                            '&::before': {
+                                                content: '""',
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                right: 0,
+                                                height: '100%',
+                                                background:
+                                                    'rgba(255,255,255,0.6)',
+                                                backdropFilter: 'blur(4px)',
+                                                borderRadius: 1,
+                                                zIndex: 0,
+                                            },
+                                            '& > *': {
+                                                position: 'relative',
+                                                zIndex: 1,
+                                            },
                                             '&:hover': {
                                                 transform: 'translateY(-2px)',
                                                 boxShadow:
                                                     '0 4px 12px rgba(0,0,0,0.06)',
+                                                borderColor:
+                                                    'rgba(44, 62, 80, 0.15)',
                                             },
                                         }}
                                     >
@@ -197,6 +257,9 @@ const CatalogPage: FC = () => {
                                                     display: '-webkit-box',
                                                     WebkitLineClamp: 2,
                                                     WebkitBoxOrient: 'vertical',
+                                                    fontFamily:
+                                                        "'Kalam', cursive",
+                                                    color: 'primary.main',
                                                 }}
                                             >
                                                 {recipe.title}
@@ -218,6 +281,8 @@ const CatalogPage: FC = () => {
                                                         xs: '40px',
                                                         sm: '48px',
                                                     },
+                                                    fontFamily:
+                                                        "'Inter', sans-serif",
                                                 }}
                                             >
                                                 {recipe.description}
@@ -243,6 +308,8 @@ const CatalogPage: FC = () => {
                                                                 fontSize:
                                                                     '0.75rem',
                                                                 height: '24px',
+                                                                fontFamily:
+                                                                    "'Inter', sans-serif",
                                                             }}
                                                         />
                                                     ))}
@@ -257,6 +324,8 @@ const CatalogPage: FC = () => {
                                                         sx={{
                                                             fontSize: '0.75rem',
                                                             height: '24px',
+                                                            fontFamily:
+                                                                "'Inter', sans-serif",
                                                         }}
                                                     />
                                                 )}
@@ -285,7 +354,7 @@ const CatalogPage: FC = () => {
                                                                 xs: '1rem',
                                                                 sm: '1.25rem',
                                                             },
-                                                            color: 'action.active',
+                                                            color: 'primary.main',
                                                         }}
                                                     />
                                                     <Typography
@@ -296,6 +365,8 @@ const CatalogPage: FC = () => {
                                                                 xs: '0.75rem',
                                                                 sm: '0.875rem',
                                                             },
+                                                            fontFamily:
+                                                                "'Inter', sans-serif",
                                                         }}
                                                     >
                                                         {recipe.servings}{' '}
@@ -317,7 +388,7 @@ const CatalogPage: FC = () => {
                                                                     xs: '1rem',
                                                                     sm: '1.25rem',
                                                                 },
-                                                                color: 'action.active',
+                                                                color: 'primary.main',
                                                             }}
                                                         />
                                                         <Typography
@@ -328,6 +399,8 @@ const CatalogPage: FC = () => {
                                                                     xs: '0.75rem',
                                                                     sm: '0.875rem',
                                                                 },
+                                                                fontFamily:
+                                                                    "'Inter', sans-serif",
                                                             }}
                                                         >
                                                             {
@@ -364,6 +437,7 @@ const CatalogPage: FC = () => {
                                 sx={{
                                     mb: 2,
                                     fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                                    fontFamily: "'Kalam', cursive",
                                 }}
                             >
                                 No recipes found
@@ -372,6 +446,7 @@ const CatalogPage: FC = () => {
                                 color="text.secondary"
                                 sx={{
                                     fontSize: { xs: '0.875rem', sm: '1rem' },
+                                    fontFamily: "'Inter', sans-serif",
                                 }}
                             >
                                 Try adjusting your search terms

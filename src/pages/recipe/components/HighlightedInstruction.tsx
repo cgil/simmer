@@ -24,7 +24,7 @@ const HighlightedInstruction: React.FC<HighlightedInstructionProps> = ({
                             key={index}
                             component="span"
                             sx={{
-                                bgcolor: 'rgba(255, 107, 107, 0.1)',
+                                bgcolor: 'secondary.light',
                                 borderRadius: 0.5,
                                 px: 0.5,
                                 display: 'inline-block',

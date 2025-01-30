@@ -80,7 +80,7 @@ const NewRecipePage: FC = () => {
     );
 
     return (
-        <AppLayout headerContent={headerContent} showIcon={false}>
+        <AppLayout headerContent={headerContent}>
             <Container maxWidth="lg" sx={{ height: '100%' }}>
                 <Box
                     sx={{

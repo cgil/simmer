@@ -264,7 +264,7 @@ const EditRecipePage: FC = () => {
     );
 
     return (
-        <AppLayout headerContent={headerContent} showIcon={false}>
+        <AppLayout headerContent={headerContent}>
             <Container
                 maxWidth={false}
                 sx={{

@@ -8,6 +8,8 @@ import {
     Button,
     useTheme,
     useMediaQuery,
+    Paper,
+    Stack,
 } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -31,10 +33,23 @@ const RecipePage: FC = () => {
         return (
             <AppLayout>
                 <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <Typography variant="h5">Recipe not found</Typography>
+                    <Typography
+                        variant="h5"
+                        sx={{
+                            fontFamily: "'Kalam', cursive",
+                            color: 'primary.main',
+                        }}
+                    >
+                        Recipe not found
+                    </Typography>
                     <Button
                         onClick={() => navigate('/')}
-                        sx={{ mt: 2 }}
+                        sx={{
+                            mt: 2,
+                            borderRadius: 1,
+                            textTransform: 'none',
+                            fontFamily: "'Inter', sans-serif",
+                        }}
                         variant="contained"
                     >
                         Back to Recipes
@@ -64,7 +79,7 @@ const RecipePage: FC = () => {
                 sx={{
                     fontWeight: 500,
                     fontSize: { xs: '1rem', sm: '1.125rem' },
-                    fontFamily: 'Inter, system-ui, sans-serif',
+                    fontFamily: "'Inter', sans-serif",
                 }}
             >
                 Back
@@ -73,9 +88,49 @@ const RecipePage: FC = () => {
     );
 
     return (
-        <AppLayout headerContent={headerContent} showIcon={false}>
-            <Box sx={{ position: 'relative' }}>
-                <Grid container spacing={4}>
+        <AppLayout headerContent={headerContent}>
+            <Box
+                sx={{
+                    position: 'relative',
+                    bgcolor: 'paper.light',
+                    minHeight: '100vh',
+                    px: { xs: 2, sm: 3, md: 4 },
+                    py: { xs: 3, sm: 4 },
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        boxShadow: 'inset 0 0 50px rgba(62, 28, 0, 0.08)',
+                        pointerEvents: 'none',
+                    },
+                    '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        opacity: 1,
+                        pointerEvents: 'none',
+                        backgroundImage: `
+                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.07) 0.5px, transparent 0.5px),
+                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.04) 1px, transparent 1px)
+                        `,
+                        backgroundSize: '6px 6px, 14px 14px',
+                        backgroundPosition: '0 0',
+                        mixBlendMode: 'multiply',
+                        filter: 'opacity(1)',
+                    },
+                }}
+            >
+                <Grid
+                    container
+                    spacing={4}
+                    sx={{ position: 'relative', zIndex: 1 }}
+                >
                     {/* Header Section */}
                     <Grid item xs={12}>
                         <Box
@@ -93,10 +148,8 @@ const RecipePage: FC = () => {
                                 gutterBottom
                                 sx={{
                                     fontWeight: 700,
-                                    background:
-                                        'linear-gradient(45deg, #FF6B6B 30%, #FF8E53 90%)',
-                                    backgroundClip: 'text',
-                                    textFillColor: 'transparent',
+                                    color: 'primary.main',
+                                    fontFamily: "'Kalam', cursive",
                                     mb: 2,
                                 }}
                             >
@@ -111,6 +164,7 @@ const RecipePage: FC = () => {
                                     maxWidth: '600px',
                                     mx: 'auto',
                                     lineHeight: 1.6,
+                                    fontFamily: "'Inter', sans-serif",
                                 }}
                             >
                                 {recipe.description}
@@ -132,6 +186,7 @@ const RecipePage: FC = () => {
                                         size={isMobile ? 'small' : 'medium'}
                                         sx={{
                                             borderRadius: '16px',
+                                            fontFamily: "'Inter', sans-serif",
                                         }}
                                     />
                                 ))}
@@ -145,43 +200,87 @@ const RecipePage: FC = () => {
                                     mb: 2,
                                 }}
                             >
-                                <Box
+                                <Paper
+                                    elevation={0}
                                     sx={{
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: 1,
-                                        bgcolor: 'background.paper',
                                         p: 1.5,
                                         px: 2.5,
-                                        borderRadius: 0,
-                                        border: '1px solid',
-                                        borderColor: 'divider',
+                                        borderRadius: 1,
+                                        position: 'relative',
+                                        bgcolor: 'background.paper',
+                                        '&::before': {
+                                            content: '""',
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            right: 0,
+                                            height: '100%',
+                                            background: 'rgba(255,255,255,0.6)',
+                                            backdropFilter: 'blur(4px)',
+                                            borderRadius: 1,
+                                            zIndex: 0,
+                                        },
+                                        '& > *': {
+                                            position: 'relative',
+                                            zIndex: 1,
+                                        },
                                     }}
                                 >
                                     <RestaurantIcon color="primary" />
-                                    <Typography sx={{ fontWeight: 500 }}>
+                                    <Typography
+                                        sx={{
+                                            fontWeight: 500,
+                                            fontFamily: "'Inter', sans-serif",
+                                        }}
+                                    >
                                         {servings} servings
                                     </Typography>
-                                </Box>
+                                </Paper>
                                 {recipe.time_estimate && (
-                                    <Box
+                                    <Paper
+                                        elevation={0}
                                         sx={{
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: 1,
-                                            bgcolor: 'background.paper',
                                             p: 1.5,
                                             px: 2.5,
-                                            borderRadius: 0,
-                                            border: '1px solid',
-                                            borderColor: 'divider',
+                                            borderRadius: 1,
+                                            position: 'relative',
+                                            bgcolor: 'background.paper',
+                                            '&::before': {
+                                                content: '""',
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                right: 0,
+                                                height: '100%',
+                                                background:
+                                                    'rgba(255,255,255,0.6)',
+                                                backdropFilter: 'blur(4px)',
+                                                borderRadius: 1,
+                                                zIndex: 0,
+                                            },
+                                            '& > *': {
+                                                position: 'relative',
+                                                zIndex: 1,
+                                            },
                                         }}
                                     >
                                         <AccessTimeIcon color="primary" />
-                                        <Typography sx={{ fontWeight: 500 }}>
+                                        <Typography
+                                            sx={{
+                                                fontWeight: 500,
+                                                fontFamily:
+                                                    "'Inter', sans-serif",
+                                            }}
+                                        >
                                             {recipe.time_estimate.total} mins
                                         </Typography>
-                                    </Box>
+                                    </Paper>
                                 )}
                             </Box>
                         </Box>
@@ -189,27 +288,167 @@ const RecipePage: FC = () => {
 
                     {/* Image Section */}
                     <Grid item xs={12}>
-                        <Box sx={{ bgcolor: '#F8F7FA' }}>
+                        <Paper
+                            elevation={0}
+                            sx={{
+                                borderRadius: 1,
+                                overflow: 'hidden',
+                                position: 'relative',
+                                bgcolor: 'background.paper',
+                                '&::before': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: '100%',
+                                    background: 'rgba(255,255,255,0.6)',
+                                    backdropFilter: 'blur(4px)',
+                                    borderRadius: 1,
+                                    zIndex: 0,
+                                },
+                                '& > *': {
+                                    position: 'relative',
+                                    zIndex: 1,
+                                },
+                            }}
+                        >
                             <RecipeGallery images={recipe.images} />
-                        </Box>
+                        </Paper>
                     </Grid>
 
                     {/* Ingredients Section */}
                     <Grid item xs={12} md={4}>
-                        <IngredientsList
-                            recipe={recipe}
-                            servings={servings}
-                            onServingsChange={setServings}
-                        />
+                        <Paper
+                            elevation={0}
+                            sx={{
+                                p: { xs: 2, sm: 3 },
+                                borderRadius: 1,
+                                position: 'relative',
+                                bgcolor: 'background.paper',
+                                '&::before': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: '100%',
+                                    background: 'rgba(255,255,255,0.6)',
+                                    backdropFilter: 'blur(4px)',
+                                    borderRadius: 1,
+                                    zIndex: 0,
+                                },
+                                '& > *': {
+                                    position: 'relative',
+                                    zIndex: 1,
+                                },
+                            }}
+                        >
+                            <IngredientsList
+                                recipe={recipe}
+                                servings={servings}
+                                onServingsChange={setServings}
+                            />
+                        </Paper>
                     </Grid>
 
                     {/* Instructions Section */}
                     <Grid item xs={12} md={8}>
-                        <CookingInstructions
-                            recipe={recipe}
-                            servings={servings}
-                        />
+                        <Paper
+                            elevation={0}
+                            sx={{
+                                p: { xs: 2, sm: 3 },
+                                borderRadius: 1,
+                                position: 'relative',
+                                bgcolor: 'background.paper',
+                                '&::before': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: '100%',
+                                    background: 'rgba(255,255,255,0.6)',
+                                    backdropFilter: 'blur(4px)',
+                                    borderRadius: 1,
+                                    zIndex: 0,
+                                },
+                                '& > *': {
+                                    position: 'relative',
+                                    zIndex: 1,
+                                },
+                            }}
+                        >
+                            <CookingInstructions
+                                recipe={recipe}
+                                servings={servings}
+                            />
+                        </Paper>
                     </Grid>
+
+                    {/* Notes Section */}
+                    {recipe.notes && recipe.notes.length > 0 && (
+                        <Grid item xs={12}>
+                            <Paper
+                                elevation={0}
+                                sx={{
+                                    p: { xs: 2, sm: 3 },
+                                    borderRadius: 1,
+                                    position: 'relative',
+                                    bgcolor: 'background.paper',
+                                    '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: '100%',
+                                        background: 'rgba(255,255,255,0.6)',
+                                        backdropFilter: 'blur(4px)',
+                                        borderRadius: 1,
+                                        zIndex: 0,
+                                    },
+                                    '& > *': {
+                                        position: 'relative',
+                                        zIndex: 1,
+                                    },
+                                }}
+                            >
+                                <Typography
+                                    variant="h6"
+                                    sx={{
+                                        color: 'primary.main',
+                                        fontFamily: "'Kalam', cursive",
+                                        mb: 2,
+                                    }}
+                                >
+                                    Notes
+                                </Typography>
+                                <Stack spacing={2}>
+                                    {recipe.notes.map((note, index) => (
+                                        <Typography
+                                            key={index}
+                                            variant="body1"
+                                            sx={{
+                                                color: 'text.secondary',
+                                                fontFamily:
+                                                    "'Inter', sans-serif",
+                                                fontSize: '1rem',
+                                                lineHeight: 1.6,
+                                                '&::before': {
+                                                    content: '"•"',
+                                                    marginRight: '8px',
+                                                    color: 'primary.main',
+                                                },
+                                            }}
+                                        >
+                                            {note}
+                                        </Typography>
+                                    ))}
+                                </Stack>
+                            </Paper>
+                        </Grid>
+                    )}
                 </Grid>
             </Box>
         </AppLayout>

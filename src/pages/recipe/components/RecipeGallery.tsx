@@ -101,7 +101,6 @@ const RecipeGallery: React.FC<RecipeGalleryProps> = ({ images }) => {
                         px: 2,
                         py: 1,
                         justifyContent: 'center',
-                        bgcolor: '#F8F7FA',
                     }}
                 >
                     {images.map((image, index) => (
