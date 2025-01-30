@@ -92,7 +92,7 @@ const RecipePage: FC = () => {
             <Box
                 sx={{
                     position: 'relative',
-                    bgcolor: 'paper.light',
+                    bgcolor: '#FFFFFF',
                     minHeight: '100vh',
                     px: { xs: 2, sm: 3, md: 4 },
                     py: { xs: 3, sm: 4 },
@@ -103,7 +103,7 @@ const RecipePage: FC = () => {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        boxShadow: 'inset 0 0 50px rgba(62, 28, 0, 0.08)',
+                        boxShadow: 'inset 0 0 100px rgba(62, 28, 0, 0.03)',
                         pointerEvents: 'none',
                     },
                     '&::after': {
@@ -113,16 +113,16 @@ const RecipePage: FC = () => {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        opacity: 1,
+                        opacity: 0.3,
                         pointerEvents: 'none',
                         backgroundImage: `
-                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.07) 0.5px, transparent 0.5px),
-                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.04) 1px, transparent 1px)
+                            linear-gradient(rgba(62, 28, 0, 0.03) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(62, 28, 0, 0.03) 1px, transparent 1px),
+                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.03) 1px, transparent 1px)
                         `,
-                        backgroundSize: '6px 6px, 14px 14px',
-                        backgroundPosition: '0 0',
+                        backgroundSize: '24px 24px, 24px 24px, 12px 12px',
+                        backgroundPosition: '-1px -1px, -1px -1px, -1px -1px',
                         mixBlendMode: 'multiply',
-                        filter: 'opacity(1)',
                     },
                 }}
             >
@@ -212,9 +212,12 @@ const RecipePage: FC = () => {
                                         px: 2.5,
                                         borderRadius: 1,
                                         position: 'relative',
-                                        bgcolor: 'background.paper',
-                                        boxShadow:
-                                            '0 4px 20px rgba(0,0,0,0.08)',
+                                        bgcolor: 'paper.main',
+                                        boxShadow: `
+                                            0 1px 2px rgba(0,0,0,0.03),
+                                            0 4px 20px rgba(0,0,0,0.06),
+                                            inset 0 0 0 1px rgba(255,255,255,0.9)
+                                        `,
                                         '&::before': {
                                             content: '""',
                                             position: 'absolute',
@@ -222,10 +225,12 @@ const RecipePage: FC = () => {
                                             left: 0,
                                             right: 0,
                                             height: '100%',
-                                            background: 'rgba(255,255,255,0.6)',
+                                            background: 'rgba(255,255,255,0.5)',
                                             backdropFilter: 'blur(4px)',
                                             borderRadius: 1,
                                             zIndex: 0,
+                                            border: '1px solid',
+                                            borderColor: 'divider',
                                         },
                                         '& > *': {
                                             position: 'relative',
@@ -254,9 +259,12 @@ const RecipePage: FC = () => {
                                             px: 2.5,
                                             borderRadius: 1,
                                             position: 'relative',
-                                            bgcolor: 'background.paper',
-                                            boxShadow:
-                                                '0 4px 20px rgba(0,0,0,0.08)',
+                                            bgcolor: 'paper.main',
+                                            boxShadow: `
+                                                0 1px 2px rgba(0,0,0,0.03),
+                                                0 4px 20px rgba(0,0,0,0.06),
+                                                inset 0 0 0 1px rgba(255,255,255,0.9)
+                                            `,
                                             '&::before': {
                                                 content: '""',
                                                 position: 'absolute',
@@ -265,10 +273,12 @@ const RecipePage: FC = () => {
                                                 right: 0,
                                                 height: '100%',
                                                 background:
-                                                    'rgba(255,255,255,0.6)',
+                                                    'rgba(255,255,255,0.5)',
                                                 backdropFilter: 'blur(4px)',
                                                 borderRadius: 1,
                                                 zIndex: 0,
+                                                border: '1px solid',
+                                                borderColor: 'divider',
                                             },
                                             '& > *': {
                                                 position: 'relative',
@@ -300,7 +310,7 @@ const RecipePage: FC = () => {
                                 borderRadius: 1,
                                 overflow: 'hidden',
                                 position: 'relative',
-                                bgcolor: 'background.paper',
+                                bgcolor: 'paper.main',
                                 '&::before': {
                                     content: '""',
                                     position: 'absolute',
@@ -331,7 +341,12 @@ const RecipePage: FC = () => {
                                 p: { xs: 2, sm: 3 },
                                 borderRadius: 1,
                                 position: 'relative',
-                                bgcolor: 'background.paper',
+                                bgcolor: 'paper.main',
+                                boxShadow: `
+                                    0 1px 2px rgba(0,0,0,0.03),
+                                    0 4px 20px rgba(0,0,0,0.06),
+                                    inset 0 0 0 1px rgba(255,255,255,0.9)
+                                `,
                                 '&::before': {
                                     content: '""',
                                     position: 'absolute',
@@ -339,10 +354,12 @@ const RecipePage: FC = () => {
                                     left: 0,
                                     right: 0,
                                     height: '100%',
-                                    background: 'rgba(255,255,255,0.6)',
+                                    background: 'rgba(255,255,255,0.5)',
                                     backdropFilter: 'blur(4px)',
                                     borderRadius: 1,
                                     zIndex: 0,
+                                    border: '1px solid',
+                                    borderColor: 'divider',
                                 },
                                 '& > *': {
                                     position: 'relative',
@@ -366,7 +383,12 @@ const RecipePage: FC = () => {
                                 p: { xs: 2, sm: 3 },
                                 borderRadius: 1,
                                 position: 'relative',
-                                bgcolor: 'background.paper',
+                                bgcolor: 'paper.main',
+                                boxShadow: `
+                                    0 1px 2px rgba(0,0,0,0.03),
+                                    0 4px 20px rgba(0,0,0,0.06),
+                                    inset 0 0 0 1px rgba(255,255,255,0.9)
+                                `,
                                 '&::before': {
                                     content: '""',
                                     position: 'absolute',
@@ -374,10 +396,12 @@ const RecipePage: FC = () => {
                                     left: 0,
                                     right: 0,
                                     height: '100%',
-                                    background: 'rgba(255,255,255,0.6)',
+                                    background: 'rgba(255,255,255,0.5)',
                                     backdropFilter: 'blur(4px)',
                                     borderRadius: 1,
                                     zIndex: 0,
+                                    border: '1px solid',
+                                    borderColor: 'divider',
                                 },
                                 '& > *': {
                                     position: 'relative',
@@ -401,7 +425,12 @@ const RecipePage: FC = () => {
                                     p: { xs: 2, sm: 3 },
                                     borderRadius: 1,
                                     position: 'relative',
-                                    bgcolor: 'background.paper',
+                                    bgcolor: 'paper.main',
+                                    boxShadow: `
+                                        0 1px 2px rgba(0,0,0,0.03),
+                                        0 4px 20px rgba(0,0,0,0.06),
+                                        inset 0 0 0 1px rgba(255,255,255,0.9)
+                                    `,
                                     '&::before': {
                                         content: '""',
                                         position: 'absolute',
@@ -409,10 +438,12 @@ const RecipePage: FC = () => {
                                         left: 0,
                                         right: 0,
                                         height: '100%',
-                                        background: 'rgba(255,255,255,0.6)',
+                                        background: 'rgba(255,255,255,0.5)',
                                         backdropFilter: 'blur(4px)',
                                         borderRadius: 1,
                                         zIndex: 0,
+                                        border: '1px solid',
+                                        borderColor: 'divider',
                                     },
                                     '& > *': {
                                         position: 'relative',

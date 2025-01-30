@@ -46,7 +46,6 @@ const RecipeGallery: React.FC<RecipeGalleryProps> = ({ images }) => {
                 borderRadius: 4,
                 boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
                 position: 'relative',
-                mb: 4,
             }}
         >
             {/* Main Image */}
@@ -128,9 +127,9 @@ const RecipeGallery: React.FC<RecipeGalleryProps> = ({ images }) => {
                                 transition: 'all 0.2s ease-in-out',
                                 outline:
                                     index === currentIndex
-                                        ? '2px solid'
+                                        ? '1px solid'
                                         : 'none',
-                                outlineColor: 'primary.main',
+                                outlineColor: 'primary.light',
                                 '&:hover': {
                                     opacity: 0.8,
                                 },

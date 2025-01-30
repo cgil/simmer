@@ -189,9 +189,9 @@ const CatalogPage: FC = () => {
                                             borderRadius: 1,
                                             overflow: 'hidden',
                                             boxShadow: `
-                                                0 1px 2px rgba(0,0,0,0.05),
-                                                0 3px 6px rgba(0,0,0,0.02),
-                                                0 1px 8px rgba(0,0,0,0.02)
+                                                0 1px 2px rgba(0,0,0,0.03),
+                                                0 4px 20px rgba(0,0,0,0.06),
+                                                inset 0 0 0 1px rgba(255,255,255,0.9)
                                             `,
                                             transition: 'all 0.15s ease-in-out',
                                             border: '1px solid',
@@ -206,10 +206,12 @@ const CatalogPage: FC = () => {
                                                 right: 0,
                                                 height: '100%',
                                                 background:
-                                                    'rgba(255,255,255,0.6)',
+                                                    'rgba(255,255,255,0.5)',
                                                 backdropFilter: 'blur(4px)',
                                                 borderRadius: 1,
                                                 zIndex: 0,
+                                                border: '1px solid',
+                                                borderColor: 'divider',
                                             },
                                             '& > *': {
                                                 position: 'relative',

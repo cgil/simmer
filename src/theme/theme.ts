@@ -77,6 +77,7 @@ const theme = createTheme({
             primary: 'rgba(0,0,0,0.75)', // Soft black
             secondary: '#595959', // Warm gray
         },
+        divider: 'rgba(62, 28, 0, 0.06)', // Lighter border color
         action: {
             active: '#6B6B6B', // Warm gray for icons
             hover: 'rgba(62, 28, 0, 0.04)',
