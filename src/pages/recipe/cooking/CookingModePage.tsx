@@ -6,8 +6,12 @@ import {
     Typography,
     useTheme,
     useMediaQuery,
+    Paper,
+    Stack,
+    Chip,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import TimerIcon from '@mui/icons-material/Timer';
 import { MOCK_RECIPES } from '../../../mocks/recipes';
 import StepNavigation from './components/StepNavigation';
 import StepContent from './components/StepContent';
@@ -227,6 +231,146 @@ const CookingModePage: FC = () => {
                     <CloseIcon />
                 </IconButton>
             </Box>
+
+            {/* Active Timers Bar */}
+            {activeTimers.length > 0 && (
+                <Paper
+                    elevation={0}
+                    sx={{
+                        px: { xs: 2, sm: 3 },
+                        py: 1.5,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: 'background.paper',
+                        position: 'relative',
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'rgba(255,255,255,0.5)',
+                            backdropFilter: 'blur(4px)',
+                            zIndex: 0,
+                        },
+                    }}
+                >
+                    <Stack spacing={1}>
+                        <Typography
+                            variant="subtitle2"
+                            sx={{
+                                color: 'text.secondary',
+                                fontWeight: 500,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                position: 'relative',
+                                zIndex: 1,
+                            }}
+                        >
+                            <TimerIcon sx={{ fontSize: 20 }} />
+                            Active Timers
+                        </Typography>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                gap: 1,
+                                flexWrap: 'wrap',
+                                position: 'relative',
+                                zIndex: 1,
+                            }}
+                        >
+                            {activeTimers.map((timer, index) => {
+                                const section =
+                                    recipe.instructions[timer.sectionIndex];
+                                const elapsed = Math.floor(
+                                    (Date.now() - timer.startTime) / 1000
+                                );
+                                const timeLeft = Math.max(
+                                    0,
+                                    Math.floor(timer.duration / 1000) - elapsed
+                                );
+                                const minutes = Math.floor(timeLeft / 60);
+                                const seconds = timeLeft % 60;
+
+                                return (
+                                    <Chip
+                                        key={index}
+                                        label={
+                                            <Box
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 1,
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="body2"
+                                                    component="span"
+                                                >
+                                                    {section.section_title} -
+                                                    Step {timer.stepIndex + 1}
+                                                </Typography>
+                                                <Typography
+                                                    variant="body2"
+                                                    component="span"
+                                                    sx={{
+                                                        fontWeight: 600,
+                                                        color: timer.hasFinished
+                                                            ? 'success.main'
+                                                            : timer.isRunning
+                                                            ? 'primary.main'
+                                                            : 'text.primary',
+                                                    }}
+                                                >
+                                                    {minutes}:
+                                                    {seconds
+                                                        .toString()
+                                                        .padStart(2, '0')}
+                                                </Typography>
+                                            </Box>
+                                        }
+                                        onClick={() => {
+                                            setCurrentSectionIndex(
+                                                timer.sectionIndex
+                                            );
+                                            setCurrentStep(timer.stepIndex);
+                                        }}
+                                        onDelete={() =>
+                                            resetTimer(
+                                                timer.sectionIndex,
+                                                timer.stepIndex
+                                            )
+                                        }
+                                        color={
+                                            timer.hasFinished
+                                                ? 'success'
+                                                : timer.isRunning
+                                                ? 'primary'
+                                                : 'default'
+                                        }
+                                        variant="outlined"
+                                        sx={{
+                                            borderRadius: 2,
+                                            '& .MuiChip-label': {
+                                                px: 1,
+                                            },
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            '&:hover': {
+                                                transform: 'translateY(-1px)',
+                                                boxShadow:
+                                                    '0 2px 4px rgba(0,0,0,0.1)',
+                                            },
+                                        }}
+                                    />
+                                );
+                            })}
+                        </Box>
+                    </Stack>
+                </Paper>
+            )}
 
             {/* Main Content Area */}
             <Box
