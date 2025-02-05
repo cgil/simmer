@@ -284,6 +284,16 @@ const CookingModePage: FC = () => {
                             {activeTimers.map((timer, index) => {
                                 const section =
                                     recipe.instructions[timer.sectionIndex];
+                                const stepNumber =
+                                    recipe.instructions
+                                        .slice(0, timer.sectionIndex)
+                                        .reduce(
+                                            (acc, section) =>
+                                                acc + section.steps.length,
+                                            0
+                                        ) +
+                                    timer.stepIndex +
+                                    1;
                                 const elapsed = Math.floor(
                                     (Date.now() - timer.startTime) / 1000
                                 );
@@ -310,7 +320,7 @@ const CookingModePage: FC = () => {
                                                     component="span"
                                                 >
                                                     {section.section_title} -
-                                                    Step {timer.stepIndex + 1}
+                                                    Step {stepNumber}
                                                 </Typography>
                                                 <Typography
                                                     variant="body2"
