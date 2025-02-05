@@ -88,7 +88,13 @@ const RecipePage: FC = () => {
     );
 
     return (
-        <AppLayout headerContent={headerContent}>
+        <AppLayout
+            headerContent={headerContent}
+            showCookingButton={true}
+            onCookingClick={() =>
+                navigate(`/recipe/${recipe.id}/cook`, { state: { servings } })
+            }
+        >
             <Box
                 sx={{
                     position: 'relative',

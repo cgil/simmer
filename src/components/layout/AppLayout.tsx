@@ -11,17 +11,22 @@ import {
 } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
+import RestaurantIcon from '@mui/icons-material/Restaurant';
 
 interface AppLayoutProps {
     children: ReactNode;
     headerContent?: ReactNode;
     showAddButton?: boolean;
+    showCookingButton?: boolean;
+    onCookingClick?: () => void;
 }
 
 const AppLayout: FC<AppLayoutProps> = ({
     children,
     headerContent,
     showAddButton = false,
+    showCookingButton = false,
+    onCookingClick,
 }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -36,10 +41,11 @@ const AppLayout: FC<AppLayoutProps> = ({
                 width: '100vw',
                 maxWidth: '100%',
                 overflow: 'hidden',
+                position: 'relative',
             }}
         >
             <AppBar
-                position="sticky"
+                position="fixed"
                 elevation={0}
                 sx={{
                     bgcolor: 'paper.light',
@@ -47,7 +53,11 @@ const AppLayout: FC<AppLayoutProps> = ({
                     borderColor: 'divider',
                     width: '100%',
                     borderRadius: 0,
-                    position: 'relative',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    zIndex: theme.zIndex.appBar,
+                    backdropFilter: 'blur(8px)',
                     '&::before': {
                         content: '""',
                         position: 'absolute',
@@ -122,54 +132,103 @@ const AppLayout: FC<AppLayoutProps> = ({
                             )}
                         </Box>
 
-                        {showAddButton && (
-                            <Button
-                                variant="contained"
-                                onClick={() => navigate('/recipe/new')}
-                                startIcon={
-                                    <AddIcon
-                                        sx={{
-                                            fontSize: { xs: 20, sm: 22 },
-                                        }}
-                                    />
-                                }
-                                sx={{
-                                    height: { xs: 38, sm: 42 },
-                                    px: { xs: 1.5, sm: 2.5 },
-                                    bgcolor: 'secondary.main',
-                                    color: 'text.primary',
-                                    fontWeight: 600,
-                                    fontSize: {
-                                        xs: '0.875rem',
-                                        sm: '0.9375rem',
-                                    },
-                                    fontFamily: "'Kalam', cursive",
-                                    letterSpacing: '0.01em',
-                                    textTransform: 'none',
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    borderBottom: '2px solid',
-                                    borderBottomColor: 'divider',
-                                    boxShadow: 'none',
-                                    transition: 'all 0.2s ease',
-                                    '&:hover': {
-                                        bgcolor: 'secondary.light',
-                                        transform: 'translateY(-1px)',
-                                        borderColor: 'rgba(44, 62, 80, 0.15)',
-                                        boxShadow:
-                                            '0 1px 3px rgba(44, 62, 80, 0.1)',
-                                        '& .MuiSvgIcon-root': {
-                                            transform: 'rotate(90deg)',
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                            {showCookingButton && (
+                                <Button
+                                    variant="contained"
+                                    onClick={onCookingClick}
+                                    startIcon={
+                                        <RestaurantIcon
+                                            sx={{
+                                                fontSize: { xs: 20, sm: 22 },
+                                            }}
+                                        />
+                                    }
+                                    sx={{
+                                        height: { xs: 38, sm: 42 },
+                                        px: { xs: 1.5, sm: 2.5 },
+                                        bgcolor: 'primary.main',
+                                        color: 'primary.contrastText',
+                                        fontWeight: 600,
+                                        fontSize: {
+                                            xs: '0.875rem',
+                                            sm: '0.9375rem',
                                         },
-                                    },
-                                }}
-                            >
-                                {isMobile ? '' : 'New Recipe'}
-                            </Button>
-                        )}
+                                        fontFamily: "'Inter', sans-serif",
+                                        letterSpacing: '0.01em',
+                                        textTransform: 'none',
+                                        boxShadow: `
+                                            0 1px 2px rgba(0,0,0,0.03),
+                                            0 4px 20px rgba(0,0,0,0.06),
+                                            inset 0 0 0 1px rgba(255,255,255,0.9)
+                                        `,
+                                        '&:hover': {
+                                            bgcolor: 'primary.dark',
+                                            transform: 'translateY(-1px)',
+                                            boxShadow: `
+                                                0 2px 4px rgba(0,0,0,0.05),
+                                                0 6px 24px rgba(0,0,0,0.08),
+                                                inset 0 0 0 1px rgba(255,255,255,0.9)
+                                            `,
+                                        },
+                                    }}
+                                >
+                                    {isMobile ? '' : 'Start Cooking'}
+                                </Button>
+                            )}
+
+                            {showAddButton && (
+                                <Button
+                                    variant="contained"
+                                    onClick={() => navigate('/recipe/new')}
+                                    startIcon={
+                                        <AddIcon
+                                            sx={{
+                                                fontSize: { xs: 20, sm: 22 },
+                                            }}
+                                        />
+                                    }
+                                    sx={{
+                                        height: { xs: 38, sm: 42 },
+                                        px: { xs: 1.5, sm: 2.5 },
+                                        bgcolor: 'secondary.main',
+                                        color: 'text.primary',
+                                        fontWeight: 600,
+                                        fontSize: {
+                                            xs: '0.875rem',
+                                            sm: '0.9375rem',
+                                        },
+                                        fontFamily: "'Kalam', cursive",
+                                        letterSpacing: '0.01em',
+                                        textTransform: 'none',
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                        borderBottom: '2px solid',
+                                        borderBottomColor: 'divider',
+                                        boxShadow: 'none',
+                                        transition: 'all 0.2s ease',
+                                        '&:hover': {
+                                            bgcolor: 'secondary.light',
+                                            transform: 'translateY(-1px)',
+                                            borderColor:
+                                                'rgba(44, 62, 80, 0.15)',
+                                            boxShadow:
+                                                '0 1px 3px rgba(44, 62, 80, 0.1)',
+                                            '& .MuiSvgIcon-root': {
+                                                transform: 'rotate(90deg)',
+                                            },
+                                        },
+                                    }}
+                                >
+                                    {isMobile ? '' : 'New Recipe'}
+                                </Button>
+                            )}
+                        </Box>
                     </Toolbar>
                 </Container>
             </AppBar>
+
+            <Toolbar sx={{ mb: { xs: 1, sm: 2 } }} />
 
             <Box
                 component="main"

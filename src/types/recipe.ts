@@ -19,9 +19,20 @@ export interface Ingredient {
     notes?: string | null;
 }
 
+interface StepTiming {
+    min: number;
+    max: number;
+    units: string;
+}
+
+interface Step {
+    text: string;
+    timing: StepTiming | null;
+}
+
 export interface InstructionSection {
     section_title: string;
-    steps: string[];
+    steps: Step[];
 }
 
 export interface TimeEstimate {

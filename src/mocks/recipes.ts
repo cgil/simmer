@@ -74,28 +74,56 @@ export const MOCK_RECIPES: Recipe[] = [
             {
                 section_title: 'Marinating the Chicken',
                 steps: [
-                    'In a bowl, combine [INGREDIENT=chicken], [INGREDIENT=yogurt], [INGREDIENT=ginger_garlic], and [INGREDIENT=masala_spices] with a pinch of [INGREDIENT=salt].',
-                    'Cover and refrigerate for at least 1 hour (overnight for best results).',
+                    {
+                        text: 'In a bowl, combine [INGREDIENT=chicken], [INGREDIENT=yogurt], [INGREDIENT=ginger_garlic], and [INGREDIENT=masala_spices] with a pinch of [INGREDIENT=salt].',
+                        timing: null, // No specific time aside from marinade time below
+                    },
+                    {
+                        text: 'Cover and refrigerate for at least 1 hour (overnight for best results).',
+                        // We'll treat 1 hour (60 min) as min, and "overnight" as a max of 720 min (12 hours) if desired.
+                        timing: { min: 60, max: 720, units: 'minutes' },
+                    },
                 ],
             },
             {
                 section_title: 'Cooking the Chicken',
                 steps: [
-                    'Heat [INGREDIENT=oil] in a skillet over medium-high heat.',
-                    'Add the marinated [INGREDIENT=chicken] and cook until lightly browned on all sides.',
+                    {
+                        text: 'Heat [INGREDIENT=oil] in a skillet over medium-high heat.',
+                        timing: null,
+                    },
+                    {
+                        text: 'Add the marinated [INGREDIENT=chicken] and cook until lightly browned on all sides.',
+                        // Approximate time can be 5-7 minutes total for browning.
+                        timing: { min: 5, max: 7, units: 'minutes' },
+                    },
                 ],
             },
             {
                 section_title: 'Making the Sauce',
                 steps: [
-                    'Stir in [INGREDIENT=tomato_puree] and let it simmer for about 5 minutes.',
-                    'Reduce heat to low, then add [INGREDIENT=cream].',
-                    'Season with [INGREDIENT=salt] if needed, and simmer until the chicken is fully cooked.',
+                    {
+                        text: 'Stir in [INGREDIENT=tomato_puree] and let it simmer for about 5 minutes.',
+                        timing: { min: 5, max: 5, units: 'minutes' },
+                    },
+                    {
+                        text: 'Reduce heat to low, then add [INGREDIENT=cream].',
+                        timing: null,
+                    },
+                    {
+                        text: 'Season with [INGREDIENT=salt] if needed, and simmer until the chicken is fully cooked.',
+                        timing: null, // No explicit time
+                    },
                 ],
             },
             {
                 section_title: 'Serving',
-                steps: ['Serve hot with rice or naan.'],
+                steps: [
+                    {
+                        text: 'Serve hot with rice or naan.',
+                        timing: null,
+                    },
+                ],
             },
         ],
         notes: [
@@ -187,22 +215,40 @@ export const MOCK_RECIPES: Recipe[] = [
             {
                 section_title: 'Marinating the Chicken',
                 steps: [
-                    'In a bowl, mix [INGREDIENT=chicken] with [INGREDIENT=taco_seasoning], [INGREDIENT=lime_juice], and a pinch of [INGREDIENT=salt].',
-                    'Let it sit for 15 minutes to absorb flavors.',
+                    {
+                        text: 'In a bowl, mix [INGREDIENT=chicken] with [INGREDIENT=taco_seasoning], [INGREDIENT=lime_juice], and a pinch of [INGREDIENT=salt].',
+                        timing: null,
+                    },
+                    {
+                        text: 'Let it sit for 15 minutes to absorb flavors.',
+                        timing: { min: 15, max: 15, units: 'minutes' },
+                    },
                 ],
             },
             {
                 section_title: 'Cooking the Chicken',
                 steps: [
-                    'Heat [INGREDIENT=oil] in a pan over medium-high heat.',
-                    'Add [INGREDIENT=chicken] and cook until browned and fully done, about 5-7 minutes.',
+                    {
+                        text: 'Heat [INGREDIENT=oil] in a pan over medium-high heat.',
+                        timing: null,
+                    },
+                    {
+                        text: 'Add [INGREDIENT=chicken] and cook until browned and fully done, about 5-7 minutes.',
+                        timing: { min: 5, max: 7, units: 'minutes' },
+                    },
                 ],
             },
             {
                 section_title: 'Assembling Tacos',
                 steps: [
-                    'Warm [INGREDIENT=tortillas] in a microwave or on a skillet.',
-                    'Fill each tortilla with cooked [INGREDIENT=chicken], [INGREDIENT=lettuce], [INGREDIENT=cheese], and top with [INGREDIENT=salsa].',
+                    {
+                        text: 'Warm [INGREDIENT=tortillas] in a microwave or on a skillet.',
+                        timing: null,
+                    },
+                    {
+                        text: 'Fill each tortilla with cooked [INGREDIENT=chicken], [INGREDIENT=lettuce], [INGREDIENT=cheese], and top with [INGREDIENT=salsa].',
+                        timing: null,
+                    },
                 ],
             },
         ],
@@ -282,25 +328,52 @@ export const MOCK_RECIPES: Recipe[] = [
             {
                 section_title: 'Cooking the Pasta & Broccoli',
                 steps: [
-                    'Boil water in a large pot with a pinch of [INGREDIENT=salt].',
-                    'Add [INGREDIENT=pasta] and cook according to package directions.',
-                    'During the last 2 minutes, add [INGREDIENT=broccoli] florets to the same pot.',
+                    {
+                        text: 'Boil water in a large pot with a pinch of [INGREDIENT=salt].',
+                        timing: null,
+                    },
+                    {
+                        text: 'Add [INGREDIENT=pasta] and cook according to package directions.',
+                        timing: null,
+                    },
+                    {
+                        text: 'During the last 2 minutes, add [INGREDIENT=broccoli] florets to the same pot.',
+                        timing: { min: 2, max: 2, units: 'minutes' },
+                    },
                 ],
             },
             {
                 section_title: 'Cooking the Salmon',
                 steps: [
-                    'Meanwhile, heat [INGREDIENT=olive_oil] in a pan over medium heat.',
-                    'Season [INGREDIENT=salmon] with [INGREDIENT=salt] and [INGREDIENT=pepper].',
-                    "Cook salmon pieces until they're lightly browned and opaque, about 3-4 minutes per side.",
+                    {
+                        text: 'Meanwhile, heat [INGREDIENT=olive_oil] in a pan over medium heat.',
+                        timing: null,
+                    },
+                    {
+                        text: 'Season [INGREDIENT=salmon] with [INGREDIENT=salt] and [INGREDIENT=pepper].',
+                        timing: null,
+                    },
+                    {
+                        text: "Cook salmon pieces until they're lightly browned and opaque, about 3-4 minutes per side.",
+                        timing: { min: 3, max: 4, units: 'minutes' },
+                    },
                 ],
             },
             {
                 section_title: 'Combining & Serving',
                 steps: [
-                    'Drain the pasta and [INGREDIENT=broccoli], then return them to the pot.',
-                    'Add [INGREDIENT=salmon] and [INGREDIENT=pesto]. Toss gently to coat everything in the sauce.',
-                    'Adjust seasoning with [INGREDIENT=salt] and [INGREDIENT=pepper] if needed.',
+                    {
+                        text: 'Drain the pasta and [INGREDIENT=broccoli], then return them to the pot.',
+                        timing: null,
+                    },
+                    {
+                        text: 'Add [INGREDIENT=salmon] and [INGREDIENT=pesto]. Toss gently to coat everything in the sauce.',
+                        timing: null,
+                    },
+                    {
+                        text: 'Adjust seasoning with [INGREDIENT=salt] and [INGREDIENT=pepper] if needed.',
+                        timing: null,
+                    },
                 ],
             },
         ],

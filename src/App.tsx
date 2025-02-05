@@ -13,6 +13,7 @@ import CatalogPage from './pages/catalog/CatalogPage';
 import RecipePage from './pages/recipe/RecipePage';
 import NewRecipePage from './pages/recipe/NewRecipePage';
 import EditRecipePage from './pages/recipe/EditRecipePage';
+import CookingModePage from './pages/recipe/cooking/CookingModePage';
 
 const App: FC = () => {
     return (
@@ -24,6 +25,10 @@ const App: FC = () => {
                     <Route path="/recipe/new" element={<NewRecipePage />} />
                     <Route path="/recipe/edit" element={<EditRecipePage />} />
                     <Route path="/recipe/:id" element={<RecipePage />} />
+                    <Route
+                        path="/recipe/:id/cook"
+                        element={<CookingModePage />}
+                    />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </Router>
