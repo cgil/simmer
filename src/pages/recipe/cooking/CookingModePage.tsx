@@ -12,6 +12,15 @@ import { MOCK_RECIPES } from '../../../mocks/recipes';
 import StepNavigation from './components/StepNavigation';
 import StepContent from './components/StepContent';
 
+interface ActiveTimer {
+    sectionIndex: number;
+    stepIndex: number;
+    startTime: number;
+    duration: number;
+    isRunning: boolean;
+    hasFinished: boolean;
+}
+
 const CookingModePage: FC = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -23,6 +32,7 @@ const CookingModePage: FC = () => {
     const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
     const [currentStep, setCurrentStep] = useState(0);
     const [servings] = useState(location.state?.servings || 2);
+    const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
 
     // Calculate total steps and current overall step
     const { totalSteps, currentOverallStep } = useMemo(() => {
@@ -52,6 +62,81 @@ const CookingModePage: FC = () => {
 
         return { totalSteps: total, currentOverallStep: current };
     }, [recipe, currentSectionIndex, currentStep]);
+
+    // Timer management functions
+    const startTimer = (
+        sectionIndex: number,
+        stepIndex: number,
+        duration: number
+    ) => {
+        setActiveTimers((prev) => [
+            ...prev,
+            {
+                sectionIndex,
+                stepIndex,
+                startTime: Date.now(),
+                duration: duration * 1000, // Convert to milliseconds
+                isRunning: true,
+                hasFinished: false,
+            },
+        ]);
+    };
+
+    const pauseTimer = (sectionIndex: number, stepIndex: number) => {
+        setActiveTimers((prev) =>
+            prev.map((timer) =>
+                timer.sectionIndex === sectionIndex &&
+                timer.stepIndex === stepIndex
+                    ? { ...timer, isRunning: false }
+                    : timer
+            )
+        );
+    };
+
+    const resumeTimer = (sectionIndex: number, stepIndex: number) => {
+        setActiveTimers((prev) =>
+            prev.map((timer) =>
+                timer.sectionIndex === sectionIndex &&
+                timer.stepIndex === stepIndex
+                    ? { ...timer, isRunning: true }
+                    : timer
+            )
+        );
+    };
+
+    const resetTimer = (sectionIndex: number, stepIndex: number) => {
+        setActiveTimers((prev) =>
+            prev.filter(
+                (timer) =>
+                    !(
+                        timer.sectionIndex === sectionIndex &&
+                        timer.stepIndex === stepIndex
+                    )
+            )
+        );
+    };
+
+    // Update timer states
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setActiveTimers((prev) =>
+                prev.map((timer) => {
+                    if (!timer.isRunning || timer.hasFinished) return timer;
+
+                    const elapsed = Date.now() - timer.startTime;
+                    const hasFinished = elapsed >= timer.duration;
+
+                    return {
+                        ...timer,
+                        hasFinished,
+                        isRunning: !hasFinished,
+                    };
+                })
+            );
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, []);
 
     // Keep screen on
     useEffect(() => {
@@ -185,6 +270,11 @@ const CookingModePage: FC = () => {
                     currentStep={currentStep}
                     currentSectionIndex={currentSectionIndex}
                     servings={servings}
+                    activeTimers={activeTimers}
+                    onStartTimer={startTimer}
+                    onPauseTimer={pauseTimer}
+                    onResumeTimer={resumeTimer}
+                    onResetTimer={resetTimer}
                 />
             </Box>
 

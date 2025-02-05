@@ -20,7 +20,7 @@ import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import FontAwesomeIcon from '../../components/icons/FontAwesomeIcon';
 import CarrotPlusIcon from '../../components/icons/CarrotPlusIcon';
 import AppLayout from '../../components/layout/AppLayout';
-import { Recipe, TimeEstimate } from '../../types';
+import { Recipe, TimeEstimate } from '../../types/recipe';
 import TimeEstimateForm from './components/TimeEstimateForm';
 import TagInput from './components/TagInput';
 import ImageIcon from '@mui/icons-material/Image';
@@ -70,6 +70,7 @@ const EditRecipePage: FC = () => {
             images,
         };
         // TODO: Implement save functionality
+        console.log('Saving recipe:', updatedRecipe);
         navigate('/');
     };
 
@@ -89,10 +90,13 @@ const EditRecipePage: FC = () => {
                 const start = textarea.selectionStart || 0;
                 const end = textarea.selectionEnd || 0;
 
-                newInstructions[sectionIndex].steps[stepIndex] =
-                    currentStep.substring(0, start) +
-                    textToInsert +
-                    currentStep.substring(end);
+                newInstructions[sectionIndex].steps[stepIndex] = {
+                    text:
+                        currentStep.text.substring(0, start) +
+                        textToInsert +
+                        currentStep.text.substring(end),
+                    timing: currentStep.timing,
+                };
 
                 setInstructions(newInstructions);
 
@@ -119,7 +123,10 @@ const EditRecipePage: FC = () => {
 
     const handleAddStep = (sectionIndex: number) => {
         const newInstructions = [...instructions];
-        newInstructions[sectionIndex].steps.push('');
+        newInstructions[sectionIndex].steps.push({
+            text: '',
+            timing: null,
+        });
         setInstructions(newInstructions);
     };
 
@@ -128,7 +135,12 @@ const EditRecipePage: FC = () => {
             ...instructions,
             {
                 section_title: 'New Section',
-                steps: [''],
+                steps: [
+                    {
+                        text: '',
+                        timing: null,
+                    },
+                ],
             },
         ]);
     };
@@ -153,22 +165,18 @@ const EditRecipePage: FC = () => {
     };
 
     const handleDeleteSection = (sectionIndex: number) => {
-        setInstructions(
-            instructions.filter((_, index) => index !== sectionIndex)
-        );
+        const newInstructions = [...instructions];
+        newInstructions.splice(sectionIndex, 1);
+        setInstructions(newInstructions);
     };
 
     const handleDeleteStep = (sectionIndex: number, stepIndex: number) => {
         const newInstructions = [...instructions];
-        newInstructions[sectionIndex].steps = newInstructions[
-            sectionIndex
-        ].steps.filter((_, index) => index !== stepIndex);
-
+        newInstructions[sectionIndex].steps.splice(stepIndex, 1);
         if (newInstructions[sectionIndex].steps.length === 0) {
-            handleDeleteSection(sectionIndex);
-        } else {
-            setInstructions(newInstructions);
+            newInstructions.splice(sectionIndex, 1);
         }
+        setInstructions(newInstructions);
     };
 
     const handleMoveImage = (fromIndex: number, toIndex: number) => {
@@ -213,6 +221,28 @@ const EditRecipePage: FC = () => {
         e.stopPropagation();
         setIsDragging(false);
         handleImageUpload(e.dataTransfer.files);
+    };
+
+    const handleStepChange = (
+        sectionIndex: number,
+        stepIndex: number,
+        e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
+    ) => {
+        const newInstructions = [...instructions];
+        newInstructions[sectionIndex].steps[stepIndex] = {
+            text: e.target.value,
+            timing: newInstructions[sectionIndex].steps[stepIndex].timing,
+        };
+        setInstructions(newInstructions);
+    };
+
+    const handleSectionTitleChange = (
+        sectionIndex: number,
+        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    ) => {
+        const newInstructions = [...instructions];
+        newInstructions[sectionIndex].section_title = e.target.value;
+        setInstructions(newInstructions);
     };
 
     const headerContent = (
@@ -944,6 +974,12 @@ const EditRecipePage: FC = () => {
                                                                         '1px 1px 1px rgba(0,0,0,0.05)',
                                                                 },
                                                         }}
+                                                        onChange={(e) =>
+                                                            handleSectionTitleChange(
+                                                                sectionIndex,
+                                                                e
+                                                            )
+                                                        }
                                                     />
                                                     <IconButton
                                                         className="delete-section"
@@ -1035,7 +1071,7 @@ const EditRecipePage: FC = () => {
                                                                         multiline
                                                                         placeholder="Describe this step..."
                                                                         value={
-                                                                            step
+                                                                            step.text
                                                                         }
                                                                         variant="standard"
                                                                         inputProps={{
@@ -1046,27 +1082,24 @@ const EditRecipePage: FC = () => {
                                                                         }}
                                                                         onChange={(
                                                                             e
-                                                                        ) => {
-                                                                            const newInstructions =
-                                                                                [
-                                                                                    ...instructions,
-                                                                                ];
-                                                                            newInstructions[
-                                                                                sectionIndex
-                                                                            ].steps[
-                                                                                stepIndex
-                                                                            ] =
-                                                                                e.target.value;
-                                                                            setInstructions(
-                                                                                newInstructions
-                                                                            );
-                                                                        }}
+                                                                        ) =>
+                                                                            handleStepChange(
+                                                                                sectionIndex,
+                                                                                stepIndex,
+                                                                                e
+                                                                            )
+                                                                        }
                                                                         onFocus={() =>
                                                                             setActiveStepIndex(
                                                                                 [
                                                                                     sectionIndex,
                                                                                     stepIndex,
                                                                                 ]
+                                                                            )
+                                                                        }
+                                                                        onBlur={() =>
+                                                                            setActiveStepIndex(
+                                                                                null
                                                                             )
                                                                         }
                                                                         sx={{

@@ -1,4 +1,4 @@
-import { FC, useState, useEffect, useCallback } from 'react';
+import { FC, useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Box,
     Typography,
@@ -11,29 +11,36 @@ import {
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 
 interface TimerProps {
     duration: number;
     maxDuration?: number;
     units: string;
     label?: string;
+    activeTimer?: {
+        startTime: number;
+        duration: number;
+        isRunning: boolean;
+        hasFinished: boolean;
+    };
+    onStart: (duration: number) => void;
+    onPause: () => void;
+    onResume: () => void;
+    onReset: () => void;
 }
 
-interface WakeLockSentinel {
-    release(): Promise<void>;
-}
-
-interface WakeLock {
-    request(type: 'screen'): Promise<WakeLockSentinel>;
-}
-
-function hasWakeLock(
-    nav: Navigator
-): nav is Navigator & { wakeLock: WakeLock } {
-    return 'wakeLock' in nav;
-}
-
-const Timer: FC<TimerProps> = ({ duration, maxDuration, units, label }) => {
+const Timer: FC<TimerProps> = ({
+    duration,
+    maxDuration,
+    units,
+    label,
+    activeTimer,
+    onStart,
+    onPause,
+    onResume,
+    onReset,
+}) => {
     // Convert to seconds based on units
     const getSecondsFromDuration = (time: number) => {
         switch (units) {
@@ -56,12 +63,21 @@ const Timer: FC<TimerProps> = ({ duration, maxDuration, units, label }) => {
         ? Math.round((minSeconds + maxSeconds) / 2)
         : minSeconds;
 
-    const [timeLeft, setTimeLeft] = useState(initialDuration);
-    const [isRunning, setIsRunning] = useState(false);
-    const [hasFinished, setHasFinished] = useState(false);
     const [selectedDuration, setSelectedDuration] = useState(initialDuration);
     const [showNotification, setShowNotification] = useState(false);
-    const [endTime, setEndTime] = useState<Date | null>(null);
+
+    // Calculate time left and progress based on active timer
+    const timeLeft = useMemo(() => {
+        if (!activeTimer) return selectedDuration;
+        const elapsed = Math.floor((Date.now() - activeTimer.startTime) / 1000);
+        return Math.max(0, Math.floor(activeTimer.duration / 1000) - elapsed);
+    }, [activeTimer, selectedDuration]);
+
+    const progress = useMemo(() => {
+        if (!activeTimer) return 0;
+        const total = activeTimer.duration / 1000;
+        return ((total - timeLeft) / total) * 100;
+    }, [activeTimer, timeLeft]);
 
     const formatTime = (seconds: number) => {
         const hours = Math.floor(seconds / 3600);
@@ -83,8 +99,6 @@ const Timer: FC<TimerProps> = ({ duration, maxDuration, units, label }) => {
         });
     };
 
-    const progress = ((selectedDuration - timeLeft) / selectedDuration) * 100;
-
     const playNotification = useCallback(() => {
         setShowNotification(true);
         if (navigator.vibrate) {
@@ -104,74 +118,32 @@ const Timer: FC<TimerProps> = ({ duration, maxDuration, units, label }) => {
         setTimeout(() => setShowNotification(false), 5000);
     }, [label]);
 
+    // Handle timer completion
     useEffect(() => {
-        let interval: number;
-        let wakeLockSentinel: WakeLockSentinel | null = null;
-
-        if (isRunning && timeLeft > 0) {
-            try {
-                if (hasWakeLock(navigator)) {
-                    navigator.wakeLock
-                        .request('screen')
-                        .then((sentinel) => {
-                            wakeLockSentinel = sentinel;
-                        })
-                        .catch(console.error);
-                }
-            } catch (err) {
-                console.error('Wake Lock API not supported', err);
-            }
-
-            interval = setInterval(() => {
-                setTimeLeft((prev) => {
-                    if (prev <= 1) {
-                        setIsRunning(false);
-                        setHasFinished(true);
-                        playNotification();
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
+        if (activeTimer?.hasFinished) {
+            playNotification();
         }
-
-        return () => {
-            clearInterval(interval);
-            wakeLockSentinel?.release().catch(console.error);
-        };
-    }, [isRunning, timeLeft, playNotification]);
-
-    useEffect(() => {
-        if (isRunning) {
-            const end = new Date();
-            end.setSeconds(end.getSeconds() + timeLeft);
-            setEndTime(end);
-        } else {
-            setEndTime(null);
-        }
-    }, [isRunning, timeLeft]);
+    }, [activeTimer?.hasFinished, playNotification]);
 
     const handleStart = () => {
-        setIsRunning(true);
-        setHasFinished(false);
+        onStart(selectedDuration);
     };
 
-    const handlePause = () => setIsRunning(false);
-
     const handleSliderChange = (_event: Event, value: number | number[]) => {
-        if (!isRunning) {
+        if (!activeTimer) {
             const newDuration = value as number;
             setSelectedDuration(newDuration);
-            setTimeLeft(newDuration);
-            setHasFinished(false);
         }
     };
 
     const getStatusText = () => {
-        if (hasFinished) {
+        if (activeTimer?.hasFinished) {
             return 'Timer complete!';
         }
-        if (isRunning && endTime) {
+        if (activeTimer?.isRunning) {
+            const endTime = new Date(
+                activeTimer.startTime + activeTimer.duration
+            );
             return `Ends at ${formatEndTime(endTime)}`;
         }
         return '';
@@ -184,22 +156,23 @@ const Timer: FC<TimerProps> = ({ duration, maxDuration, units, label }) => {
                 position: 'relative',
                 p: { xs: 1.5, sm: 2 },
                 borderRadius: 4,
-                bgcolor: hasFinished
+                bgcolor: activeTimer?.hasFinished
                     ? 'success.lighter'
-                    : isRunning
+                    : activeTimer?.isRunning
                     ? 'primary.lighter'
                     : 'background.default',
                 transition: 'all 0.3s ease',
                 border: '1px solid',
-                borderColor: hasFinished
+                borderColor: activeTimer?.hasFinished
                     ? 'success.light'
-                    : isRunning
+                    : activeTimer?.isRunning
                     ? 'primary.light'
                     : 'divider',
                 overflow: 'hidden',
                 backdropFilter: 'blur(8px)',
                 boxShadow: '0 4px 24px rgba(0, 0, 0, 0.05)',
                 maxWidth: { sm: 480, md: 560 },
+                margin: '0 auto',
             }}
         >
             <Box
@@ -210,25 +183,32 @@ const Timer: FC<TimerProps> = ({ duration, maxDuration, units, label }) => {
                     height: { xs: 80, sm: 96 },
                 }}
             >
-                {/* Play/Pause Button Container */}
+                {/* Play/Pause/Reset Buttons */}
                 <Box
                     sx={{
                         display: 'flex',
                         alignItems: 'center',
+                        gap: 1,
                         height: '100%',
                     }}
                 >
                     <IconButton
-                        onClick={isRunning ? handlePause : handleStart}
+                        onClick={
+                            activeTimer
+                                ? activeTimer.isRunning
+                                    ? onPause
+                                    : onResume
+                                : handleStart
+                        }
                         sx={{
                             width: { xs: 48, sm: 56 },
                             height: { xs: 48, sm: 56 },
-                            bgcolor: isRunning
+                            bgcolor: activeTimer?.isRunning
                                 ? 'primary.main'
                                 : 'success.main',
                             color: 'white',
                             '&:hover': {
-                                bgcolor: isRunning
+                                bgcolor: activeTimer?.isRunning
                                     ? 'primary.dark'
                                     : 'success.dark',
                             },
@@ -239,7 +219,7 @@ const Timer: FC<TimerProps> = ({ duration, maxDuration, units, label }) => {
                             },
                         }}
                     >
-                        {isRunning ? (
+                        {activeTimer?.isRunning ? (
                             <PauseIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
                         ) : (
                             <PlayArrowIcon
@@ -247,6 +227,27 @@ const Timer: FC<TimerProps> = ({ duration, maxDuration, units, label }) => {
                             />
                         )}
                     </IconButton>
+                    {activeTimer && (
+                        <IconButton
+                            onClick={onReset}
+                            sx={{
+                                width: { xs: 36, sm: 42 },
+                                height: { xs: 36, sm: 42 },
+                                bgcolor: 'background.paper',
+                                color: 'text.secondary',
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                '&:hover': {
+                                    bgcolor: 'background.default',
+                                    color: 'primary.main',
+                                },
+                            }}
+                        >
+                            <RestartAltIcon
+                                sx={{ fontSize: { xs: 20, sm: 24 } }}
+                            />
+                        </IconButton>
+                    )}
                 </Box>
 
                 {/* Middle section with slider and status */}
@@ -269,7 +270,6 @@ const Timer: FC<TimerProps> = ({ duration, maxDuration, units, label }) => {
                             alignItems: 'center',
                         }}
                     >
-                        {/* Status Text - Only show if there's text to display */}
                         {getStatusText() && (
                             <Typography
                                 variant="subtitle2"
@@ -284,55 +284,30 @@ const Timer: FC<TimerProps> = ({ duration, maxDuration, units, label }) => {
                             </Typography>
                         )}
 
-                        {/* Time Range Slider */}
-                        {minSeconds !== maxSeconds &&
-                            !isRunning &&
-                            !hasFinished && (
-                                <Box
+                        {minSeconds !== maxSeconds && !activeTimer && (
+                            <Box sx={{ width: '100%', maxWidth: 180 }}>
+                                <Slider
+                                    value={selectedDuration}
+                                    onChange={handleSliderChange}
+                                    min={minSeconds}
+                                    max={maxSeconds}
+                                    step={30}
                                     sx={{
-                                        width: '100%',
-                                        maxWidth: 180,
-                                    }}
-                                >
-                                    <Slider
-                                        value={selectedDuration}
-                                        onChange={handleSliderChange}
-                                        min={minSeconds}
-                                        max={maxSeconds}
-                                        step={30}
-                                        sx={{
-                                            '& .MuiSlider-markLabel': {
-                                                fontSize: '0.75rem',
-                                                color: 'text.secondary',
-                                                mt: 0.5,
-                                            },
-                                            '& .MuiSlider-thumb': {
-                                                width: { xs: 24, sm: 28 },
-                                                height: { xs: 24, sm: 28 },
-                                                backgroundColor:
-                                                    'background.paper',
+                                        '& .MuiSlider-thumb': {
+                                            width: { xs: 24, sm: 28 },
+                                            height: { xs: 24, sm: 28 },
+                                            backgroundColor: 'background.paper',
+                                            boxShadow:
+                                                '0 2px 4px rgba(0,0,0,0.1)',
+                                            '&:hover, &.Mui-focusVisible': {
                                                 boxShadow:
-                                                    '0 2px 4px rgba(0,0,0,0.1)',
-                                                '&:hover, &.Mui-focusVisible': {
-                                                    boxShadow:
-                                                        '0 0 0 8px rgba(25, 118, 210, 0.16)',
-                                                },
+                                                    '0 0 0 8px rgba(25, 118, 210, 0.16)',
                                             },
-                                            '& .MuiSlider-track': {
-                                                height: 6,
-                                                border: 'none',
-                                            },
-                                            '& .MuiSlider-rail': {
-                                                height: 6,
-                                                opacity: 0.2,
-                                            },
-                                            '& .MuiSlider-mark': {
-                                                display: 'none',
-                                            },
-                                        }}
-                                    />
-                                </Box>
-                            )}
+                                        },
+                                    }}
+                                />
+                            </Box>
+                        )}
                     </Box>
                 </Box>
 
@@ -358,9 +333,9 @@ const Timer: FC<TimerProps> = ({ duration, maxDuration, units, label }) => {
                         thickness={3}
                         sx={{
                             position: 'absolute',
-                            color: hasFinished
+                            color: activeTimer?.hasFinished
                                 ? 'success.main'
-                                : isRunning
+                                : activeTimer?.isRunning
                                 ? 'primary.main'
                                 : 'grey.200',
                             opacity: 0.8,
@@ -372,9 +347,9 @@ const Timer: FC<TimerProps> = ({ duration, maxDuration, units, label }) => {
                             fontFamily: "'Inter', sans-serif",
                             fontWeight: 600,
                             fontSize: { xs: '1.5rem', sm: '1.75rem' },
-                            color: hasFinished
+                            color: activeTimer?.hasFinished
                                 ? 'success.dark'
-                                : isRunning
+                                : activeTimer?.isRunning
                                 ? 'primary.dark'
                                 : 'text.primary',
                             textAlign: 'center',

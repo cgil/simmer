@@ -14,6 +14,22 @@ interface StepContentProps {
     currentStep: number;
     currentSectionIndex: number;
     servings: number;
+    activeTimers: Array<{
+        sectionIndex: number;
+        stepIndex: number;
+        startTime: number;
+        duration: number;
+        isRunning: boolean;
+        hasFinished: boolean;
+    }>;
+    onStartTimer: (
+        sectionIndex: number,
+        stepIndex: number,
+        duration: number
+    ) => void;
+    onPauseTimer: (sectionIndex: number, stepIndex: number) => void;
+    onResumeTimer: (sectionIndex: number, stepIndex: number) => void;
+    onResetTimer: (sectionIndex: number, stepIndex: number) => void;
 }
 
 const StepContent: FC<StepContentProps> = ({
@@ -21,6 +37,11 @@ const StepContent: FC<StepContentProps> = ({
     currentStep,
     currentSectionIndex,
     servings,
+    activeTimers,
+    onStartTimer,
+    onPauseTimer,
+    onResumeTimer,
+    onResetTimer,
 }) => {
     const section = recipe.instructions[currentSectionIndex];
     const step = section.steps[currentStep];
@@ -53,6 +74,13 @@ const StepContent: FC<StepContentProps> = ({
                 quantity: scaledQuantity,
             };
         });
+
+    // Find active timer for current step
+    const activeTimer = activeTimers.find(
+        (timer) =>
+            timer.sectionIndex === currentSectionIndex &&
+            timer.stepIndex === currentStep
+    );
 
     return (
         <Box
@@ -160,6 +188,32 @@ const StepContent: FC<StepContentProps> = ({
                                         step.timing.min === step.timing.max
                                             ? `${step.timing.min} ${step.timing.units}`
                                             : `${step.timing.min}-${step.timing.max} ${step.timing.units}`
+                                    }
+                                    activeTimer={activeTimer}
+                                    onStart={(duration) =>
+                                        onStartTimer(
+                                            currentSectionIndex,
+                                            currentStep,
+                                            duration
+                                        )
+                                    }
+                                    onPause={() =>
+                                        onPauseTimer(
+                                            currentSectionIndex,
+                                            currentStep
+                                        )
+                                    }
+                                    onResume={() =>
+                                        onResumeTimer(
+                                            currentSectionIndex,
+                                            currentStep
+                                        )
+                                    }
+                                    onReset={() =>
+                                        onResetTimer(
+                                            currentSectionIndex,
+                                            currentStep
+                                        )
                                     }
                                 />
                             </Box>
