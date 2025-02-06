@@ -23,6 +23,8 @@ interface ActiveTimer {
     duration: number;
     isRunning: boolean;
     hasFinished: boolean;
+    pausedAt: number | null;
+    totalPausedTime: number;
 }
 
 const CookingModePage: FC = () => {
@@ -82,6 +84,8 @@ const CookingModePage: FC = () => {
                 duration: duration * 1000, // Convert to milliseconds
                 isRunning: true,
                 hasFinished: false,
+                pausedAt: null,
+                totalPausedTime: 0,
             },
         ]);
     };
@@ -91,7 +95,7 @@ const CookingModePage: FC = () => {
             prev.map((timer) =>
                 timer.sectionIndex === sectionIndex &&
                 timer.stepIndex === stepIndex
-                    ? { ...timer, isRunning: false }
+                    ? { ...timer, isRunning: false, pausedAt: Date.now() }
                     : timer
             )
         );
@@ -99,12 +103,23 @@ const CookingModePage: FC = () => {
 
     const resumeTimer = (sectionIndex: number, stepIndex: number) => {
         setActiveTimers((prev) =>
-            prev.map((timer) =>
-                timer.sectionIndex === sectionIndex &&
-                timer.stepIndex === stepIndex
-                    ? { ...timer, isRunning: true }
-                    : timer
-            )
+            prev.map((timer) => {
+                if (
+                    timer.sectionIndex === sectionIndex &&
+                    timer.stepIndex === stepIndex &&
+                    timer.pausedAt
+                ) {
+                    const additionalPausedTime = Date.now() - timer.pausedAt;
+                    return {
+                        ...timer,
+                        isRunning: true,
+                        pausedAt: null,
+                        totalPausedTime:
+                            timer.totalPausedTime + additionalPausedTime,
+                    };
+                }
+                return timer;
+            })
         );
     };
 
@@ -127,7 +142,8 @@ const CookingModePage: FC = () => {
                 prev.map((timer) => {
                     if (!timer.isRunning || timer.hasFinished) return timer;
 
-                    const elapsed = Date.now() - timer.startTime;
+                    const elapsed =
+                        Date.now() - timer.startTime - timer.totalPausedTime;
                     const hasFinished = elapsed >= timer.duration;
 
                     return {
@@ -301,8 +317,17 @@ const CookingModePage: FC = () => {
                                         ) +
                                     timer.stepIndex +
                                     1;
+                                const currentPauseTime = timer.pausedAt
+                                    ? Date.now() - timer.pausedAt
+                                    : 0;
+                                const totalPauseTime =
+                                    timer.totalPausedTime +
+                                    (timer.pausedAt ? currentPauseTime : 0);
                                 const elapsed = Math.floor(
-                                    (Date.now() - timer.startTime) / 1000
+                                    (Date.now() -
+                                        timer.startTime -
+                                        totalPauseTime) /
+                                        1000
                                 );
                                 const timeLeft = Math.max(
                                     0,

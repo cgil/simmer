@@ -21,6 +21,8 @@ interface StepContentProps {
         duration: number;
         isRunning: boolean;
         hasFinished: boolean;
+        pausedAt: number | null;
+        totalPausedTime: number;
     }>;
     onStartTimer: (
         sectionIndex: number,

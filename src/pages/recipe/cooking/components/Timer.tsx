@@ -23,6 +23,8 @@ interface TimerProps {
         duration: number;
         isRunning: boolean;
         hasFinished: boolean;
+        pausedAt: number | null;
+        totalPausedTime: number;
     };
     onStart: (duration: number) => void;
     onPause: () => void;
@@ -69,7 +71,15 @@ const Timer: FC<TimerProps> = ({
     // Calculate time left and progress based on active timer
     const timeLeft = useMemo(() => {
         if (!activeTimer) return selectedDuration;
-        const elapsed = Math.floor((Date.now() - activeTimer.startTime) / 1000);
+        const currentPauseTime = activeTimer.pausedAt
+            ? Date.now() - activeTimer.pausedAt
+            : 0;
+        const totalPauseTime =
+            activeTimer.totalPausedTime +
+            (activeTimer.pausedAt ? currentPauseTime : 0);
+        const elapsed = Math.floor(
+            (Date.now() - activeTimer.startTime - totalPauseTime) / 1000
+        );
         return Math.max(0, Math.floor(activeTimer.duration / 1000) - elapsed);
     }, [activeTimer, selectedDuration]);
 
