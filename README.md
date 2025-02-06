@@ -19,6 +19,7 @@ Simmer is a modern web application that brings the warmth and personality of a p
 -   Node.js (v18 or higher)
 -   npm or yarn
 -   A modern web browser
+-   Vercel account (for deployment)
 
 ### Installation
 
@@ -67,6 +68,48 @@ yarn build
 
 The built files will be in the `dist` directory.
 
+### Deploying to Vercel
+
+1. Install the Vercel CLI:
+
+```bash
+npm i -g vercel
+```
+
+2. Configure environment variables in Vercel:
+
+    - Go to your project settings in Vercel
+    - Add the following environment variables:
+        ```
+        VITE_SUPABASE_URL
+        VITE_SUPABASE_ANON_KEY
+        VITE_OPENAI_API_KEY
+        ```
+
+3. Deploy using one of these methods:
+
+    a. Using Vercel CLI:
+
+    ```bash
+    vercel
+    ```
+
+    b. Using GitHub Integration:
+
+    - Connect your GitHub repository to Vercel
+    - Enable automatic deployments
+    - Push to main branch to trigger deployment
+
+4. Your app will be available at `https://your-project-name.vercel.app`
+
+Note: The project includes a `vercel.json` configuration file that handles:
+
+-   Routing configuration
+-   Build settings
+-   Security headers
+-   Asset caching
+-   GitHub integration settings
+
 ## Development
 
 ### Project Structure
@@ -90,3 +133,30 @@ src/
 -   Material-UI (MUI) for UI components
 -   Supabase for backend services
 -   OpenAI API for recipe extraction
+-   Vercel for deployment and hosting
+
+### Available Scripts
+
+-   `npm run dev` - Start development server
+-   `npm run build` - Build for production
+-   `npm run lint` - Run ESLint
+-   `npm run preview` - Preview production build locally
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+-   Material-UI for the component library
+-   OpenAI for recipe extraction capabilities
+-   Supabase for backend services
+-   Vercel for hosting and deployment

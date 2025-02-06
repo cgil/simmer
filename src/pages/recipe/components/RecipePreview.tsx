@@ -167,7 +167,7 @@ const RecipePreview: FC<RecipePreviewProps> = ({
                                             component="li"
                                             sx={{ mb: 1 }}
                                         >
-                                            {step}
+                                            {step.text}
                                         </Typography>
                                     ))}
                                 </Box>
