@@ -98,6 +98,18 @@ The app follows a "Paper Notebook Recipe Journal" aesthetic with these key eleme
 -   Tag filtering
 -   Preview cards
 
+### 3.5. Cooking Mode
+
+-   Step-by-step instruction view
+-   Interactive timer system with:
+    -   Pause/resume functionality
+    -   Visual and audio notifications
+    -   Multi-timer tracking across steps
+    -   Quick navigation between timed steps
+-   Real-time timer synchronization
+-   Ingredient scaling
+-   Mobile-friendly interface
+
 ---
 
 ## 4. User Flows

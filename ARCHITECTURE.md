@@ -136,6 +136,40 @@ src/
       Typography.tsx
 ```
 
+### 3.4. Timer System
+
+```typescript
+interface ActiveTimer {
+    startTime: number;
+    duration: number;
+    isRunning: boolean;
+    hasFinished: boolean;
+    pausedAt: number | null;
+    totalPausedTime: number;
+}
+
+// Timer state management
+const timerManagement = {
+    startTimer: (duration: number) => void;
+    pauseTimer: () => void;
+    resumeTimer: () => void;
+    resetTimer: () => void;
+    calculateTimeLeft: () => number;
+};
+
+// Notification system
+const notificationSystem = {
+    audio: {
+        play: () => void;
+        fadeOut: (duration: number) => void;
+    },
+    visual: {
+        showOverlay: boolean;
+        vibrate: boolean;
+    }
+};
+```
+
 ---
 
 ## 4. Data Models
