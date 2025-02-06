@@ -104,8 +104,35 @@ const Timer: FC<TimerProps> = ({
         if (navigator.vibrate) {
             navigator.vibrate([200, 100, 200]);
         }
+
+        // Create and configure audio
         const audio = new Audio('/notification.mp3');
-        audio.play().catch(console.error);
+        audio.volume = 1;
+        audio.loop = true;
+
+        // Play audio with fade out
+        audio
+            .play()
+            .then(() => {
+                setTimeout(() => {
+                    // Fade out over 2 seconds
+                    const fadeInterval = setInterval(() => {
+                        if (audio.volume > 0.1) {
+                            audio.volume = Math.max(0, audio.volume - 0.1);
+                        } else {
+                            audio.pause();
+                            clearInterval(fadeInterval);
+                        }
+                    }, 200);
+
+                    // Stop after fade out
+                    setTimeout(() => {
+                        audio.pause();
+                        clearInterval(fadeInterval);
+                    }, 2000);
+                }, 10000); // Play at full volume for 2 seconds before fade
+            })
+            .catch(console.error);
 
         if (Notification.permission === 'granted') {
             new Notification('Timer Complete!', {
@@ -255,7 +282,7 @@ const Timer: FC<TimerProps> = ({
                     sx={{
                         flex: 1,
                         minWidth: 0,
-                        px: { xs: 2, sm: 3 },
+                        px: { xs: 0, sm: 3 },
                         height: '100%',
                         display: 'flex',
                         flexDirection: 'column',

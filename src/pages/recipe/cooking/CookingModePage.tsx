@@ -238,7 +238,7 @@ const CookingModePage: FC = () => {
                     elevation={0}
                     sx={{
                         px: { xs: 2, sm: 3 },
-                        py: 1.5,
+                        py: 2,
                         borderBottom: '1px solid',
                         borderColor: 'divider',
                         bgcolor: 'background.paper',
@@ -256,21 +256,28 @@ const CookingModePage: FC = () => {
                         },
                     }}
                 >
-                    <Stack spacing={1}>
+                    <Stack spacing={1.5}>
                         <Typography
                             variant="subtitle2"
                             sx={{
-                                color: 'text.secondary',
-                                fontWeight: 500,
+                                color: 'primary.dark',
+                                fontWeight: 600,
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 1,
                                 position: 'relative',
                                 zIndex: 1,
+                                fontFamily: "'Kalam', cursive",
+                                fontSize: { xs: '1rem', sm: '1.1rem' },
                             }}
                         >
-                            <TimerIcon sx={{ fontSize: 20 }} />
-                            Active Timers
+                            <TimerIcon
+                                sx={{
+                                    fontSize: { xs: 20, sm: 22 },
+                                    color: 'primary.main',
+                                }}
+                            />
+                            Active Timers ({activeTimers.length})
                         </Typography>
                         <Box
                             sx={{
