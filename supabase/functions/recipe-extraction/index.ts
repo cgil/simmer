@@ -5,6 +5,21 @@ import { zodResponseFormat } from 'https://deno.land/x/openai@v4.55.1/helpers/zo
 import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
+// Helper function to generate kebab-case IDs
+function generateId(text: string): string {
+    return text
+        .toLowerCase()
+        // Replace special characters with spaces
+        .replace(/[^a-z0-9\s-]/g, '')
+        // Replace multiple spaces with single space
+        .replace(/\s+/g, ' ')
+        .trim()
+        // Replace spaces with hyphens
+        .replace(/\s/g, '-')
+        // Remove consecutive hyphens
+        .replace(/-+/g, '-');
+}
+
 // Define Zod schemas
 const TimingSchema = z.object({
     min: z.number(),
@@ -18,11 +33,13 @@ const StepSchema = z.object({
 });
 
 const InstructionSectionSchema = z.object({
+    id: z.string(),
     section_title: z.string(),
     steps: z.array(StepSchema)
 });
 
 const IngredientSchema = z.object({
+    id: z.string(),
     name: z.string(),
     quantity: z.number().nullable(),
     unit: z.string().nullable(),
@@ -36,6 +53,7 @@ const TimeEstimateSchema = z.object({
 });
 
 const RecipeSchema = z.object({
+    id: z.string(),
     title: z.string(),
     description: z.string(),
     servings: z.number(),
@@ -166,6 +184,9 @@ serve(async (req) => {
                         - The description should be a concise and descriptive sentence that describes the recipe.
                         - If information is missing, use null (not undefined) rather than guessing.
                         - Always return the necessary fields in the schema, set as null if there's no information.
+                        - Ingredient names should be clear and concise, as they will be used to generate unique IDs.
+                        - Section titles should be clear and concise, as they will be used to generate unique IDs.
+                        - Avoid using special characters in ingredient names, section titles, and the recipe title.
                         - Ingredient units must be in the following style and always plural where possible:
                             - "cups"
                             - "tablespoons"
@@ -203,6 +224,18 @@ serve(async (req) => {
 
             // Parse and validate the response
             const parsedResult = JSON.parse(result);
+
+            // Add IDs to the recipe and its components
+            parsedResult.id = generateId(parsedResult.title);
+            parsedResult.ingredients = parsedResult.ingredients.map(ingredient => ({
+                ...ingredient,
+                id: generateId(ingredient.name)
+            }));
+            parsedResult.instructions = parsedResult.instructions.map(section => ({
+                ...section,
+                id: generateId(section.section_title)
+            }));
+
             const validatedRecipe = RecipeSchema.parse(parsedResult);
 
             // Store in cache
