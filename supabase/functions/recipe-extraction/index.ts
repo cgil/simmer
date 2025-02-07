@@ -3,6 +3,7 @@ import { OpenAI } from "https://deno.land/x/openai@v4.55.1/mod.ts";
 import { z } from "https://deno.land/x/zod@v3.24.1/mod.ts";
 import { zodResponseFormat } from 'https://deno.land/x/openai@v4.55.1/helpers/zod.ts';
 import { corsHeaders } from "../_shared/cors.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 // Define Zod schemas
 const TimingSchema = z.object({
@@ -101,15 +102,43 @@ serve(async (req) => {
     }
 
     try {
-        const openai = new OpenAI({
-            apiKey: Deno.env.get("OPENAI_API_KEY") || "",
-        });
-
         const { url } = await req.json();
 
         if (!url) {
             throw new Error("URL is required");
         }
+
+        // Initialize Supabase client
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+        // Check cache first
+        const { data: cachedData, error: cacheError } = await supabase.rpc(
+            'get_or_set_recipe_cache',
+            {
+                p_url: url,
+                p_data: null
+            }
+        );
+
+        if (cacheError) {
+            console.error('Cache error:', cacheError);
+        } else if (cachedData) {
+            // Return cached data if available
+            return new Response(JSON.stringify(cachedData), {
+                headers: {
+                    ...corsHeaders,
+                    'Content-Type': 'application/json',
+                    'X-Cache': 'HIT',
+                },
+            });
+        }
+
+        // If no cache hit, proceed with extraction
+        const openai = new OpenAI({
+            apiKey: Deno.env.get("OPENAI_API_KEY") || "",
+        });
 
         try {
             // Fetch webpage content
@@ -176,12 +205,19 @@ serve(async (req) => {
             const parsedResult = JSON.parse(result);
             const validatedRecipe = RecipeSchema.parse(parsedResult);
 
+            // Store in cache
+            await supabase.rpc('get_or_set_recipe_cache', {
+                p_url: url,
+                p_data: validatedRecipe
+            });
+
             return new Response(
                 JSON.stringify(validatedRecipe),
                 {
                     headers: {
                         ...corsHeaders,
-                        "Content-Type": "application/json",
+                        'Content-Type': 'application/json',
+                        'X-Cache': 'MISS',
                     },
                 },
             );
