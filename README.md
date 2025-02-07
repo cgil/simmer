@@ -37,14 +37,16 @@ cd simmer
 npm install
 ```
 
-3. Create a `.env` file in the root directory:
+3. Copy `.env.example` to create your environment files:
 
-```env
-# Local Development
-VITE_SUPABASE_URL=http://127.0.0.1:54321
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-OPENAI_API_KEY=your_openai_api_key
+```bash
+cp .env.example .env.local    # For local development
+cp .env.example .env.production    # For production deployment
 ```
+
+4. Configure your environment files:
+    - `.env.local`: Used for local development with Supabase running locally
+    - `.env.production`: Used for production deployment with your Supabase cloud project
 
 ### Starting the Development Environment
 
@@ -149,19 +151,25 @@ The built files will be in the `dist` directory.
 
 ### Environment Setup
 
-Create the following environment files:
+We use two environment files:
 
 1. `.env.local` - Local development
-2. `.env.development` - Development deployment
-3. `.env.production` - Production deployment
+2. `.env.production` - Production deployment
 
 Each file should contain:
 
 ```env
+# Supabase Configuration
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# OpenAI Configuration
 OPENAI_API_KEY=your_openai_api_key
+
+# Environment Configuration
 ENVIRONMENT=development|production
+
+# Additional configurations as needed
 ```
 
 ### Deploying to Vercel
@@ -174,27 +182,20 @@ npm i -g vercel
 
 2. Configure environment variables in Vercel:
 
-    - Development: `vercel env pull .env.development`
-    - Production: `vercel env pull .env.production`
+```bash
+vercel env pull .env.production
+```
 
 3. Deploy:
 
 ```bash
-# Development
-npm run deploy:dev
-
-# Production
-npm run deploy:prod
+npm run deploy
 ```
 
 ### Deploying Functions to Supabase
 
 ```bash
-# Development (no JWT verification)
-npm run functions:deploy:dev
-
-# Production (with JWT verification)
-npm run functions:deploy:prod
+npm run functions:deploy
 ```
 
 ### Deployment Checklist
