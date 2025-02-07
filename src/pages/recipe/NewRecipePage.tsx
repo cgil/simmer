@@ -14,7 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LinkIcon from '@mui/icons-material/Link';
 import AppLayout from '../../components/layout/AppLayout';
-import { MOCK_RECIPES } from '../../mocks/recipes';
+import { extractRecipe } from '../../lib/api';
 
 const NewRecipePage: FC = () => {
     const navigate = useNavigate();
@@ -36,16 +36,14 @@ const NewRecipePage: FC = () => {
             setError(null);
             setIsLoading(true);
 
-            // Simulate API call with mock data
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-
-            // For now, using the first mock recipe as example
-            const importedRecipe = MOCK_RECIPES[0];
+            const importedRecipe = await extractRecipe(url);
 
             // Navigate to edit mode with the imported recipe
             navigate('/recipe/edit', { state: { recipe: importedRecipe } });
-        } catch {
-            setError('Please enter a valid URL');
+        } catch (err) {
+            setError(
+                err instanceof Error ? err.message : 'Failed to extract recipe'
+            );
             setIsLoading(false);
         }
     };

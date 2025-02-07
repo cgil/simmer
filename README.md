@@ -107,10 +107,15 @@ The application will be available at:
 
     ```bash
     # Start functions server (auto-reloads on changes)
+    # Development mode - JWT verification disabled
     npm run functions:serve
 
-    # Test recipe extraction
+    # Test recipe extraction (requires authentication in production)
     npm run test:function
+
+    # Deploy functions
+    npm run functions:deploy:dev  # Development (JWT verification disabled)
+    npm run functions:deploy:prod # Production (JWT verification enabled)
     ```
 
 3. **Full Development Environment**
@@ -168,6 +173,9 @@ OPENAI_API_KEY=your_openai_api_key
 
 # Environment Configuration
 ENVIRONMENT=development|production
+
+# JWT Configuration
+SUPABASE_JWT_SECRET=your_jwt_secret  # Required for production
 
 # Additional configurations as needed
 ```

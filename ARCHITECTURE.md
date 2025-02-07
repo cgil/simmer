@@ -250,12 +250,33 @@ interface ExtractedRecipe {
     notes?: string[];
 }
 
-async function extractRecipe(url: string): Promise<ExtractedRecipe> {
-    // Implementation details for OpenAI API call
-}
+// Recipe extraction API client
+const extractRecipe = async (url: string): Promise<Recipe> => {
+    const { data, error } = await supabase.functions.invoke(
+        'recipe-extraction',
+        {
+            body: { url },
+        }
+    );
+
+    if (error) {
+        throw new Error(`Recipe extraction failed: ${error.message}`);
+    }
+
+    return data;
+};
 ```
 
-### 5.2. Supabase Integration
+### 5.2. Authentication & Security
+
+The recipe extraction endpoint is protected by JWT verification in production:
+
+-   All requests must include a valid JWT token
+-   The Supabase client automatically handles token inclusion
+-   Development environment can optionally disable JWT verification
+-   Production environment enforces JWT verification
+
+### 5.3. Supabase Integration
 
 ```typescript
 // Database types

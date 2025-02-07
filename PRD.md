@@ -161,6 +161,14 @@ The app follows a "Paper Notebook Recipe Journal" aesthetic with these key eleme
 -   Image optimization
 -   Efficient search indexing
 
+### 5.4. Security & Authentication
+
+-   JWT-based authentication for all API endpoints
+-   Secure recipe extraction with authenticated requests
+-   Environment-specific security configurations
+-   Automatic token management in frontend
+-   Protected routes and API endpoints
+
 ---
 
 ## 6. Future Considerations
