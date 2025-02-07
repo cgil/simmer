@@ -142,7 +142,7 @@ serve(async (req) => {
                         - When timing info is available, the timing min and max should always be in minutes
                         - Use the following image URLs in your response: ${JSON.stringify(images)}
                         - For the images list, pick a maximum of 5 images relevant to the recipe, and avoid duplicates, including duplicates at different sizes.
-                        - Tags should be relevant to the recipe and should be thoughtful, such as:
+                        - Tags should be relevant to the recipe and should be thoughtful, such as as the following but think of tags specific to the recipe:
                             - "Healthy"
                             - "Low Calorie"
                             - "Main Dish"

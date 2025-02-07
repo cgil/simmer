@@ -42,9 +42,11 @@ const EditRecipePage: FC = () => {
     );
     const [ingredients, setIngredients] = useState(recipe?.ingredients || []);
     const [notes, setNotes] = useState(recipe?.notes || []);
-    const [timeEstimate, setTimeEstimate] = useState<TimeEstimate | undefined>(
-        recipe?.time_estimate
-    );
+    const [timeEstimate, setTimeEstimate] = useState<TimeEstimate>({
+        prep: recipe?.time_estimate?.prep ?? 0,
+        cook: recipe?.time_estimate?.cook ?? 0,
+        total: recipe?.time_estimate?.total ?? 0,
+    });
     const [tags, setTags] = useState<string[]>(recipe?.tags || []);
     const [title, setTitle] = useState(recipe?.title || '');
     const [description, setDescription] = useState(recipe?.description || '');
