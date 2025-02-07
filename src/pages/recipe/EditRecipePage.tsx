@@ -41,7 +41,12 @@ const EditRecipePage: FC = () => {
         recipe?.instructions || []
     );
     const [ingredients, setIngredients] = useState(recipe?.ingredients || []);
-    const [notes, setNotes] = useState(recipe?.notes || []);
+    const [notes, setNotes] = useState(
+        recipe?.notes?.map((note) => ({
+            id: `note-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            text: note,
+        })) || []
+    );
     const [timeEstimate, setTimeEstimate] = useState<TimeEstimate>({
         prep: recipe?.time_estimate?.prep ?? 0,
         cook: recipe?.time_estimate?.cook ?? 0,
@@ -66,7 +71,7 @@ const EditRecipePage: FC = () => {
             description,
             ingredients,
             instructions,
-            notes,
+            notes: notes.map((note) => note.text),
             time_estimate: timeEstimate,
             tags,
             images,
@@ -148,17 +153,26 @@ const EditRecipePage: FC = () => {
     };
 
     const handleAddNote = () => {
-        setNotes([...notes, '']);
+        setNotes([
+            ...notes,
+            {
+                id: `note-${Date.now()}-${Math.random()
+                    .toString(36)
+                    .substr(2, 9)}`,
+                text: '',
+            },
+        ]);
     };
 
-    const handleDeleteNote = (index: number) => {
-        const newNotes = notes.filter((_, i) => i !== index);
+    const handleDeleteNote = (noteId: string) => {
+        const newNotes = notes.filter((note) => note.id !== noteId);
         setNotes(newNotes);
     };
 
-    const handleNoteChange = (index: number, value: string) => {
-        const newNotes = [...notes];
-        newNotes[index] = value;
+    const handleNoteChange = (noteId: string, value: string) => {
+        const newNotes = notes.map((note) =>
+            note.id === noteId ? { ...note, text: value } : note
+        );
         setNotes(newNotes);
     };
 
@@ -1279,9 +1293,9 @@ const EditRecipePage: FC = () => {
                                     Notes
                                 </Typography>
                                 <Stack spacing={3}>
-                                    {notes.map((note, index) => (
+                                    {notes.map((note) => (
                                         <Box
-                                            key={index}
+                                            key={note.id}
                                             sx={{
                                                 display: 'flex',
                                                 gap: 2,
@@ -1297,11 +1311,11 @@ const EditRecipePage: FC = () => {
                                                 fullWidth
                                                 multiline
                                                 placeholder="Add a note..."
-                                                value={note}
+                                                value={note.text}
                                                 variant="standard"
                                                 onChange={(e) =>
                                                     handleNoteChange(
-                                                        index,
+                                                        note.id,
                                                         e.target.value
                                                     )
                                                 }
@@ -1316,7 +1330,7 @@ const EditRecipePage: FC = () => {
                                                 className="delete-button"
                                                 size="small"
                                                 onClick={() =>
-                                                    handleDeleteNote(index)
+                                                    handleDeleteNote(note.id)
                                                 }
                                                 sx={{
                                                     mt: 1,
