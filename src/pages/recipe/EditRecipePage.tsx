@@ -47,7 +47,6 @@ const EditRecipePage: FC = () => {
             text: note,
         })) || []
     );
-    console.log(recipe?.time_estimate?.cook);
     const [timeEstimate, setTimeEstimate] = useState<TimeEstimate>({
         prep: recipe?.time_estimate?.prep ?? 0,
         cook: recipe?.time_estimate?.cook ?? 0,

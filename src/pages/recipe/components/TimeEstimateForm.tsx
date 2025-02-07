@@ -37,7 +37,7 @@ const TimeEstimateForm: FC<TimeEstimateFormProps> = ({
         };
 
     const getDisplayValue = (value: number) => {
-        return value === 0 ? '' : value.toString();
+        return value.toString();
     };
 
     return (
