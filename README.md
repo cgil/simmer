@@ -147,6 +147,23 @@ The built files will be in the `dist` directory.
 
 ## Deployment
 
+### Environment Setup
+
+Create the following environment files:
+
+1. `.env.local` - Local development
+2. `.env.development` - Development deployment
+3. `.env.production` - Production deployment
+
+Each file should contain:
+
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+OPENAI_API_KEY=your_openai_api_key
+ENVIRONMENT=development|production
+```
+
 ### Deploying to Vercel
 
 1. Install Vercel CLI:
@@ -157,25 +174,43 @@ npm i -g vercel
 
 2. Configure environment variables in Vercel:
 
-    - `VITE_SUPABASE_URL`
-    - `VITE_SUPABASE_ANON_KEY`
-    - `OPENAI_API_KEY`
+    - Development: `vercel env pull .env.development`
+    - Production: `vercel env pull .env.production`
 
 3. Deploy:
 
 ```bash
-vercel
+# Development
+npm run deploy:dev
+
+# Production
+npm run deploy:prod
 ```
 
 ### Deploying Functions to Supabase
 
 ```bash
 # Development (no JWT verification)
-npm run functions:deploy
+npm run functions:deploy:dev
 
 # Production (with JWT verification)
 npm run functions:deploy:prod
 ```
+
+### Deployment Checklist
+
+1. Update environment variables
+2. Run database migrations
+3. Deploy Supabase functions
+4. Deploy frontend to Vercel
+5. Test the deployment
+
+### Monitoring
+
+-   Check Supabase logs in the dashboard
+-   Monitor OpenAI API usage
+-   Set up error tracking (recommended: Sentry)
+-   Monitor Vercel deployment status
 
 ## Contributing
 

@@ -13,11 +13,13 @@
         "supabase:status": "supabase status",
         "db:reset": "supabase db reset",
         "db:migration:new": "supabase migration new",
-        "functions:serve": "supabase functions serve --no-verify-jwt",
-        "functions:deploy": "supabase functions deploy --no-verify-jwt",
-        "functions:deploy:prod": "supabase functions deploy",
+        "functions:serve": "supabase functions serve --env-file .env.local --no-verify-jwt",
+        "functions:deploy:dev": "supabase functions deploy --env-file .env.development --no-verify-jwt",
+        "functions:deploy:prod": "supabase functions deploy --env-file .env.production",
         "dev:all": "concurrently \"npm run dev\" \"npm run functions:serve\"",
-        "test:function": "curl -i --request POST 'http://localhost:54321/functions/v1/recipe-extraction' --header 'Content-Type: application/json' --data '{\"url\": \"https://www.allrecipes.com/recipe/158968/spinach-and-feta-turkey-burgers/\"}'"
+        "test:function": "curl -i --request POST 'http://localhost:54321/functions/v1/recipe-extraction' --header 'Content-Type: application/json' --data '{\"url\": \"https://www.allrecipes.com/recipe/158968/spinach-and-feta-turkey-burgers/\"}'",
+        "deploy:dev": "npm run build && vercel",
+        "deploy:prod": "npm run build && vercel --prod"
     },
     "dependencies": {
         "@emotion/react": "^11.11.3",

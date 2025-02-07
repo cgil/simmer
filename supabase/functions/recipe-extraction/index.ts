@@ -1,5 +1,7 @@
-import OpenAI from 'https://deno.land/x/openai@v4.24.0/mod.ts'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { OpenAI } from "https://deno.land/x/openai@v4.24.0/mod.ts";
 import { z } from "https://deno.land/x/zod@v3.24.1/mod.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -74,23 +76,23 @@ function extractMainContent(html: string): string {
     return html;
 }
 
-Deno.serve(async (req) => {
-    // Handle CORS preflight requests
-    if (req.method === 'OPTIONS') {
-        return new Response('ok', { headers: corsHeaders });
-    }
+const isDevelopment = Deno.env.get("ENVIRONMENT") !== "production";
 
+serve(async (req) => {
     try {
-        // Get OpenAI API key
-        const apiKey = Deno.env.get('OPENAI_API_KEY');
-        if (!apiKey) {
-            throw new Error('Missing OpenAI API key');
+        // Handle CORS
+        if (req.method === "OPTIONS") {
+            return new Response("ok", { headers: corsHeaders });
         }
 
-        // Parse request body
-        const { url } = (await req.json()) as RequestBody;
+        const openai = new OpenAI({
+            apiKey: Deno.env.get("OPENAI_API_KEY") || "",
+        });
+
+        const { url } = await req.json();
+
         if (!url) {
-            throw new Error('URL is required');
+            throw new Error("URL is required");
         }
 
         try {
@@ -101,14 +103,9 @@ Deno.serve(async (req) => {
             // Extract main content
             const mainContent = extractMainContent(html);
 
-            // Initialize OpenAI
-            const openai = new OpenAI({
-                apiKey: apiKey,
-            });
-
             // Extract recipe using OpenAI
             const completion = await openai.chat.completions.create({
-                model: 'gpt-4o',
+                model: isDevelopment ? "gpt-3.5-turbo-1106" : "gpt-4",
                 response_format: { type: "json_object" },
                 messages: [
                     {
@@ -191,40 +188,41 @@ Deno.serve(async (req) => {
                 temperature: 0.2,
             });
 
-            if (!completion.choices[0].message?.content) {
-                throw new Error('No content in OpenAI response');
+            const result = completion.choices[0].message?.content;
+            if (!result) {
+                throw new Error("No content in response");
             }
 
-            const extractedData = completion.choices[0].message?.content;
-            if (!extractedData) {
-                throw new Error('No content in OpenAI response');
-            }
+            // Parse and validate the response
+            const parsedResult = JSON.parse(result);
+            const validatedRecipe = RecipeSchema.parse(parsedResult);
 
-            // Parse JSON and validate with Zod schema
-            let parsedData;
-            try {
-                const rawData = JSON.parse(extractedData);
-                parsedData = RecipeSchema.parse(rawData);
-            } catch (error) {
-                if (error instanceof z.ZodError) {
-                    console.error('Validation error:', error.errors);
-                    throw new Error(`Recipe validation failed: ${error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')}`);
-                }
-                throw new Error(`Failed to parse recipe data: ${error.message}`);
-            }
-
-            return new Response(JSON.stringify({ data: parsedData }), {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
+            return new Response(
+                JSON.stringify(validatedRecipe),
+                {
+                    headers: {
+                        ...corsHeaders,
+                        "Content-Type": "application/json",
+                    },
+                },
+            );
         } catch (error) {
-            console.error('Error details:', error);
+            console.error("Error details:", error);
             throw new Error(`Recipe extraction failed: ${error.message}`);
         }
     } catch (error) {
-        console.error('Error:', error);
-        return new Response(JSON.stringify({ error: error.message }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        console.error("Error:", error);
+        return new Response(
+            JSON.stringify({
+                error: error instanceof Error ? error.message : "Unknown error occurred",
+            }),
+            {
+                status: 400,
+                headers: {
+                    ...corsHeaders,
+                    "Content-Type": "application/json",
+                },
+            },
+        );
     }
 });
