@@ -11,9 +11,9 @@ const corsHeaders = {
 
 // Define Zod schemas
 const TimingSchema = z.object({
-    min: z.number(),
-    max: z.number(),
-    units: z.literal('minutes')
+    min: z.number().nullable(),
+    max: z.number().nullable(),
+    units: z.literal('minutes').nullable()
 });
 
 const StepSchema = z.object({
