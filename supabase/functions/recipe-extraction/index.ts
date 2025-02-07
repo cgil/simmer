@@ -89,12 +89,18 @@ function extractMainContent(html: string): ExtractedContent {
 const isDevelopment = Deno.env.get("ENVIRONMENT") !== "production";
 
 serve(async (req) => {
-    try {
-        // Handle CORS
-        if (req.method === "OPTIONS") {
-            return new Response("ok", { headers: corsHeaders });
-        }
+    // Handle CORS preflight requests
+    if (req.method === "OPTIONS") {
+        return new Response(null, {
+            status: 204,
+            headers: {
+                ...corsHeaders,
+                'Access-Control-Max-Age': '86400',
+            },
+        });
+    }
 
+    try {
         const openai = new OpenAI({
             apiKey: Deno.env.get("OPENAI_API_KEY") || "",
         });
