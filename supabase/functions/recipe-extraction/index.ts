@@ -46,9 +46,23 @@ const RecipeSchema = z.object({
     time_estimate: TimeEstimateSchema
 });
 
+interface ExtractedContent {
+    text: string;
+    images: string[];
+}
 
+function extractMainContent(html: string): ExtractedContent {
+    // Extract image URLs before removing HTML
+    const imageUrls: string[] = [];
+    const imgRegex = /<img[^>]+src="([^">]+)"/g;
+    let match;
+    while ((match = imgRegex.exec(html)) !== null) {
+        const url = match[1];
+        if (url && !url.startsWith('data:')) { // Skip data URLs
+            imageUrls.push(url);
+        }
+    }
 
-function extractMainContent(html: string): string {
     // Remove script and style tags and their content
     html = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
     html = html.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
@@ -66,7 +80,10 @@ function extractMainContent(html: string): string {
                .replace(/&quot;/g, '"')
                .replace(/&#039;/g, "'");
 
-    return html;
+    return {
+        text: html,
+        images: imageUrls
+    };
 }
 
 const isDevelopment = Deno.env.get("ENVIRONMENT") !== "production";
@@ -93,8 +110,8 @@ serve(async (req) => {
             const response = await fetch(url);
             const html = await response.text();
 
-            // Extract main content
-            const mainContent = extractMainContent(html);
+            // Extract main content and images
+            const { text: mainContent, images } = extractMainContent(html);
 
             // Extract recipe using OpenAI with Zod schema
             const completion = await openai.chat.completions.create({
@@ -112,7 +129,7 @@ serve(async (req) => {
                         - Extract serving size
                         - The title should be concise and descriptive. It should be a few words that captures the main idea of the recipe.
                         - The description should be a concise and descriptive sentence that describes the recipe.
-                        - If information is missing, use null (not undefined) rather than guessing,.
+                        - If information is missing, use null (not undefined) rather than guessing.
                         - Always return the necessary fields in the schema, set as null if there's no information.
                         - Ingredient units must be in the following style and always plural where possible:
                             - "cups"
@@ -123,7 +140,7 @@ serve(async (req) => {
                             - "quarts"
                         - The timing unit should always be in "minutes"
                         - When timing info is available, the timing min and max should always be in minutes
-                        - Extract images used in the recipe. Images should be returned as an array of URL strings.
+                        - Use the following image URLs in your response: ${JSON.stringify(images)}
                         - Tags should be relevant to the recipe and should be thoughtful, such as:
                             - "Healthy"
                             - "Low Calorie"
