@@ -82,7 +82,7 @@ function extractMainContent(html: string): ExtractedContent {
 
     return {
         text: html,
-        images: imageUrls
+        images: imageUrls.slice(0, 6)  // Limit to 6 images
     };
 }
 
