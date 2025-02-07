@@ -45,23 +45,8 @@ const RecipeSchema = z.object({
     time_estimate: TimeEstimateSchema
 });
 
-interface ExtractedContent {
-    text: string;
-    images: string[];
-}
 
-function extractMainContent(html: string): ExtractedContent {
-    // Extract image URLs before removing tags
-    const imageUrls: string[] = [];
-    const imgRegex = /<img[^>]+src="([^">]+)"/g;
-    let match;
-    while ((match = imgRegex.exec(html)) !== null) {
-        const url = match[1];
-        if (url.startsWith('http')) {
-            imageUrls.push(url);
-        }
-    }
-
+function extractMainContent(html: string): string {
     // Remove script and style tags and their content
     html = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
     html = html.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
@@ -79,10 +64,7 @@ function extractMainContent(html: string): ExtractedContent {
                .replace(/&quot;/g, '"')
                .replace(/&#039;/g, "'");
 
-    return {
-        text: html,
-        images: imageUrls
-    };
+    return html;
 }
 
 const isDevelopment = Deno.env.get("ENVIRONMENT") !== "production";
@@ -109,8 +91,8 @@ serve(async (req) => {
             const response = await fetch(url);
             const html = await response.text();
 
-            // Extract main content and images
-            const { text: mainContent, images } = extractMainContent(html);
+            // Extract main content
+            const mainContent = extractMainContent(html);
 
             // Extract recipe using OpenAI
             const completion = await openai.chat.completions.create({
@@ -120,7 +102,6 @@ serve(async (req) => {
                     {
                         role: 'system',
                         content: `You are a recipe extraction expert. Extract recipe information from the following text into a structured JSON format.
-                        The following images were found in the recipe: ${JSON.stringify(images)}.
                         Follow these rules strictly:
                         - Maintain exact measurements and units
                         - Split instructions into logical sections
@@ -129,7 +110,8 @@ serve(async (req) => {
                         - Extract serving size
                         - The title should be concise and descriptive. It should be a few words that captures the main idea of the recipe.
                         - The description should be a concise and descriptive sentence that describes the recipe.
-                        - If information is missing, use null rather than guessing.
+                        - If information is missing, use null (not undefined) rather than guessing,.
+                        - Always return the necessary fields in the schema, set as null if there's no information.
                         - Ingredient units must be in the following style and always plural where possible:
                             - "cups"
                             - "tablespoons"
