@@ -3,12 +3,6 @@ import { OpenAI } from "https://deno.land/x/openai@v4.24.0/mod.ts";
 import { z } from "https://deno.land/x/zod@v3.24.1/mod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers':
-        'authorization, x-client-info, apikey, content-type',
-};
-
 // Define Zod schemas
 const TimingSchema = z.object({
     min: z.number().nullable(),
@@ -51,9 +45,6 @@ const RecipeSchema = z.object({
     time_estimate: TimeEstimateSchema
 });
 
-interface RequestBody {
-    url: string;
-}
 
 function extractMainContent(html: string): string {
     // Remove script and style tags and their content
