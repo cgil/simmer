@@ -12,16 +12,17 @@ Simmer is a modern web application that brings the warmth and personality of a p
 -   📋 Section-based cooking instructions
 -   ⏲️ Multi-timer tracking across recipe steps
 
-## Getting Started
+## Local Development Setup
 
 ### Prerequisites
 
 -   Node.js (v18 or higher)
 -   npm or yarn
--   A modern web browser
--   Vercel account (for deployment)
+-   [Supabase CLI](https://supabase.com/docs/guides/cli) installed globally
+-   Docker Desktop (required for Supabase local development)
+-   OpenAI API key
 
-### Installation
+### Environment Setup
 
 1. Clone the repository:
 
@@ -34,43 +35,121 @@ cd simmer
 
 ```bash
 npm install
-# or
-yarn install
 ```
 
-3. Create a `.env` file in the root directory with the following variables:
+3. Create a `.env` file in the root directory:
 
 ```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_OPENAI_API_KEY=your_openai_api_key
+# Local Development
+VITE_SUPABASE_URL=http://127.0.0.1:54321
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+OPENAI_API_KEY=your_openai_api_key
 ```
 
-4. Start the development server:
+### Starting the Development Environment
+
+1. Start the Supabase local development environment:
 
 ```bash
-npm run dev
-# or
-yarn dev
+npm run supabase:start
 ```
 
-5. Open your browser and navigate to `http://localhost:5173`
+2. Start both the Vite development server and Supabase functions:
 
-### Building for Production
+```bash
+npm run dev:all
+```
 
-To create a production build:
+The application will be available at:
+
+-   Frontend: `http://localhost:5173`
+-   Supabase Studio: `http://localhost:54323`
+-   Functions: `http://localhost:54321/functions/v1/*`
+
+### Available Development Commands
+
+#### Supabase Control
+
+-   `npm run supabase:start` - Start Supabase local development
+-   `npm run supabase:stop` - Stop Supabase local development
+-   `npm run supabase:status` - Check Supabase services status
+
+#### Database Management
+
+-   `npm run db:reset` - Reset local database to clean state
+-   `npm run db:migration:new` - Create a new migration file
+
+#### Function Development
+
+-   `npm run functions:serve` - Start functions development server
+-   `npm run functions:deploy` - Deploy functions (development)
+-   `npm run functions:deploy:prod` - Deploy functions (production)
+
+#### Testing
+
+-   `npm run test:function` - Test recipe extraction with sample URL
+
+### Development Workflow
+
+1. **Making Database Changes**
+
+    ```bash
+    # Create a new migration
+    npm run db:migration:new your_migration_name
+
+    # Apply migrations
+    npm run db:reset
+    ```
+
+2. **Working with Functions**
+
+    ```bash
+    # Start functions server (auto-reloads on changes)
+    npm run functions:serve
+
+    # Test recipe extraction
+    npm run test:function
+    ```
+
+3. **Full Development Environment**
+    ```bash
+    # Start everything
+    npm run supabase:start
+    npm run dev:all
+    ```
+
+### Troubleshooting
+
+1. **Supabase Issues**
+
+    - Check service status: `npm run supabase:status`
+    - Try stopping and restarting:
+        ```bash
+        npm run supabase:stop
+        npm run supabase:start
+        ```
+
+2. **Function Development**
+
+    - Functions logs are available in the terminal running `functions:serve`
+    - Check Supabase Studio for function invocation logs
+
+3. **Database Reset**
+    - If schema gets corrupted: `npm run db:reset`
+
+## Building for Production
 
 ```bash
 npm run build
-# or
-yarn build
 ```
 
 The built files will be in the `dist` directory.
 
+## Deployment
+
 ### Deploying to Vercel
 
-1. Install the Vercel CLI:
+1. Install Vercel CLI:
 
 ```bash
 npm i -g vercel
@@ -78,69 +157,25 @@ npm i -g vercel
 
 2. Configure environment variables in Vercel:
 
-    - Go to your project settings in Vercel
-    - Add the following environment variables:
-        ```
-        VITE_SUPABASE_URL
-        VITE_SUPABASE_ANON_KEY
-        VITE_OPENAI_API_KEY
-        ```
+    - `VITE_SUPABASE_URL`
+    - `VITE_SUPABASE_ANON_KEY`
+    - `OPENAI_API_KEY`
 
-3. Deploy using one of these methods:
+3. Deploy:
 
-    a. Using Vercel CLI:
-
-    ```bash
-    vercel
-    ```
-
-    b. Using GitHub Integration:
-
-    - Connect your GitHub repository to Vercel
-    - Enable automatic deployments
-    - Push to main branch to trigger deployment
-
-4. Your app will be available at `https://your-project-name.vercel.app`
-
-Note: The project includes a `vercel.json` configuration file that handles:
-
--   Routing configuration
--   Build settings
--   Security headers
--   Asset caching
--   GitHub integration settings
-
-## Development
-
-### Project Structure
-
-```
-src/
-  ├── components/      # Reusable UI components
-  ├── pages/           # Page components
-  ├── features/        # Feature-specific components
-  ├── hooks/           # Custom React hooks
-  ├── utils/           # Utility functions
-  ├── types/           # TypeScript type definitions
-  ├── theme/           # MUI theme configuration
-  └── App.tsx          # Root component
+```bash
+vercel
 ```
 
-### Tech Stack
+### Deploying Functions to Supabase
 
--   React 18 with TypeScript
--   Vite for build tooling
--   Material-UI (MUI) for UI components
--   Supabase for backend services
--   OpenAI API for recipe extraction
--   Vercel for deployment and hosting
+```bash
+# Development (no JWT verification)
+npm run functions:deploy
 
-### Available Scripts
-
--   `npm run dev` - Start development server
--   `npm run build` - Build for production
--   `npm run lint` - Run ESLint
--   `npm run preview` - Preview production build locally
+# Production (with JWT verification)
+npm run functions:deploy:prod
+```
 
 ## Contributing
 
