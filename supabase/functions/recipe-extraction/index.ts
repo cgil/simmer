@@ -1,18 +1,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { OpenAI } from "https://deno.land/x/openai@v4.24.0/mod.ts";
+import { OpenAI } from "https://deno.land/x/openai@v4.55.1/mod.ts";
 import { z } from "https://deno.land/x/zod@v3.24.1/mod.ts";
+import { zodResponseFormat } from 'https://deno.land/x/openai@v4.55.1/helpers/zod.ts';
 import { corsHeaders } from "../_shared/cors.ts";
 
 // Define Zod schemas
 const TimingSchema = z.object({
-    min: z.number().nullable(),
-    max: z.number().nullable(),
-    units: z.literal('minutes').nullable()
-});
+    min: z.number(),
+    max: z.number(),
+    units: z.literal('minutes')
+}).nullable();
 
 const StepSchema = z.object({
     text: z.string(),
-    timing: TimingSchema.nullable()
+    timing: TimingSchema
 });
 
 const InstructionSectionSchema = z.object({
@@ -44,6 +45,7 @@ const RecipeSchema = z.object({
     tags: z.array(z.string()),
     time_estimate: TimeEstimateSchema
 });
+
 
 
 function extractMainContent(html: string): string {
@@ -94,10 +96,10 @@ serve(async (req) => {
             // Extract main content
             const mainContent = extractMainContent(html);
 
-            // Extract recipe using OpenAI
+            // Extract recipe using OpenAI with Zod schema
             const completion = await openai.chat.completions.create({
-                model: isDevelopment ? "gpt-3.5-turbo-1106" : "gpt-4",
-                response_format: { type: "json_object" },
+                model: isDevelopment ? "gpt-4o" : "gpt-4o",
+                response_format: zodResponseFormat(RecipeSchema, "recipe_extraction"),
                 messages: [
                     {
                         role: 'system',
@@ -106,7 +108,7 @@ serve(async (req) => {
                         - Maintain exact measurements and units
                         - Split instructions into logical sections
                         - Identify timing information in steps
-                        - Generate relevant tags
+                        - Generate relevant tags (max 7)
                         - Extract serving size
                         - The title should be concise and descriptive. It should be a few words that captures the main idea of the recipe.
                         - The description should be a concise and descriptive sentence that describes the recipe.
@@ -120,57 +122,18 @@ serve(async (req) => {
                             - "pounds"
                             - "quarts"
                         - The timing unit should always be in "minutes"
-                        - The timing min and max should always be in minutes
-                        - Extract images used in the url. Images should be returned as an array of URLs
-                        - Tags should be relevant to the recipe and should be thoughtful such as:
+                        - When timing info is available, the timing min and max should always be in minutes
+                        - Extract images used in the recipe. Images should be returned as an array of URL strings.
+                        - Tags should be relevant to the recipe and should be thoughtful, such as:
                             - "Healthy"
                             - "Low Calorie"
                             - "Main Dish"
                             - "Italian"
-                        - Have no more than the top 7 tags
-                        - Notes should be a list of notes about the recipe or the preparation, have them be concise, friendly, helpful, and thoughtful. Only add them if they provide additional information and value to the recipe.
-                        - Section titles should be concise and descriptive. They should be a single sentence that captures the main idea of the section such as:
+                        - Notes should be about the recipe or the preparation, have them be concise, friendly, helpful, and thoughtful. Only add them if they provide additional information and value to the recipe.
+                        - Section titles should be concise and descriptive. They should be a few words that captures the main idea of the section such as:
                             - "Marinating the Chicken"
                             - "Making the Sauce"
-
-
-                        Required JSON Schema:
-                        {
-                            "title": string,
-                            "description": string,
-                            "servings": number,
-                            "images": string[],
-                            "ingredients": [
-                            {
-                                "name": string,
-                                "quantity": number | null,
-                                "unit": string | null,
-                                "notes": string | null
-                            }
-                            ],
-                            "instructions": [
-                            {
-                                "section_title": string,
-                                "steps": [
-                                {
-                                    "text": string,
-                                    "timing": {
-                                    "min": number,
-                                    "max": number,
-                                    "units": "minutes"
-                                    } | null
-                                }
-                                ]
-                            }
-                            ],
-                            "notes": string[],
-                            "tags": string[],
-                            "time_estimate": {
-                            "prep": number,
-                            "cook": number,
-                            "total": number
-                            }
-                        }`
+                        `
                     },
                     {
                         role: 'user',
