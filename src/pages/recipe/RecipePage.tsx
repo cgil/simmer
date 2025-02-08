@@ -10,9 +10,7 @@ import {
     useMediaQuery,
     Paper,
 } from '@mui/material';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import RestaurantIcon from '@mui/icons-material/Restaurant';
 import AppLayout from '../../components/layout/AppLayout';
 import { MOCK_RECIPES } from '../../mocks/recipes';
 import IngredientsList from './components/IngredientsList';
@@ -199,112 +197,6 @@ const RecipePage: FC = () => {
                                         }}
                                     />
                                 ))}
-                            </Box>
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    gap: 4,
-                                    justifyContent: 'center',
-                                    flexWrap: 'wrap',
-                                    mb: 2,
-                                }}
-                            >
-                                <Paper
-                                    elevation={0}
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 1,
-                                        p: 1.5,
-                                        px: 2.5,
-                                        borderRadius: 1,
-                                        position: 'relative',
-                                        bgcolor: 'paper.main',
-                                        boxShadow: `
-                                            0 1px 2px rgba(0,0,0,0.03),
-                                            0 4px 20px rgba(0,0,0,0.06),
-                                            inset 0 0 0 1px rgba(255,255,255,0.9)
-                                        `,
-                                        '&::before': {
-                                            content: '""',
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            right: 0,
-                                            height: '100%',
-                                            background: 'rgba(255,255,255,0.5)',
-                                            backdropFilter: 'blur(4px)',
-                                            borderRadius: 1,
-                                            zIndex: 0,
-                                            border: '1px solid',
-                                            borderColor: 'divider',
-                                        },
-                                        '& > *': {
-                                            position: 'relative',
-                                            zIndex: 1,
-                                        },
-                                    }}
-                                >
-                                    <RestaurantIcon color="primary" />
-                                    <Typography
-                                        sx={{
-                                            fontWeight: 500,
-                                            fontFamily: "'Inter', sans-serif",
-                                        }}
-                                    >
-                                        {servings} servings
-                                    </Typography>
-                                </Paper>
-                                {recipe.time_estimate && (
-                                    <Paper
-                                        elevation={0}
-                                        sx={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 1,
-                                            p: 1.5,
-                                            px: 2.5,
-                                            borderRadius: 1,
-                                            position: 'relative',
-                                            bgcolor: 'paper.main',
-                                            boxShadow: `
-                                                0 1px 2px rgba(0,0,0,0.03),
-                                                0 4px 20px rgba(0,0,0,0.06),
-                                                inset 0 0 0 1px rgba(255,255,255,0.9)
-                                            `,
-                                            '&::before': {
-                                                content: '""',
-                                                position: 'absolute',
-                                                top: 0,
-                                                left: 0,
-                                                right: 0,
-                                                height: '100%',
-                                                background:
-                                                    'rgba(255,255,255,0.5)',
-                                                backdropFilter: 'blur(4px)',
-                                                borderRadius: 1,
-                                                zIndex: 0,
-                                                border: '1px solid',
-                                                borderColor: 'divider',
-                                            },
-                                            '& > *': {
-                                                position: 'relative',
-                                                zIndex: 1,
-                                            },
-                                        }}
-                                    >
-                                        <AccessTimeIcon color="primary" />
-                                        <Typography
-                                            sx={{
-                                                fontWeight: 500,
-                                                fontFamily:
-                                                    "'Inter', sans-serif",
-                                            }}
-                                        >
-                                            {recipe.time_estimate.total} mins
-                                        </Typography>
-                                    </Paper>
-                                )}
                             </Box>
                         </Box>
                     </Grid>
