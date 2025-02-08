@@ -19,6 +19,7 @@ import IngredientsList from './components/IngredientsList';
 import CookingInstructions from './components/CookingInstructions';
 import RecipeGallery from './components/RecipeGallery';
 import RecipeNotes from './components/RecipeNotes';
+import TimeEstimate from './components/TimeEstimate';
 
 const RecipePage: FC = () => {
     const { id } = useParams();
@@ -336,6 +337,44 @@ const RecipePage: FC = () => {
                             }}
                         >
                             <RecipeGallery images={recipe.images} />
+                        </Paper>
+                    </Grid>
+
+                    {/* Time Estimate Section */}
+                    <Grid item xs={12}>
+                        <Paper
+                            elevation={0}
+                            sx={{
+                                p: { xs: 2, sm: 3 },
+                                borderRadius: 1,
+                                position: 'relative',
+                                bgcolor: 'paper.main',
+                                boxShadow: `
+                                    0 1px 2px rgba(0,0,0,0.03),
+                                    0 4px 20px rgba(0,0,0,0.06),
+                                    inset 0 0 0 1px rgba(255,255,255,0.9)
+                                `,
+                                '&::before': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: '100%',
+                                    background: 'rgba(255,255,255,0.5)',
+                                    backdropFilter: 'blur(4px)',
+                                    borderRadius: 1,
+                                    zIndex: 0,
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                },
+                                '& > *': {
+                                    position: 'relative',
+                                    zIndex: 1,
+                                },
+                            }}
+                        >
+                            <TimeEstimate timeEstimate={recipe.time_estimate} />
                         </Paper>
                     </Grid>
 

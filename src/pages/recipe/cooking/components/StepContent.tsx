@@ -301,24 +301,27 @@ const StepContent: FC<StepContentProps> = ({
                                 >
                                     {formatQuantity(ingredient.quantity)}{' '}
                                     {ingredient.unit}
-                                </Typography>
-                                <Typography
-                                    component="span"
-                                    sx={{ color: 'text.secondary' }}
-                                >
-                                    {ingredient.name}
-                                    {ingredient.notes && (
-                                        <Box
-                                            component="span"
-                                            sx={{
-                                                color: 'text.secondary',
-                                                ml: 1,
-                                                fontSize: '0.85em',
-                                            }}
-                                        >
-                                            ({ingredient.notes})
-                                        </Box>
-                                    )}
+                                    <Typography
+                                        component="span"
+                                        sx={{
+                                            color: 'text.secondary',
+                                            ml: 1,
+                                        }}
+                                    >
+                                        {ingredient.name}
+                                        {ingredient.notes && (
+                                            <Box
+                                                component="span"
+                                                sx={{
+                                                    color: 'text.secondary',
+                                                    ml: 1,
+                                                    fontSize: '0.85em',
+                                                }}
+                                            >
+                                                ({ingredient.notes})
+                                            </Box>
+                                        )}
+                                    </Typography>
                                 </Typography>
                             </Box>
                         ))}

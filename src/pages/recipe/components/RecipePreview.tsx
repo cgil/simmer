@@ -14,6 +14,8 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
+import KitchenIcon from '@mui/icons-material/Kitchen';
+import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 
 interface RecipePreviewProps {
     recipe: Recipe;
@@ -91,18 +93,79 @@ const RecipePreview: FC<RecipePreviewProps> = ({
                             <Typography>{recipe.servings} servings</Typography>
                         </Box>
                         {recipe.time_estimate && (
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1,
-                                }}
+                            <Stack
+                                direction="row"
+                                spacing={2}
+                                divider={
+                                    <Divider orientation="vertical" flexItem />
+                                }
                             >
-                                <AccessTimeIcon color="primary" />
-                                <Typography>
-                                    {recipe.time_estimate.total} mins
-                                </Typography>
-                            </Box>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                    }}
+                                >
+                                    <RestaurantIcon
+                                        color="primary"
+                                        fontSize="small"
+                                    />
+                                    <Typography variant="body2">
+                                        Prep: {recipe.time_estimate.prep}m
+                                    </Typography>
+                                </Box>
+                                {recipe.time_estimate.rest > 0 && (
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1,
+                                        }}
+                                    >
+                                        <AccessTimeIcon
+                                            color="primary"
+                                            fontSize="small"
+                                        />
+                                        <Typography variant="body2">
+                                            Rest: {recipe.time_estimate.rest}m
+                                        </Typography>
+                                    </Box>
+                                )}
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                    }}
+                                >
+                                    <KitchenIcon
+                                        color="primary"
+                                        fontSize="small"
+                                    />
+                                    <Typography variant="body2">
+                                        Cook: {recipe.time_estimate.cook}m
+                                    </Typography>
+                                </Box>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                    }}
+                                >
+                                    <TimerOutlinedIcon
+                                        color="primary"
+                                        fontSize="small"
+                                    />
+                                    <Typography
+                                        variant="body2"
+                                        sx={{ fontWeight: 600 }}
+                                    >
+                                        Total: {recipe.time_estimate.total}m
+                                    </Typography>
+                                </Box>
+                            </Stack>
                         )}
                     </Stack>
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>

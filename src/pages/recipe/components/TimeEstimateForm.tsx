@@ -1,36 +1,43 @@
 import { FC } from 'react';
-import { Box, TextField, Typography, Paper } from '@mui/material';
+import {
+    Box,
+    TextField,
+    Typography,
+    Paper,
+    Stack,
+    InputAdornment,
+    Divider,
+} from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import KitchenIcon from '@mui/icons-material/Kitchen';
 import { TimeEstimate } from '../../../types';
 
 interface TimeEstimateFormProps {
-    timeEstimate: TimeEstimate | undefined;
+    timeEstimate?: TimeEstimate;
     onChange: (timeEstimate: TimeEstimate) => void;
 }
 
 const TimeEstimateForm: FC<TimeEstimateFormProps> = ({
-    timeEstimate = { prep: 0, cook: 0, total: 0 },
+    timeEstimate = { prep: 0, cook: 0, rest: 0, total: 0 },
     onChange,
 }) => {
     const handleChange =
         (field: keyof TimeEstimate) =>
         (event: React.ChangeEvent<HTMLInputElement>) => {
             const rawValue = event.target.value;
-            // If empty string, use empty string (don't convert to 0)
-            // If number, remove leading zeros and convert to number
             const value =
                 rawValue === ''
                     ? 0
                     : parseInt(rawValue.replace(/^0+/, '')) || 0;
 
             const newTimeEstimate = { ...timeEstimate, [field]: value };
-
             // Auto-calculate total time
             if (field !== 'total') {
                 newTimeEstimate.total =
-                    newTimeEstimate.prep + newTimeEstimate.cook;
+                    newTimeEstimate.prep +
+                    newTimeEstimate.cook +
+                    newTimeEstimate.rest;
             }
 
             onChange(newTimeEstimate);
@@ -88,121 +95,149 @@ const TimeEstimateForm: FC<TimeEstimateFormProps> = ({
                         alignItems: 'center',
                         gap: 1,
                         color: 'text.primary',
-                        mb: 3,
+                        mb: 2,
                         fontFamily: "'Kalam', cursive",
                     }}
                 >
                     <AccessTimeIcon />
-                    Time Estimates
+                    Time Estimate
                 </Typography>
-                <Box
-                    sx={{
-                        display: 'grid',
-                        gridTemplateColumns: {
-                            xs: '1fr',
-                            sm: 'repeat(3, 1fr)',
-                        },
-                        gap: 3,
-                        flex: 1,
-                    }}
-                >
+
+                <Stack spacing={2}>
                     <Box>
-                        <Box
+                        <Typography
+                            variant="body2"
                             sx={{
+                                mb: 1,
+                                color: 'text.secondary',
+                                fontWeight: 500,
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 1,
-                                mb: 1,
                             }}
                         >
-                            <KitchenIcon color="primary" />
-                            <Typography
-                                variant="subtitle2"
-                                color="text.secondary"
-                            >
-                                Prep Time
-                            </Typography>
-                        </Box>
+                            <RestaurantIcon fontSize="small" />
+                            Prep Time
+                        </Typography>
                         <TextField
                             fullWidth
-                            variant="standard"
+                            size="small"
                             type="number"
                             value={getDisplayValue(timeEstimate.prep)}
                             onChange={handleChange('prep')}
                             InputProps={{
                                 endAdornment: (
-                                    <Typography color="text.secondary">
-                                        mins
-                                    </Typography>
+                                    <InputAdornment position="end">
+                                        min
+                                    </InputAdornment>
                                 ),
+                            }}
+                            inputProps={{
+                                min: 0,
+                                step: 1,
                             }}
                         />
                     </Box>
+
                     <Box>
-                        <Box
+                        <Typography
+                            variant="body2"
                             sx={{
+                                mb: 1,
+                                color: 'text.secondary',
+                                fontWeight: 500,
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 1,
-                                mb: 1,
                             }}
                         >
-                            <RestaurantIcon color="primary" />
-                            <Typography
-                                variant="subtitle2"
-                                color="text.secondary"
-                            >
-                                Cook Time
-                            </Typography>
-                        </Box>
+                            <AccessTimeIcon fontSize="small" />
+                            Resting Time
+                        </Typography>
                         <TextField
                             fullWidth
-                            variant="standard"
+                            size="small"
+                            type="number"
+                            value={getDisplayValue(timeEstimate.rest)}
+                            onChange={handleChange('rest')}
+                            InputProps={{
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        min
+                                    </InputAdornment>
+                                ),
+                            }}
+                            inputProps={{
+                                min: 0,
+                                step: 1,
+                            }}
+                        />
+                    </Box>
+
+                    <Box>
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                mb: 1,
+                                color: 'text.secondary',
+                                fontWeight: 500,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                            }}
+                        >
+                            <KitchenIcon fontSize="small" />
+                            Cook Time
+                        </Typography>
+                        <TextField
+                            fullWidth
+                            size="small"
                             type="number"
                             value={getDisplayValue(timeEstimate.cook)}
                             onChange={handleChange('cook')}
                             InputProps={{
                                 endAdornment: (
-                                    <Typography color="text.secondary">
-                                        mins
-                                    </Typography>
+                                    <InputAdornment position="end">
+                                        min
+                                    </InputAdornment>
                                 ),
+                            }}
+                            inputProps={{
+                                min: 0,
+                                step: 1,
                             }}
                         />
                     </Box>
+
+                    <Divider />
+
                     <Box>
-                        <Box
+                        <Typography
+                            variant="body2"
                             sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
                                 mb: 1,
+                                color: 'text.secondary',
+                                fontWeight: 500,
                             }}
                         >
-                            <AccessTimeIcon color="primary" />
-                            <Typography
-                                variant="subtitle2"
-                                color="text.secondary"
-                            >
-                                Total Time
-                            </Typography>
-                        </Box>
+                            Total Time
+                        </Typography>
                         <TextField
                             fullWidth
-                            variant="standard"
+                            size="small"
                             type="number"
                             value={getDisplayValue(timeEstimate.total)}
                             disabled
                             InputProps={{
                                 endAdornment: (
-                                    <Typography color="text.secondary">
-                                        mins
-                                    </Typography>
+                                    <InputAdornment position="end">
+                                        min
+                                    </InputAdornment>
                                 ),
                             }}
                         />
                     </Box>
-                </Box>
+                </Stack>
             </Box>
         </Paper>
     );

@@ -3,6 +3,7 @@ import { Box, Typography, Paper, Stack } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import KitchenIcon from '@mui/icons-material/Kitchen';
+import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 import { TimeEstimate as TimeEstimateType } from '../../../types';
 
 interface TimeEstimateProps {
@@ -16,35 +17,48 @@ const TimeEstimate: React.FC<TimeEstimateProps> = ({ timeEstimate }) => {
         {
             label: 'Prep Time',
             value: timeEstimate.prep,
-            icon: <KitchenIcon color="primary" />,
+            icon: <RestaurantIcon color="primary" />,
+            show: true,
+        },
+        {
+            label: 'Rest Time',
+            value: timeEstimate.rest,
+            icon: <AccessTimeIcon color="primary" />,
+            show: timeEstimate.rest > 0,
         },
         {
             label: 'Cook Time',
             value: timeEstimate.cook,
-            icon: <RestaurantIcon color="primary" />,
+            icon: <KitchenIcon color="primary" />,
+            show: true,
         },
         {
             label: 'Total Time',
             value: timeEstimate.total,
-            icon: <AccessTimeIcon color="primary" />,
+            icon: <TimerOutlinedIcon color="primary" />,
+            show: true,
         },
-    ];
+    ].filter((item) => item.show);
 
     return (
         <Paper
             elevation={0}
             sx={{
                 p: { xs: 2, sm: 3 },
-                borderRadius: 4,
+                borderRadius: 2,
+                bgcolor: 'background.paper',
                 boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                mb: 4,
             }}
         >
             <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={{ xs: 2, sm: 4 }}
-                justifyContent="center"
+                direction="row"
+                spacing={{ xs: 2, sm: 3, md: 4 }}
+                justifyContent="space-around"
                 alignItems="center"
+                sx={{
+                    flexWrap: { xs: 'wrap', md: 'nowrap' },
+                    gap: { xs: 2, sm: 3 },
+                }}
             >
                 {timeItems.map((item) => (
                     <Box
@@ -53,7 +67,8 @@ const TimeEstimate: React.FC<TimeEstimateProps> = ({ timeEstimate }) => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 1.5,
-                            minWidth: 140,
+                            flex: { xs: '1 1 40%', sm: '1 1 auto' },
+                            justifyContent: 'center',
                         }}
                     >
                         {item.icon}
@@ -63,7 +78,7 @@ const TimeEstimate: React.FC<TimeEstimateProps> = ({ timeEstimate }) => {
                                 sx={{
                                     color: 'text.secondary',
                                     display: 'block',
-                                    fontSize: '0.75rem',
+                                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
                                 }}
                             >
                                 {item.label}
@@ -71,7 +86,11 @@ const TimeEstimate: React.FC<TimeEstimateProps> = ({ timeEstimate }) => {
                             <Typography
                                 sx={{
                                     fontWeight: 600,
-                                    fontSize: '1rem',
+                                    fontSize: { xs: '1rem', sm: '1.125rem' },
+                                    color:
+                                        item.label === 'Total Time'
+                                            ? 'primary.main'
+                                            : 'text.primary',
                                 }}
                             >
                                 {item.value} mins

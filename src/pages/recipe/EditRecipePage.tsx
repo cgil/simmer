@@ -33,6 +33,7 @@ const EditRecipePage: FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const recipe = location.state?.recipe as Recipe;
+    console.log(recipe);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [activeStepIndex, setActiveStepIndex] = useState<
         [number, number] | null
@@ -50,6 +51,7 @@ const EditRecipePage: FC = () => {
     const [timeEstimate, setTimeEstimate] = useState<TimeEstimate>({
         prep: recipe?.time_estimate?.prep ?? 0,
         cook: recipe?.time_estimate?.cook ?? 0,
+        rest: recipe?.time_estimate?.rest ?? 0,
         total: recipe?.time_estimate?.total ?? 0,
     });
     const [tags, setTags] = useState<string[]>(recipe?.tags || []);

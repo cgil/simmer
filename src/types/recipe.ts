@@ -38,5 +38,6 @@ export interface InstructionSection {
 export interface TimeEstimate {
     prep: number;
     cook: number;
+    rest: number;
     total: number;
 }
