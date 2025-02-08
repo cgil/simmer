@@ -11,6 +11,8 @@ Simmer is a modern web application that brings the warmth and personality of a p
 -   ⚡ Real-time ingredient scaling
 -   📋 Section-based cooking instructions
 -   ⏲️ Multi-timer tracking across recipe steps
+-   ⚖️ Flexible time handling (supports zero prep/cook times)
+-   🎨 Whimsical loading states with recipe-themed progress indicators
 
 ## Local Development Setup
 
@@ -239,3 +241,19 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 -   OpenAI for recipe extraction capabilities
 -   Supabase for backend services
 -   Vercel for hosting and deployment
+
+### Recent Updates
+
+#### Time Handling Improvements
+
+-   Support for zero prep and cook times
+-   Automatic total time calculation
+-   Enhanced time display in recipe cards and details
+-   Flexible time input validation
+
+#### Recipe Extraction Enhancements
+
+-   Improved extraction reliability
+-   Whimsical loading states during extraction
+-   Better error handling and user feedback
+-   Enhanced progress tracking with themed steps

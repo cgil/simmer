@@ -74,6 +74,11 @@ The app follows a "Paper Notebook Recipe Journal" aesthetic with these key eleme
 -   AI extraction of recipe data
 -   Preview and edit capabilities
 -   Structured data storage
+-   Whimsical loading experience with:
+    -   Recipe-themed progress steps
+    -   Visual feedback on extraction stages
+    -   Friendly, cooking-themed status messages
+    -   Smooth transitions between states
 
 ### 3.2. Recipe Viewing
 
@@ -82,6 +87,11 @@ The app follows a "Paper Notebook Recipe Journal" aesthetic with these key eleme
 -   Ingredient scaling
 -   Section-based instructions
 -   Notes support
+-   Flexible time display:
+    -   Support for zero prep/cook times
+    -   Automatic total time calculation
+    -   Clear time breakdown visualization
+    -   Optional time fields
 
 ### 3.3. Recipe Editing
 
@@ -148,6 +158,11 @@ The app follows a "Paper Notebook Recipe Journal" aesthetic with these key eleme
 -   Quick recipe loading
 -   Responsive image handling
 -   Efficient data management
+-   Enhanced loading states:
+    -   Themed progress indicators
+    -   Step-by-step extraction feedback
+    -   Optimistic UI updates
+    -   Error state handling
 
 ### 5.2. Compatibility
 

@@ -182,9 +182,9 @@ create table recipes (
   title text not null,
   description text,
   servings integer,
-  prep_time text,
-  cook_time text,
-  total_time text,
+  prep_time integer check (prep_time >= 0),
+  cook_time integer check (cook_time >= 0),
+  total_time integer check (total_time >= 0),
   created_at timestamp with time zone default now(),
   updated_at timestamp with time zone default now()
 );
@@ -221,6 +221,67 @@ create table recipe_notes (
   content text not null,
   position integer default 0
 );
+```
+
+### 4.2. Time Handling System
+
+```typescript
+interface TimeEstimate {
+    prep: number; // In minutes, can be 0
+    cook: number; // In minutes, can be 0
+    total: number; // Auto-calculated, can be 0
+}
+
+// Time management utilities
+const timeManagement = {
+    calculateTotal: (prep: number, cook: number) => prep + cook,
+    validateTime: (time: number) => time >= 0,
+    formatTimeDisplay: (minutes: number) => `${minutes} mins`,
+};
+```
+
+### 4.3. Extraction Progress System
+
+```typescript
+// Extraction steps configuration
+const EXTRACTION_STEPS = [
+    'Visiting the recipe website',
+    'Gathering tasty photos',
+    'Having our chef taste test',
+    'Personalizing it for you',
+    'Writing it in our cookbook',
+];
+
+interface ExtractionProgress {
+    activeStep: number;
+    isLoading: boolean;
+    error: string | null;
+}
+
+// Progress management
+const extractionProgress = {
+    nextStep: () => void;
+    handleError: (error: Error) => void;
+    resetProgress: () => void;
+};
+
+// Visual components
+const progressComponents = {
+    StepCard: {
+        active: {
+            transform: 'rotate(-2deg)',
+            elevation: 2,
+            bgcolor: 'primary.lighter',
+        },
+        completed: {
+            bgcolor: 'success.lighter',
+            checkmark: true,
+        },
+        pending: {
+            bgcolor: 'background.paper',
+        },
+    },
+};
 ```
 
 ---
