@@ -47,9 +47,20 @@ const IngredientSchema = z.object({
 });
 
 const TimeEstimateSchema = z.object({
-    prep: z.number(),
-    cook: z.number(),
-    total: z.number()
+    prep: z.number().min(0),
+    cook: z.number().min(0),
+    rest: z.number().min(0),
+    total: z.number().min(0).refine(
+        (total, ctx) => {
+            const prep = ctx.parent.prep;
+            const cook = ctx.parent.cook;
+            const rest = ctx.parent.rest;
+            return total === prep + cook + rest;
+        },
+        {
+            message: "Total time must equal prep + cook + rest time"
+        }
+    )
 });
 
 const RecipeSchema = z.object({
@@ -104,8 +115,6 @@ function extractMainContent(html: string): ExtractedContent {
         images: imageUrls.slice(0, 6)  // Limit to 6 images
     };
 }
-
-const isDevelopment = Deno.env.get("ENVIRONMENT") !== "production";
 
 serve(async (req) => {
     // Handle CORS preflight requests
@@ -168,7 +177,7 @@ serve(async (req) => {
 
             // Extract recipe using OpenAI with Zod schema
             const completion = await openai.chat.completions.create({
-                model: isDevelopment ? "gpt-4o" : "gpt-4o",
+                model: "gpt-4o",
                 response_format: zodResponseFormat(RecipeSchema, "recipe_extraction"),
                 messages: [
                     {
@@ -187,7 +196,22 @@ serve(async (req) => {
                         - Ingredient names should be clear and concise, as they will be used to generate unique IDs.
                         - Section titles should be clear and concise, as they will be used to generate unique IDs.
                         - Avoid using special characters in ingredient names, section titles, and the recipe title.
-                        - Ingredient units must be in the following style and always plural where possible:
+
+                        Resting Time Rules:
+                        - Look for and identify any resting, proofing, marinating, chilling, cooling, or other active waiting times in the recipe
+                        - Include these in the time_estimate.rest field (in minutes)
+                        - Examples of resting times to identify:
+                            * "Let dough rise for 1 hour" -> rest: 60
+                            * "Marinate chicken overnight (8-12 hours)" -> rest: 480 (use minimum time)
+                            * "Chill in refrigerator for 30 minutes" -> rest: 30
+                            * "Allow to cool completely (about 45 minutes)" -> rest: 45
+                            * "Rest meat for 10 minutes before slicing" -> rest: 10
+                            * "Proof the dough until doubled in size (1-2 hours)" -> rest: 60
+                        - For overnight or long marination, use the minimum suggested time or 8 hours (480 minutes) if no time range given
+                        - If multiple resting periods exist, add them together for the total rest time
+                        - Always convert resting times to minutes
+
+                        Ingredient units must be in the following style and always plural where possible:
                             - "cups"
                             - "tablespoons"
                             - "teaspoons"
