@@ -48,7 +48,7 @@ const NewRecipePage: FC = () => {
             setActiveStep(0);
 
             // Simulate progress through steps
-            const stepDuration = Math.floor(Math.random() * 3000) + 1000; // Random interval between 3 and 7 seconds per step for first 4 steps
+            const stepDuration = Math.floor(Math.random() * 4000) + 1000; // Random interval between 3 and 7 seconds per step for first 4 steps
             for (let i = 0; i < 4; i++) {
                 await new Promise((resolve) =>
                     setTimeout(resolve, stepDuration)

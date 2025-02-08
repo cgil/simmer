@@ -46,21 +46,12 @@ const IngredientSchema = z.object({
     notes: z.string().nullable()
 });
 
+
 const TimeEstimateSchema = z.object({
-    prep: z.number().min(0),
-    cook: z.number().min(0),
-    rest: z.number().min(0),
-    total: z.number().min(0).refine(
-        (total, ctx) => {
-            const prep = ctx.parent.prep;
-            const cook = ctx.parent.cook;
-            const rest = ctx.parent.rest;
-            return total === prep + cook + rest;
-        },
-        {
-            message: "Total time must equal prep + cook + rest time"
-        }
-    )
+    prep: z.number(),
+    cook: z.number(),
+    rest: z.number(),
+    total: z.number()
 });
 
 const RecipeSchema = z.object({
