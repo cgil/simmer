@@ -8,6 +8,7 @@ import RestaurantIcon from '@mui/icons-material/Restaurant';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SearchIcon from '@mui/icons-material/Search';
 import InputBase from '@mui/material/InputBase';
+import { formatTimeDisplay } from '../../utils/time';
 
 const CatalogPage: FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -405,12 +406,11 @@ const CatalogPage: FC = () => {
                                                                     "'Inter', sans-serif",
                                                             }}
                                                         >
-                                                            {
+                                                            {formatTimeDisplay(
                                                                 recipe
                                                                     .time_estimate
                                                                     .total
-                                                            }{' '}
-                                                            mins
+                                                            )}
                                                         </Typography>
                                                     </Box>
                                                 )}

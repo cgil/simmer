@@ -5,13 +5,13 @@
  */
 export const formatTimeDisplay = (minutes: number): string => {
     // Handle edge cases
-    if (minutes === 0) return '0 minutes';
-    if (minutes < 0) return '0 minutes';
-    if (!Number.isFinite(minutes)) return '0 minutes';
+    if (minutes === 0) return '0 mins';
+    if (minutes < 0) return '0 mins';
+    if (!Number.isFinite(minutes)) return '0 mins';
 
     // If less than 60 minutes, just show minutes
     if (minutes < 60) {
-        return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
+        return `${minutes} ${minutes === 1 ? 'min' : 'mins'}`;
     }
 
     const days = Math.floor(minutes / (24 * 60));
@@ -27,12 +27,12 @@ export const formatTimeDisplay = (minutes: number): string => {
 
     // Add hours if we have them
     if (remainingHours > 0) {
-        parts.push(`${remainingHours} ${remainingHours === 1 ? 'hour' : 'hours'}`);
+        parts.push(`${remainingHours} ${remainingHours === 1 ? 'hr' : 'hrs'}`);
     }
 
     // Add minutes if we have them
     if (remainingMinutes > 0) {
-        parts.push(`${remainingMinutes} ${remainingMinutes === 1 ? 'minute' : 'minutes'}`);
+        parts.push(`${remainingMinutes} ${remainingMinutes === 1 ? 'min' : 'mins'}`);
     }
 
     return parts.join(' ');

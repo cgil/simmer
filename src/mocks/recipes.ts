@@ -134,8 +134,8 @@ export const MOCK_RECIPES: Recipe[] = [
         time_estimate: {
             prep: 30,
             cook: 30,
-            rest: 60, // Marination time
-            total: 120,
+            rest: 70, // Marination time
+            total: 130,
         },
     },
     {

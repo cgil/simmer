@@ -95,9 +95,8 @@ const Timer: FC<TimerProps> = ({
         const secs = seconds % 60;
 
         if (hours > 0) {
-            return `${hours}:${minutes.toString().padStart(2, '0')}:${secs
-                .toString()
-                .padStart(2, '0')}`;
+            // For longer durations, use a more compact format
+            return `${hours}h ${minutes}m`;
         }
         return `${minutes}:${secs.toString().padStart(2, '0')}`;
     };

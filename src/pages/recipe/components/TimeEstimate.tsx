@@ -5,6 +5,7 @@ import RestaurantIcon from '@mui/icons-material/Restaurant';
 import KitchenIcon from '@mui/icons-material/Kitchen';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 import { TimeEstimate as TimeEstimateType } from '../../../types';
+import { formatTimeDisplay } from '../../../utils/time';
 
 interface TimeEstimateProps {
     timeEstimate: TimeEstimateType | undefined;
@@ -67,6 +68,7 @@ const TimeEstimate: React.FC<TimeEstimateProps> = ({ timeEstimate }) => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 1.5,
+                            ml: '0 !important',
                             flex: { xs: '1 1 40%', sm: '1 1 auto' },
                             justifyContent: 'center',
                         }}
@@ -91,9 +93,10 @@ const TimeEstimate: React.FC<TimeEstimateProps> = ({ timeEstimate }) => {
                                         item.label === 'Total Time'
                                             ? 'primary.main'
                                             : 'text.primary',
+                                    // whiteSpace: 'nowrap',
                                 }}
                             >
-                                {item.value} mins
+                                {formatTimeDisplay(item.value)}
                             </Typography>
                         </Box>
                     </Box>
