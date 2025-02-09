@@ -33,7 +33,6 @@ const EditRecipePage: FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const recipe = location.state?.recipe as Recipe;
-    console.log(recipe);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [activeStepIndex, setActiveStepIndex] = useState<
         [number, number] | null

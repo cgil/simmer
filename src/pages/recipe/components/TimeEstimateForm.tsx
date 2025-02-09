@@ -12,6 +12,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import KitchenIcon from '@mui/icons-material/Kitchen';
 import { TimeEstimate } from '../../../types';
+import { formatTimeDisplay } from '../../../utils/time';
 
 interface TimeEstimateFormProps {
     timeEstimate?: TimeEstimate;
@@ -46,6 +47,69 @@ const TimeEstimateForm: FC<TimeEstimateFormProps> = ({
     const getDisplayValue = (value: number) => {
         return value.toString();
     };
+
+    const TimeInput = ({
+        label,
+        icon,
+        value,
+        field,
+    }: {
+        label: string;
+        icon: JSX.Element;
+        value: number;
+        field: keyof TimeEstimate;
+    }) => (
+        <Box>
+            <Box
+                sx={{
+                    mb: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                }}
+            >
+                <Typography
+                    variant="body2"
+                    sx={{
+                        color: 'text.secondary',
+                        fontWeight: 500,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                    }}
+                >
+                    {icon}
+                    {label}
+                </Typography>
+
+                <Typography
+                    variant="caption"
+                    sx={{
+                        color: 'text.disabled',
+                        fontFamily: "'Inter', sans-serif",
+                    }}
+                >
+                    ({formatTimeDisplay(value)})
+                </Typography>
+            </Box>
+            <TextField
+                fullWidth
+                size="small"
+                type="number"
+                value={getDisplayValue(value)}
+                onChange={handleChange(field)}
+                InputProps={{
+                    endAdornment: (
+                        <InputAdornment position="end">min</InputAdornment>
+                    ),
+                }}
+                inputProps={{
+                    min: 0,
+                    step: 1,
+                }}
+            />
+        </Box>
+    );
 
     return (
         <Paper
@@ -104,124 +168,59 @@ const TimeEstimateForm: FC<TimeEstimateFormProps> = ({
                 </Typography>
 
                 <Stack spacing={2}>
-                    <Box>
-                        <Typography
-                            variant="body2"
-                            sx={{
-                                mb: 1,
-                                color: 'text.secondary',
-                                fontWeight: 500,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
-                            }}
-                        >
-                            <RestaurantIcon fontSize="small" />
-                            Prep Time
-                        </Typography>
-                        <TextField
-                            fullWidth
-                            size="small"
-                            type="number"
-                            value={getDisplayValue(timeEstimate.prep)}
-                            onChange={handleChange('prep')}
-                            InputProps={{
-                                endAdornment: (
-                                    <InputAdornment position="end">
-                                        min
-                                    </InputAdornment>
-                                ),
-                            }}
-                            inputProps={{
-                                min: 0,
-                                step: 1,
-                            }}
-                        />
-                    </Box>
+                    <TimeInput
+                        label="Prep Time"
+                        icon={<RestaurantIcon fontSize="small" />}
+                        value={timeEstimate.prep}
+                        field="prep"
+                    />
 
-                    <Box>
-                        <Typography
-                            variant="body2"
-                            sx={{
-                                mb: 1,
-                                color: 'text.secondary',
-                                fontWeight: 500,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
-                            }}
-                        >
-                            <AccessTimeIcon fontSize="small" />
-                            Resting Time
-                        </Typography>
-                        <TextField
-                            fullWidth
-                            size="small"
-                            type="number"
-                            value={getDisplayValue(timeEstimate.rest)}
-                            onChange={handleChange('rest')}
-                            InputProps={{
-                                endAdornment: (
-                                    <InputAdornment position="end">
-                                        min
-                                    </InputAdornment>
-                                ),
-                            }}
-                            inputProps={{
-                                min: 0,
-                                step: 1,
-                            }}
-                        />
-                    </Box>
+                    <TimeInput
+                        label="Resting Time"
+                        icon={<AccessTimeIcon fontSize="small" />}
+                        value={timeEstimate.rest}
+                        field="rest"
+                    />
 
-                    <Box>
-                        <Typography
-                            variant="body2"
-                            sx={{
-                                mb: 1,
-                                color: 'text.secondary',
-                                fontWeight: 500,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
-                            }}
-                        >
-                            <KitchenIcon fontSize="small" />
-                            Cook Time
-                        </Typography>
-                        <TextField
-                            fullWidth
-                            size="small"
-                            type="number"
-                            value={getDisplayValue(timeEstimate.cook)}
-                            onChange={handleChange('cook')}
-                            InputProps={{
-                                endAdornment: (
-                                    <InputAdornment position="end">
-                                        min
-                                    </InputAdornment>
-                                ),
-                            }}
-                            inputProps={{
-                                min: 0,
-                                step: 1,
-                            }}
-                        />
-                    </Box>
+                    <TimeInput
+                        label="Cook Time"
+                        icon={<KitchenIcon fontSize="small" />}
+                        value={timeEstimate.cook}
+                        field="cook"
+                    />
 
                     <Divider />
 
                     <Box>
-                        <Typography
-                            variant="body2"
+                        <Box
                             sx={{
                                 mb: 1,
-                                color: 'text.secondary',
-                                fontWeight: 500,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
                             }}
                         >
-                            Total Time
-                        </Typography>
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    color: 'text.secondary',
+                                    fontWeight: 500,
+                                }}
+                            >
+                                Total Time
+                            </Typography>
+                            {timeEstimate.total >= 60 && (
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        color: 'text.disabled',
+                                        fontFamily: "'Inter', sans-serif",
+                                    }}
+                                >
+                                    ({formatTimeDisplay(timeEstimate.total)})
+                                </Typography>
+                            )}
+                        </Box>
                         <TextField
                             fullWidth
                             size="small"
