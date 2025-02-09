@@ -70,7 +70,7 @@ const TimeEstimate: React.FC<TimeEstimateProps> = ({ timeEstimate }) => {
                             gap: 1.5,
                             ml: '0 !important',
                             flex: { xs: '1 1 40%', sm: '1 1 auto' },
-                            justifyContent: 'center',
+                            justifyContent: 'start',
                         }}
                     >
                         {item.icon}

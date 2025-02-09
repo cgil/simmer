@@ -187,7 +187,7 @@ serve(async (req) => {
                         - Ingredient names should be clear and concise, as they will be used to generate unique IDs.
                         - Section titles should be clear and concise, as they will be used to generate unique IDs.
                         - Avoid using special characters in ingredient names, section titles, and the recipe title.
-
+                        - Look for and identify timing information for each step. Do not make up any timing information.
                         Resting Time Rules:
                         - Look for and identify any resting, proofing, marinating, chilling, cooling, or other active waiting times in the recipe
                         - Include these in the time_estimate.rest field (in minutes)

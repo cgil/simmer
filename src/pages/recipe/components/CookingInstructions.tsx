@@ -4,6 +4,7 @@ import { Recipe } from '../../../types';
 import { parseIngredientReferences } from '../../../utils/recipe';
 import HighlightedInstruction from './HighlightedInstruction';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
+import { formatTimeDisplay } from '../../../utils/time';
 
 interface CookingInstructionsProps {
     recipe: Recipe;
@@ -75,49 +76,36 @@ const CookingInstructions: FC<CookingInstructionsProps> = ({
                                         lineHeight: 1.6,
                                         color: 'text.primary',
                                         display: 'flex',
-                                        alignItems: 'flex-start',
-                                        gap: { xs: 2, sm: 3 },
-                                        mb: 2,
+                                        flexDirection: 'column',
+                                        gap: { xs: 1, sm: 1.5 },
+                                        mb: { xs: 3, sm: 4 },
                                         '&:last-child': {
                                             mb: 0,
                                         },
                                     }}
                                 >
-                                    <Typography
-                                        sx={{
-                                            color: 'primary.main',
-                                            fontFamily: "'Kalam', cursive",
-                                            fontSize: {
-                                                xs: '1.25rem',
-                                                sm: '1.5rem',
-                                            },
-                                            fontWeight: 700,
-                                            lineHeight: 1.4,
-                                            minWidth: {
-                                                xs: '24px',
-                                                sm: '32px',
-                                            },
-                                        }}
-                                    >
-                                        {currentStepNumber}.
-                                    </Typography>
+                                    {/* Header row with step number and timing */}
                                     <Box
                                         sx={{
-                                            flex: 1,
                                             display: 'flex',
                                             justifyContent: 'space-between',
-                                            alignItems: 'flex-start',
-                                            gap: 2,
+                                            alignItems: 'center',
+                                            width: '100%',
                                         }}
                                     >
-                                        <Typography sx={{ flex: 1 }}>
-                                            <HighlightedInstruction
-                                                text={parseIngredientReferences(
-                                                    step.text,
-                                                    recipe,
-                                                    servings
-                                                )}
-                                            />
+                                        <Typography
+                                            sx={{
+                                                color: 'primary.main',
+                                                fontFamily: "'Kalam', cursive",
+                                                fontSize: {
+                                                    xs: '1.0rem',
+                                                    sm: '1.5rem',
+                                                },
+                                                fontWeight: 700,
+                                                lineHeight: 1.4,
+                                            }}
+                                        >
+                                            Step {currentStepNumber}.
                                         </Typography>
                                         {step.timing && (
                                             <Box
@@ -127,15 +115,19 @@ const CookingInstructions: FC<CookingInstructionsProps> = ({
                                                     gap: 0.5,
                                                     color: 'text.secondary',
                                                     fontSize: '0.85em',
-                                                    flexShrink: 0,
                                                     bgcolor: 'grey.50',
                                                     p: 0.5,
-                                                    px: 1,
-                                                    borderRadius: 1,
+                                                    px: 1.5,
+                                                    borderRadius: '12px',
                                                     border: '1px solid',
                                                     borderColor: 'grey.100',
-                                                    mt: 0.25,
-                                                    whiteSpace: 'nowrap',
+                                                    boxShadow:
+                                                        '0 1px 2px rgba(0,0,0,0.05)',
+                                                    transition: 'all 0.2s ease',
+                                                    '&:hover': {
+                                                        bgcolor: 'grey.100',
+                                                        borderColor: 'grey.200',
+                                                    },
                                                 }}
                                             >
                                                 <TimerOutlinedIcon
@@ -147,13 +139,41 @@ const CookingInstructions: FC<CookingInstructionsProps> = ({
                                                 <span>
                                                     {step.timing.min ===
                                                     step.timing.max
-                                                        ? `${step.timing.min}`
-                                                        : `${step.timing.min}-${step.timing.max}`}{' '}
-                                                    {step.timing.units}
+                                                        ? formatTimeDisplay(
+                                                              step.timing.min
+                                                          )
+                                                        : `${formatTimeDisplay(
+                                                              step.timing.min
+                                                          )} - ${formatTimeDisplay(
+                                                              step.timing.max
+                                                          )}`}
                                                 </span>
                                             </Box>
                                         )}
                                     </Box>
+
+                                    {/* Instruction text */}
+                                    <Typography
+                                        sx={{
+                                            color: 'text.primary',
+                                            fontSize: {
+                                                xs: '0.9rem',
+                                                sm: '1rem',
+                                            },
+                                            lineHeight: 1.8,
+                                            pl: { xs: 1, sm: 2 },
+                                            borderLeft: '2px solid',
+                                            borderColor: 'grey.100',
+                                        }}
+                                    >
+                                        <HighlightedInstruction
+                                            text={parseIngredientReferences(
+                                                step.text,
+                                                recipe,
+                                                servings
+                                            )}
+                                        />
+                                    </Typography>
                                 </Box>
                             );
                         })}
