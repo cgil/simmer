@@ -1,13 +1,10 @@
 import { FC } from 'react';
 import { Box, Typography, Paper } from '@mui/material';
 import { Recipe } from '../../../../types';
-import {
-    parseIngredientReferences,
-    scaleQuantity,
-    formatQuantity,
-} from '../../../../utils/recipe';
+import { scaleQuantity, formatQuantity } from '../../../../utils/recipe';
 import HighlightedInstruction from '../../components/HighlightedInstruction';
 import Timer from './Timer';
+import { parseIngredientMentions } from '../../../../utils/ingredientMentions';
 
 interface StepContentProps {
     recipe: Recipe;
@@ -56,23 +53,30 @@ const StepContent: FC<StepContentProps> = ({
         currentStep +
         1;
 
-    // Get ingredients needed for this step
-    const ingredientMatches = step.text.match(/\[INGREDIENT=([^\]]+)\]/g) || [];
-    const stepIngredients = ingredientMatches
-        .map((match) => {
-            const id = match.match(/\[INGREDIENT=([^\]]+)\]/)?.[1];
-            return recipe.ingredients.find((ing) => ing.id === id);
-        })
-        .filter((ing): ing is Recipe['ingredients'][0] => ing !== undefined)
-        .map((ingredient) => {
+    // Parse the step text to find ingredient mentions
+    const segments = parseIngredientMentions(step.text, recipe.ingredients);
+
+    // Extract ingredient IDs from the mentions
+    const stepIngredients = segments
+        .filter(
+            (
+                segment
+            ): segment is {
+                id: string;
+                display: string;
+                ingredient?: Recipe['ingredients'][0];
+            } => typeof segment !== 'string' && segment.ingredient !== undefined
+        )
+        .map(({ ingredient }) => {
+            // Scale the ingredient quantity based on servings
             const scaledQuantity = scaleQuantity(
-                ingredient.quantity,
+                ingredient!.quantity,
                 recipe.servings,
                 servings
             );
 
             return {
-                ...ingredient,
+                ...ingredient!,
                 quantity: scaledQuantity,
             };
         });
@@ -172,11 +176,8 @@ const StepContent: FC<StepContentProps> = ({
                             }}
                         >
                             <HighlightedInstruction
-                                text={parseIngredientReferences(
-                                    step.text,
-                                    recipe,
-                                    servings
-                                )}
+                                text={step.text}
+                                ingredients={recipe.ingredients}
                             />
                         </Typography>
 

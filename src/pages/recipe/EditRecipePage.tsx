@@ -28,6 +28,8 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import NotebookButton from '../../components/common/NotebookButton';
+import IngredientReferenceInput from './components/IngredientReferenceInput';
+import { convertRecipeIngredientMentions } from '../../utils/ingredientMentions';
 
 const EditRecipePage: FC = () => {
     const location = useLocation();
@@ -38,7 +40,12 @@ const EditRecipePage: FC = () => {
         [number, number] | null
     >(null);
     const [instructions, setInstructions] = useState(
-        recipe?.instructions || []
+        recipe?.instructions
+            ? convertRecipeIngredientMentions(
+                  recipe.instructions,
+                  recipe?.ingredients || []
+              )
+            : []
     );
     const [ingredients, setIngredients] = useState(recipe?.ingredients || []);
     const [notes, setNotes] = useState(
@@ -87,36 +94,17 @@ const EditRecipePage: FC = () => {
             const [sectionIndex, stepIndex] = activeStepIndex;
             const newInstructions = [...instructions];
             const currentStep = newInstructions[sectionIndex].steps[stepIndex];
-            const textToInsert = `[INGREDIENT=${ingredient.id}]`;
+            const textToInsert = `@[${ingredient.name}](${ingredient.id})`;
 
-            // Get the active textarea element
-            const textarea = document.querySelector(
-                `[data-section-index="${sectionIndex}"][data-step-index="${stepIndex}"]`
-            ) as HTMLTextAreaElement;
+            // Update state directly for the new component
+            newInstructions[sectionIndex].steps[stepIndex] = {
+                text: currentStep.text + textToInsert + ' ',
+                timing: currentStep.timing,
+            };
 
-            if (textarea) {
-                const start = textarea.selectionStart || 0;
-                const end = textarea.selectionEnd || 0;
-
-                newInstructions[sectionIndex].steps[stepIndex] = {
-                    text:
-                        currentStep.text.substring(0, start) +
-                        textToInsert +
-                        currentStep.text.substring(end),
-                    timing: currentStep.timing,
-                };
-
-                setInstructions(newInstructions);
-
-                // Restore focus and move cursor after the inserted text
-                setTimeout(() => {
-                    textarea.focus();
-                    const newPosition = start + textToInsert.length;
-                    textarea.setSelectionRange(newPosition, newPosition);
-                }, 0);
-            }
+            setInstructions(newInstructions);
+            setAnchorEl(null); // Close the menu after selecting an ingredient
         }
-        setAnchorEl(null);
     };
 
     const handleAddIngredient = () => {
@@ -243,11 +231,11 @@ const EditRecipePage: FC = () => {
     const handleStepChange = (
         sectionIndex: number,
         stepIndex: number,
-        e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
+        value: string
     ) => {
         const newInstructions = [...instructions];
         newInstructions[sectionIndex].steps[stepIndex] = {
-            text: e.target.value,
+            text: value,
             timing: newInstructions[sectionIndex].steps[stepIndex].timing,
         };
         setInstructions(newInstructions);
@@ -1083,50 +1071,23 @@ const EditRecipePage: FC = () => {
                                                                         flex: 1,
                                                                     }}
                                                                 >
-                                                                    <TextField
-                                                                        fullWidth
-                                                                        multiline
-                                                                        placeholder="Describe this step..."
+                                                                    <IngredientReferenceInput
                                                                         value={
                                                                             step.text
                                                                         }
-                                                                        variant="standard"
-                                                                        inputProps={{
-                                                                            'data-section-index':
-                                                                                sectionIndex,
-                                                                            'data-step-index':
-                                                                                stepIndex,
-                                                                        }}
                                                                         onChange={(
-                                                                            e
+                                                                            value
                                                                         ) =>
                                                                             handleStepChange(
                                                                                 sectionIndex,
                                                                                 stepIndex,
-                                                                                e
+                                                                                value
                                                                             )
                                                                         }
-                                                                        onFocus={() =>
-                                                                            setActiveStepIndex(
-                                                                                [
-                                                                                    sectionIndex,
-                                                                                    stepIndex,
-                                                                                ]
-                                                                            )
+                                                                        ingredients={
+                                                                            ingredients
                                                                         }
-                                                                        onBlur={() =>
-                                                                            setActiveStepIndex(
-                                                                                null
-                                                                            )
-                                                                        }
-                                                                        sx={{
-                                                                            '& .MuiInputBase-input':
-                                                                                {
-                                                                                    fontSize:
-                                                                                        '1rem',
-                                                                                    lineHeight: 1.6,
-                                                                                },
-                                                                        }}
+                                                                        placeholder="Describe this step..."
                                                                     />
                                                                     <Box
                                                                         className="step-actions"
