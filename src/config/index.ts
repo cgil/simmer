@@ -6,15 +6,15 @@ interface Config {
     openai: {
         model: string;
     };
-    environment: 'development' | 'production';
+    environment: "development" | "production";
 }
 
 const getEnvironment = () => {
     // Check if we're in a production environment (Vercel sets this)
     if (import.meta.env.PROD) {
-        return 'production';
+        return "production";
     }
-    return 'development';
+    return "development";
 };
 
 const config: Config = {
@@ -25,7 +25,7 @@ const config: Config = {
     },
     openai: {
         // Use a more cost-effective model in development
-        model: getEnvironment() === 'production' ? 'gpt-4' : 'gpt-3.5-turbo',
+        model: getEnvironment() === "production" ? "gpt-4o" : "gpt-4o",
     },
 };
 

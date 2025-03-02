@@ -1,41 +1,41 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { OpenAI } from "https://deno.land/x/openai@v4.55.1/mod.ts";
 import { z } from "https://deno.land/x/zod@v3.24.1/mod.ts";
-import { zodResponseFormat } from 'https://deno.land/x/openai@v4.55.1/helpers/zod.ts';
+import { zodResponseFormat } from "https://deno.land/x/openai@v4.55.1/helpers/zod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 // Helper function to generate kebab-case IDs
 function generateId(text: string): string {
     return text
         .toLowerCase()
         // Replace special characters with spaces
-        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/[^a-z0-9\s-]/g, "")
         // Replace multiple spaces with single space
-        .replace(/\s+/g, ' ')
+        .replace(/\s+/g, " ")
         .trim()
         // Replace spaces with hyphens
-        .replace(/\s/g, '-')
+        .replace(/\s/g, "-")
         // Remove consecutive hyphens
-        .replace(/-+/g, '-');
+        .replace(/-+/g, "-");
 }
 
 // Define Zod schemas
 const TimingSchema = z.object({
     min: z.number(),
     max: z.number(),
-    units: z.literal('minutes')
+    units: z.literal("minutes"),
 }).nullable();
 
 const StepSchema = z.object({
     text: z.string(),
-    timing: TimingSchema
+    timing: TimingSchema,
 });
 
 const InstructionSectionSchema = z.object({
     id: z.string(),
     section_title: z.string(),
-    steps: z.array(StepSchema)
+    steps: z.array(StepSchema),
 });
 
 const IngredientSchema = z.object({
@@ -43,15 +43,14 @@ const IngredientSchema = z.object({
     name: z.string(),
     quantity: z.number().nullable(),
     unit: z.string().nullable(),
-    notes: z.string().nullable()
+    notes: z.string().nullable(),
 });
-
 
 const TimeEstimateSchema = z.object({
     prep: z.number(),
     cook: z.number(),
     rest: z.number(),
-    total: z.number()
+    total: z.number(),
 });
 
 const RecipeSchema = z.object({
@@ -64,7 +63,7 @@ const RecipeSchema = z.object({
     instructions: z.array(InstructionSectionSchema),
     notes: z.array(z.string()),
     tags: z.array(z.string()),
-    time_estimate: TimeEstimateSchema
+    time_estimate: TimeEstimateSchema,
 });
 
 interface ExtractedContent {
@@ -79,31 +78,34 @@ function extractMainContent(html: string): ExtractedContent {
     let match;
     while ((match = imgRegex.exec(html)) !== null) {
         const url = match[1];
-        if (url && !url.startsWith('data:')) { // Skip data URLs
+        if (url && !url.startsWith("data:")) { // Skip data URLs
             imageUrls.push(url);
         }
     }
 
     // Remove script and style tags and their content
-    html = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-    html = html.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+    html = html.replace(
+        /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+        "",
+    );
+    html = html.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
 
     // Remove all HTML tags except some basic formatting
-    html = html.replace(/<[^>]+>/g, ' ');
+    html = html.replace(/<[^>]+>/g, " ");
 
     // Remove extra whitespace
-    html = html.replace(/\s+/g, ' ').trim();
+    html = html.replace(/\s+/g, " ").trim();
 
     // Decode HTML entities
-    html = html.replace(/&amp;/g, '&')
-               .replace(/&lt;/g, '<')
-               .replace(/&gt;/g, '>')
-               .replace(/&quot;/g, '"')
-               .replace(/&#039;/g, "'");
+    html = html.replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#039;/g, "'");
 
     return {
         text: html,
-        images: imageUrls.slice(0, 6)  // Limit to 6 images
+        images: imageUrls.slice(0, 6), // Limit to 6 images
     };
 }
 
@@ -114,7 +116,7 @@ serve(async (req) => {
             status: 204,
             headers: {
                 ...corsHeaders,
-                'Access-Control-Max-Age': '86400',
+                "Access-Control-Max-Age": "86400",
             },
         });
     }
@@ -127,28 +129,29 @@ serve(async (req) => {
         }
 
         // Initialize Supabase client
-        const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+        const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+            "";
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
         // Check cache first
         const { data: cachedData, error: cacheError } = await supabase.rpc(
-            'get_or_set_recipe_cache',
+            "get_or_set_recipe_cache",
             {
                 p_url: url,
-                p_data: null
-            }
+                p_data: null,
+            },
         );
 
         if (cacheError) {
-            console.error('Cache error:', cacheError);
+            console.error("Cache error:", cacheError);
         } else if (cachedData) {
             // Return cached data if available
             return new Response(JSON.stringify(cachedData), {
                 headers: {
                     ...corsHeaders,
-                    'Content-Type': 'application/json',
-                    'X-Cache': 'HIT',
+                    "Content-Type": "application/json",
+                    "X-Cache": "HIT",
                 },
             });
         }
@@ -169,13 +172,18 @@ serve(async (req) => {
             // Extract recipe using OpenAI with Zod schema
             const completion = await openai.chat.completions.create({
                 model: "gpt-4o",
-                response_format: zodResponseFormat(RecipeSchema, "recipe_extraction"),
+                response_format: zodResponseFormat(
+                    RecipeSchema,
+                    "recipe_extraction",
+                ),
                 messages: [
                     {
-                        role: 'system',
-                        content: `You are a recipe extraction expert. Extract recipe information from the following text into a structured JSON format.
+                        role: "system",
+                        content:
+                            `You are a recipe extraction expert. Extract recipe information from the following text into a structured JSON format.
                         Follow these rules strictly:
                         - Maintain exact measurements and units
+                        - You must always extract the correct unit type for each ingredient
                         - Split instructions into logical sections
                         - Identify timing information in steps
                         - Generate relevant tags (max 7)
@@ -211,7 +219,9 @@ serve(async (req) => {
                             - "quarts"
                         - The timing unit should always be in "minutes"
                         - When timing info is available, the timing min and max should always be in minutes
-                        - Use the following image URLs in your response: ${JSON.stringify(images)}
+                        - Use the following image URLs in your response: ${
+                                JSON.stringify(images)
+                            }
                         - For the images list, pick a maximum of 5 images relevant to the recipe, and avoid duplicates, including duplicates at different sizes.
                         - Tags should be relevant to the recipe and should be thoughtful, such as as the following but think of tags specific to the recipe:
                             - "Healthy"
@@ -222,10 +232,10 @@ serve(async (req) => {
                         - Section titles should be concise and descriptive. They should be a few words that captures the main idea of the section such as:
                             - "Marinating the Chicken"
                             - "Making the Sauce"
-                        `
+                        `,
                     },
                     {
-                        role: 'user',
+                        role: "user",
                         content: mainContent,
                     },
                 ],
@@ -242,21 +252,25 @@ serve(async (req) => {
 
             // Add IDs to the recipe and its components
             parsedResult.id = generateId(parsedResult.title);
-            parsedResult.ingredients = parsedResult.ingredients.map(ingredient => ({
-                ...ingredient,
-                id: generateId(ingredient.name)
-            }));
-            parsedResult.instructions = parsedResult.instructions.map(section => ({
-                ...section,
-                id: generateId(section.section_title)
-            }));
+            parsedResult.ingredients = parsedResult.ingredients.map(
+                (ingredient) => ({
+                    ...ingredient,
+                    id: generateId(ingredient.name),
+                }),
+            );
+            parsedResult.instructions = parsedResult.instructions.map(
+                (section) => ({
+                    ...section,
+                    id: generateId(section.section_title),
+                }),
+            );
 
             const validatedRecipe = RecipeSchema.parse(parsedResult);
 
             // Store in cache
-            await supabase.rpc('get_or_set_recipe_cache', {
+            await supabase.rpc("get_or_set_recipe_cache", {
                 p_url: url,
-                p_data: validatedRecipe
+                p_data: validatedRecipe,
             });
 
             return new Response(
@@ -264,8 +278,8 @@ serve(async (req) => {
                 {
                     headers: {
                         ...corsHeaders,
-                        'Content-Type': 'application/json',
-                        'X-Cache': 'MISS',
+                        "Content-Type": "application/json",
+                        "X-Cache": "MISS",
                     },
                 },
             );
@@ -277,7 +291,9 @@ serve(async (req) => {
         console.error("Error:", error);
         return new Response(
             JSON.stringify({
-                error: error instanceof Error ? error.message : "Unknown error occurred",
+                error: error instanceof Error
+                    ? error.message
+                    : "Unknown error occurred",
             }),
             {
                 status: 400,
