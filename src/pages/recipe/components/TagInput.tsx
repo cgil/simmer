@@ -144,6 +144,7 @@ const TagInput: FC<TagInputProps> = ({ tags, onChange }) => {
                             gap: 1,
                             flexWrap: 'wrap',
                             flex: 1,
+                            alignContent: 'start',
                         }}
                     >
                         {tags.map((tag) => (

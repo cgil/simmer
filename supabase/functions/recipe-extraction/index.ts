@@ -171,7 +171,7 @@ serve(async (req) => {
 
             // Extract recipe using OpenAI with Zod schema
             const completion = await openai.chat.completions.create({
-                model: "gpt-4o",
+                model: "o3-mini",
                 response_format: zodResponseFormat(
                     RecipeSchema,
                     "recipe_extraction",
@@ -210,13 +210,17 @@ serve(async (req) => {
                         - If multiple resting periods exist, add them together for the total rest time
                         - Always convert resting times to minutes
 
-                        Ingredient units must be in the following style and always plural where possible:
+                        - Ingredient units must be in the following style and always plural where possible, here are a few examples:
                             - "cups"
                             - "tablespoons"
                             - "teaspoons"
                             - "ounces"
                             - "pounds"
                             - "quarts"
+                            - "pinch"
+                            - "cloves"
+                            - "slices"
+                        - If the unit type is not listed above, use your best judgement to determine the correct unit type.
                         - The timing unit should always be in "minutes"
                         - When timing info is available, the timing min and max should always be in minutes
                         - Use the following image URLs in your response: ${
@@ -239,7 +243,7 @@ serve(async (req) => {
                         content: mainContent,
                     },
                 ],
-                temperature: 0.2,
+                // temperature: 0.2, // Does not work with o3-mini
             });
 
             const result = completion.choices[0].message?.content;

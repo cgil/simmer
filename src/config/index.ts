@@ -25,7 +25,7 @@ const config: Config = {
     },
     openai: {
         // Use a more cost-effective model in development
-        model: getEnvironment() === "production" ? "gpt-4o" : "gpt-4o",
+        model: getEnvironment() === "production" ? "o3-mini" : "o3-mini",
     },
 };
 
