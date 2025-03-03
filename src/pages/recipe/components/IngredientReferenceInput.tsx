@@ -101,6 +101,11 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
         ingredient, // Include the full ingredient object for reference
     }));
 
+    // Function to find an ingredient by ID
+    const findIngredientById = (id: string) => {
+        return ingredients.find((ingredient) => ingredient.id === id);
+    };
+
     // Custom CSS to ensure consistent text styling
     const customCSS = `
     .react-mentions__highlighter {
@@ -191,7 +196,24 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
                                 )}
                         </Box>
                     )}
-                    displayTransform={(_id, display) => display}
+                    displayTransform={(id, display) => {
+                        // Find the ingredient by id
+                        const ingredient = findIngredientById(id);
+                        if (!ingredient) return display;
+
+                        // Format the display text with quantity and unit if available
+                        if (
+                            ingredient.quantity !== null &&
+                            ingredient.quantity !== undefined
+                        ) {
+                            return `${ingredient.quantity}${
+                                ingredient.unit ? ' ' + ingredient.unit : ''
+                            } ${ingredient.name}`;
+                        }
+
+                        // Otherwise just return the name
+                        return ingredient.name;
+                    }}
                     markup="@[__display__](__id__)"
                     appendSpaceOnAdd
                     style={mentionStyle}
