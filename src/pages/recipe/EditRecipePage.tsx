@@ -1110,7 +1110,7 @@ const EditRecipePage: FC = () => {
                                                                         ingredients={
                                                                             ingredients
                                                                         }
-                                                                        placeholder="Describe this step..."
+                                                                        placeholder="Describe step (use @ for ingredients)..."
                                                                         onCursorPositionChange={(
                                                                             position
                                                                         ) =>

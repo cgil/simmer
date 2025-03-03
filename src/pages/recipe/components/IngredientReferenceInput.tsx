@@ -31,7 +31,7 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
     value,
     onChange,
     ingredients,
-    placeholder = 'Describe this step...',
+    placeholder = 'Describe step (use @ for ingredients)...',
     onCursorPositionChange,
 }) => {
     // Get theme

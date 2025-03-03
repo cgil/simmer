@@ -91,13 +91,17 @@ const IngredientReferenceMention: FC<IngredientReferenceMentionProps> = ({
         const scaledQuantity =
             (ingredient.quantity * servings) / originalServings;
         displayText = `${formatQuantity(scaledQuantity)}${
-            ingredient.unit ? ' ' + ingredient.unit : ''
+            ingredient.unit && ingredient.unit.trim()
+                ? ' ' + ingredient.unit
+                : ''
         } ${ingredient.name}`;
     }
     // Use the original quantity if no scaling is requested
     else if (ingredient && ingredient.quantity !== null) {
         displayText = `${formatQuantity(ingredient.quantity)}${
-            ingredient.unit ? ' ' + ingredient.unit : ''
+            ingredient.unit && ingredient.unit.trim()
+                ? ' ' + ingredient.unit
+                : ''
         } ${ingredient.name}`;
     }
 
