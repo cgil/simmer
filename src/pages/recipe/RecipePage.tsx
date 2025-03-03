@@ -10,9 +10,19 @@ import {
     useMediaQuery,
     Paper,
     CircularProgress,
+    IconButton,
+    Menu,
+    MenuItem,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import AppLayout from '../../components/layout/AppLayout';
 import IngredientsList from './components/IngredientsList';
 import CookingInstructions from './components/CookingInstructions';
@@ -40,6 +50,20 @@ const RecipePage: FC = () => {
     const [servings, setServings] = useState<number>(
         initialRecipe?.servings || 2
     );
+
+    // State for menu and dialogs
+    const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    // Menu handlers
+    const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
+        setMenuAnchorEl(event.currentTarget);
+    };
+
+    const handleCloseMenu = () => {
+        setMenuAnchorEl(null);
+    };
 
     // Fetch recipe if not provided in location state
     useEffect(() => {
@@ -81,6 +105,34 @@ const RecipePage: FC = () => {
                     returnTo: `/recipe/${recipe.id}`,
                 },
             });
+        }
+        handleCloseMenu();
+    };
+
+    // Delete handlers
+    const handleDeleteClick = () => {
+        handleCloseMenu();
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteCancel = () => {
+        setDeleteDialogOpen(false);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!recipe || !recipe.id || !user) return;
+
+        setIsDeleting(true);
+        try {
+            await RecipeService.deleteRecipe(recipe.id, user.id);
+            setDeleteDialogOpen(false);
+            // Navigate back to catalog after successful deletion
+            navigate('/');
+        } catch (err) {
+            console.error('Error deleting recipe:', err);
+            setError('Failed to delete recipe. Please try again.');
+            setIsDeleting(false);
+            setDeleteDialogOpen(false);
         }
     };
 
@@ -131,7 +183,124 @@ const RecipePage: FC = () => {
         );
     }
 
-    // Content for the header
+    // Create the action button with the three-dot menu
+    const actionButton =
+        user && recipe && user.id === recipe.user_id ? (
+            <>
+                <IconButton
+                    onClick={handleOpenMenu}
+                    aria-label="recipe actions"
+                    sx={{
+                        color: 'text.secondary',
+                        '&:hover': {
+                            color: 'primary.main',
+                        },
+                    }}
+                >
+                    <MoreVertIcon />
+                </IconButton>
+
+                <Menu
+                    anchorEl={menuAnchorEl}
+                    open={Boolean(menuAnchorEl)}
+                    onClose={handleCloseMenu}
+                    PaperProps={{
+                        elevation: 3,
+                        sx: {
+                            borderRadius: 1,
+                            minWidth: 180,
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                        },
+                    }}
+                >
+                    <MenuItem onClick={handleEditClick}>
+                        <EditIcon sx={{ mr: 2, fontSize: 20 }} />
+                        <Typography>Edit Recipe</Typography>
+                    </MenuItem>
+                    <MenuItem
+                        onClick={handleDeleteClick}
+                        sx={{
+                            color: 'error.main',
+                            '&:hover': { bgcolor: 'error.lighter' },
+                        }}
+                    >
+                        <DeleteIcon
+                            sx={{
+                                mr: 2,
+                                fontSize: 20,
+                                color: (theme) =>
+                                    theme.palette.error.contrastText,
+                            }}
+                        />
+                        <Typography>Delete Recipe</Typography>
+                    </MenuItem>
+                </Menu>
+
+                {/* Delete confirmation dialog */}
+                <Dialog
+                    open={deleteDialogOpen}
+                    onClose={handleDeleteCancel}
+                    aria-labelledby="delete-dialog-title"
+                    aria-describedby="delete-dialog-description"
+                    PaperProps={{
+                        sx: {
+                            borderRadius: 1,
+                            width: '100%',
+                            maxWidth: 450,
+                        },
+                    }}
+                >
+                    <DialogTitle id="delete-dialog-title">
+                        Delete "{recipe.title}"?
+                    </DialogTitle>
+                    <DialogContent>
+                        <DialogContentText id="delete-dialog-description">
+                            Once you remove this recipe from your cookbook, you
+                            won't be able to access this recipe, its
+                            ingredients, or cooking instructions anymore.
+                        </DialogContentText>
+                    </DialogContent>
+                    <DialogActions sx={{ px: 3, pb: 3 }}>
+                        <Button
+                            onClick={handleDeleteCancel}
+                            variant="outlined"
+                            disabled={isDeleting}
+                            sx={{
+                                borderRadius: 1,
+                                textTransform: 'none',
+                                fontFamily: "'Inter', sans-serif",
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleDeleteConfirm}
+                            variant="contained"
+                            color="error"
+                            disabled={isDeleting}
+                            startIcon={
+                                isDeleting ? (
+                                    <CircularProgress
+                                        size={20}
+                                        color="inherit"
+                                    />
+                                ) : (
+                                    <DeleteIcon />
+                                )
+                            }
+                            sx={{
+                                borderRadius: 1,
+                                textTransform: 'none',
+                                fontFamily: "'Inter', sans-serif",
+                            }}
+                        >
+                            {isDeleting ? 'Deleting...' : 'Delete Recipe'}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            </>
+        ) : null;
+
     const headerContent = (
         <Box
             sx={{
@@ -166,22 +335,6 @@ const RecipePage: FC = () => {
                     Back
                 </Typography>
             </Box>
-
-            {/* Show edit button only for recipe owners and only in view mode */}
-            {user && recipe && user.id === recipe.user_id && (
-                <Button
-                    variant="outlined"
-                    startIcon={<EditIcon />}
-                    onClick={handleEditClick}
-                    sx={{
-                        borderRadius: 1,
-                        textTransform: 'none',
-                        fontFamily: "'Inter', sans-serif",
-                    }}
-                >
-                    Edit Recipe
-                </Button>
-            )}
         </Box>
     );
 
@@ -192,6 +345,7 @@ const RecipePage: FC = () => {
             onCookingClick={() =>
                 navigate(`/recipe/${recipe.id}/cook`, { state: { servings } })
             }
+            actionButton={actionButton}
         >
             <Box
                 sx={{

@@ -27,6 +27,7 @@ interface AppLayoutProps {
     showAddButton?: boolean;
     showCookingButton?: boolean;
     onCookingClick?: () => void;
+    actionButton?: ReactNode;
 }
 
 const AppLayout: FC<AppLayoutProps> = ({
@@ -35,6 +36,7 @@ const AppLayout: FC<AppLayoutProps> = ({
     showAddButton = false,
     showCookingButton = false,
     onCookingClick,
+    actionButton,
 }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -209,6 +211,9 @@ const AppLayout: FC<AppLayoutProps> = ({
                                     {isMobile ? '' : 'Start Cooking'}
                                 </Button>
                             )}
+
+                            {/* Display the action button if provided */}
+                            {actionButton}
 
                             {showAddButton && (
                                 <Button
