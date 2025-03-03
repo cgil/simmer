@@ -1,5 +1,5 @@
 import { Recipe } from "../types";
-import { formatIngredientDisplayText } from "../pages/recipe/components/IngredientReferenceMention";
+import { formatIngredientDisplayText } from "./ingredientDisplay";
 
 export const scaleQuantity = (
     originalQuantity: number | null,

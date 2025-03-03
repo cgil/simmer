@@ -14,6 +14,7 @@ Simmer is a modern web application that brings the warmth and personality of a p
 -   ⚖️ Flexible time handling (supports zero prep/cook times)
 -   🎨 Whimsical loading states with recipe-themed progress indicators
 -   🔖 @-mention style ingredient references in instructions
+-   👤 User profile pictures from authentication providers (Google, GitHub, etc.)
 
 ## Local Development Setup
 
@@ -244,6 +245,12 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 -   Vercel for hosting and deployment
 
 ### Recent Updates
+
+#### User Profile Avatar Integration
+
+-   Added support for displaying user profile pictures from authentication providers
+-   Implemented fallback mechanisms for when profile images aren't available
+-   Created a dedicated UserAvatar component with proper error handling
 
 #### Improved Ingredient Reference Handling
 

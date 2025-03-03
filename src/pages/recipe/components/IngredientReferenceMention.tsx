@@ -2,7 +2,7 @@ import { FC } from 'react';
 import { styled } from '@mui/material/styles';
 import { Box, Typography, Tooltip } from '@mui/material';
 import { Ingredient } from '../../../types/recipe';
-import { formatQuantity } from '../../../utils/recipe';
+import { formatIngredientDisplayText } from '../../../utils/ingredientDisplay';
 
 interface IngredientReferenceMentionProps {
     ingredient?: Ingredient;
@@ -66,27 +66,6 @@ const InvalidReferenceMention = styled(Box)(({ theme }) => ({
     lineHeight: '1.6',
     letterSpacing: 'normal',
 }));
-
-/**
- * Formats an ingredient display text including quantity and units when available
- */
-export const formatIngredientDisplayText = (
-    ingredient: Ingredient,
-    scaledQuantity?: number | null
-): string => {
-    const quantity =
-        scaledQuantity !== undefined ? scaledQuantity : ingredient.quantity;
-
-    if (quantity !== null && quantity !== undefined) {
-        return `${formatQuantity(quantity)}${
-            ingredient.unit && ingredient.unit.trim()
-                ? ' ' + ingredient.unit
-                : ''
-        } ${ingredient.name}`;
-    }
-
-    return ingredient.name;
-};
 
 const IngredientReferenceMention: FC<IngredientReferenceMentionProps> = ({
     ingredient,

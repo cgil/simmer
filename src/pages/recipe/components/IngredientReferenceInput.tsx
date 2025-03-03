@@ -2,7 +2,7 @@ import { FC, useRef, useState, useEffect } from 'react';
 import { MentionsInput, Mention } from 'react-mentions';
 import { Box, Typography, useTheme } from '@mui/material';
 import { Ingredient } from '../../../types/recipe';
-import { formatIngredientDisplayText } from './IngredientReferenceMention';
+import { formatIngredientDisplayText } from '../../../utils/ingredientDisplay';
 import { isValidUuid, ensureUuid } from '../../../utils/uuid';
 
 // Extend SuggestionDataItem type to include our ingredient data

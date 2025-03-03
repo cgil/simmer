@@ -101,6 +101,7 @@ src/
       AppLayout.tsx       # Main app wrapper with header
       PageContainer.tsx   # Standard page container
       RecipeLayout.tsx    # Recipe page specific layout
+      UserAvatar.tsx      # User profile avatar component with robust fallbacks
 ```
 
 ### 3.2. Feature Components
@@ -215,6 +216,36 @@ const notificationSystem = {
 };
 ```
 
+### 3.6. Authentication and User Profile
+
+```typescript
+// UserAvatar component for displaying user profile pictures
+interface User {
+  id: string;
+  email?: string;
+  user_metadata?: {
+    avatar_url?: string;
+    picture?: string;
+    [key: string]: unknown;
+  };
+}
+
+interface UserAvatarProps {
+  user: User | null;
+  size?: number;
+  sx?: SxProps<Theme>;
+}
+
+// Avatar rendering with fallbacks
+const avatarRenderingStrategy = {
+  checkImageValidity: (url: string) => boolean;
+  primarySource: 'user_metadata.avatar_url',
+  secondarySource: 'user_metadata.picture',
+  fallbackDisplay: 'user.email.charAt(0).toUpperCase()',
+  noUserFallback: '<AccountCircleIcon />'
+};
+```
+
 ---
 
 ## 4. Data Models
@@ -285,7 +316,21 @@ const timeManagement = {
 };
 ```
 
-### 4.3. Extraction Progress System
+### 4.3. Ingredient Display Utilities
+
+```typescript
+// Utility for consistently formatting ingredient display text
+export const formatIngredientDisplayText = (
+    ingredient: Ingredient,
+    scaledQuantity?: number | null
+): string => {
+    // Format ingredient with quantity and unit when available
+    // Support for scaled quantities when serving size changes
+    // Consistent display format across all ingredient references
+};
+```
+
+### 4.4. Extraction Progress System
 
 ```typescript
 // Extraction steps configuration
@@ -453,6 +498,8 @@ const recipeQueries = {
 ### 7.1. Authentication
 
 -   Supabase authentication
+-   OAuth providers (Google, GitHub, etc.)
+-   User profile image display from auth providers
 -   Protected routes
 -   Secure session management
 
