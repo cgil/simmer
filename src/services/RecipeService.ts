@@ -34,6 +34,19 @@ export class RecipeService {
                 .test(recipe.id);
         const isNewRecipe = !recipe.id;
 
+        console.log("Recipe save operation:", {
+            isNewRecipe,
+            isValidUuid,
+            recipeId: recipe.id,
+            userId,
+            hasImages: recipe.images?.length > 0,
+            numImages: recipe.images?.length,
+            hasIngredients: recipe.ingredients?.length > 0,
+            numIngredients: recipe.ingredients?.length,
+            hasInstructions: recipe.instructions?.length > 0,
+            numInstructions: recipe.instructions?.length,
+        });
+
         try {
             // 1. Save the main recipe record
             const recipeData = {
@@ -49,6 +62,8 @@ export class RecipeService {
                 user_id: userId,
             };
 
+            console.log("Saving recipe main data:", recipeData);
+
             let recipeId: string;
 
             if (isNewRecipe || !isValidUuid) {
@@ -59,8 +74,12 @@ export class RecipeService {
                     .select("id")
                     .single();
 
-                if (insertError) throw insertError;
+                if (insertError) {
+                    console.error("Error inserting recipe:", insertError);
+                    throw insertError;
+                }
                 recipeId = newRecipe.id;
+                console.log("Created new recipe with ID:", recipeId);
             } else {
                 // Update existing recipe with valid UUID
                 recipeId = recipe.id!;
@@ -70,17 +89,32 @@ export class RecipeService {
                     .eq("id", recipeId)
                     .eq("user_id", userId);
 
-                if (updateError) throw updateError;
+                if (updateError) {
+                    console.error("Error updating recipe:", updateError);
+                    throw updateError;
+                }
+                console.log("Updated existing recipe with ID:", recipeId);
             }
 
             // 2. Handle recipe images
             if (recipe.images && recipe.images.length > 0) {
                 // Delete existing images if updating
                 if (!isNewRecipe) {
-                    await supabase
+                    console.log(
+                        "Deleting existing images for recipe:",
+                        recipeId,
+                    );
+                    const { error: deleteImagesError } = await supabase
                         .from("recipe_images")
                         .delete()
                         .eq("recipe_id", recipeId);
+
+                    if (deleteImagesError) {
+                        console.error(
+                            "Error deleting existing images:",
+                            deleteImagesError,
+                        );
+                    }
                 }
 
                 // Insert new images
@@ -90,21 +124,43 @@ export class RecipeService {
                     position: index,
                 }));
 
-                const { error: imageError } = await supabase
+                console.log("Inserting image records:", imageRecords);
+                const { error: imageError, data: newImages } = await supabase
                     .from("recipe_images")
-                    .insert(imageRecords);
+                    .insert(imageRecords)
+                    .select("*");
 
-                if (imageError) throw imageError;
+                if (imageError) {
+                    console.error("Error inserting images:", imageError);
+                    throw imageError;
+                }
+                console.log(
+                    "Successfully inserted images:",
+                    newImages?.length || 0,
+                );
+            } else {
+                console.log("No images to save for recipe:", recipeId);
             }
 
             // 3. Handle ingredients
             if (recipe.ingredients && recipe.ingredients.length > 0) {
                 // Delete existing ingredients if updating
                 if (!isNewRecipe) {
-                    await supabase
+                    console.log(
+                        "Deleting existing ingredients for recipe:",
+                        recipeId,
+                    );
+                    const { error: deleteIngredientsError } = await supabase
                         .from("recipe_ingredients")
                         .delete()
                         .eq("recipe_id", recipeId);
+
+                    if (deleteIngredientsError) {
+                        console.error(
+                            "Error deleting existing ingredients:",
+                            deleteIngredientsError,
+                        );
+                    }
                 }
 
                 // Insert new ingredients
@@ -120,11 +176,26 @@ export class RecipeService {
                     position: index,
                 }));
 
-                const { error: ingredientError } = await supabase
-                    .from("recipe_ingredients")
-                    .insert(ingredientRecords);
+                console.log("Inserting ingredient records:", ingredientRecords);
+                const { error: ingredientError, data: newIngredients } =
+                    await supabase
+                        .from("recipe_ingredients")
+                        .insert(ingredientRecords)
+                        .select("*");
 
-                if (ingredientError) throw ingredientError;
+                if (ingredientError) {
+                    console.error(
+                        "Error inserting ingredients:",
+                        ingredientError,
+                    );
+                    throw ingredientError;
+                }
+                console.log(
+                    "Successfully inserted ingredients:",
+                    newIngredients?.length || 0,
+                );
+            } else {
+                console.log("No ingredients to save for recipe:", recipeId);
             }
 
             // 4. Handle instruction sections and steps
@@ -132,17 +203,36 @@ export class RecipeService {
                 // Delete existing sections if updating
                 if (!isNewRecipe) {
                     // This will cascade delete to steps
-                    await supabase
+                    console.log(
+                        "Deleting existing instruction sections for recipe:",
+                        recipeId,
+                    );
+                    const { error: deleteSectionsError } = await supabase
                         .from("recipe_instruction_sections")
                         .delete()
                         .eq("recipe_id", recipeId);
+
+                    if (deleteSectionsError) {
+                        console.error(
+                            "Error deleting existing instruction sections:",
+                            deleteSectionsError,
+                        );
+                    }
                 }
+
+                console.log(
+                    "Processing instruction sections:",
+                    recipe.instructions.length,
+                );
 
                 // Insert new sections and steps
                 for (let i = 0; i < recipe.instructions.length; i++) {
                     const section = recipe.instructions[i];
 
                     // Insert section
+                    console.log(
+                        `Inserting section ${i}: ${section.section_title}`,
+                    );
                     const { data: newSection, error: sectionError } =
                         await supabase
                             .from("recipe_instruction_sections")
@@ -154,7 +244,13 @@ export class RecipeService {
                             .select("id")
                             .single();
 
-                    if (sectionError) throw sectionError;
+                    if (sectionError) {
+                        console.error(
+                            "Error inserting instruction section:",
+                            sectionError,
+                        );
+                        throw sectionError;
+                    }
 
                     // Insert steps for this section
                     if (section.steps && section.steps.length > 0) {
@@ -170,16 +266,38 @@ export class RecipeService {
                             position: stepIndex,
                         }));
 
-                        const { error: stepError } = await supabase
-                            .from("recipe_instruction_steps")
-                            .insert(stepRecords);
+                        console.log(
+                            `Inserting ${stepRecords.length} steps for section ${i}`,
+                        );
+                        const { error: stepError, data: newSteps } =
+                            await supabase
+                                .from("recipe_instruction_steps")
+                                .insert(stepRecords)
+                                .select("*");
 
-                        if (stepError) throw stepError;
+                        if (stepError) {
+                            console.log(
+                                "Error inserting instruction steps:",
+                                stepError,
+                            );
+
+                            throw stepError;
+                        }
+                        console.log(
+                            `Successfully inserted ${
+                                newSteps?.length || 0
+                            } steps for section ${i}`,
+                        );
+                    } else {
+                        console.log(`No steps to insert for section ${i}`);
                     }
                 }
+            } else {
+                console.log("No instructions to save for recipe:", recipeId);
             }
 
             // Return the saved recipe
+            console.log("Recipe saved successfully:", recipeId);
             return {
                 ...recipe,
                 id: recipeId,

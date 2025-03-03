@@ -189,15 +189,66 @@ interface ExtractedContent {
     images: string[];
 }
 
-function extractMainContent(html: string): ExtractedContent {
+function extractMainContent(html: string, pageUrl: string): ExtractedContent {
     // Extract image URLs before removing HTML
     const imageUrls: string[] = [];
-    const imgRegex = /<img[^>]+src="([^">]+)"/g;
+    const parsedUrl = new URL(pageUrl);
+    const baseUrl = `${parsedUrl.protocol}//${parsedUrl.host}`;
+
+    // Extract regular image src attributes
+    const imgRegex = /<img[^>]+src="([^">]+)"[^>]*>/g;
     let match;
     while ((match = imgRegex.exec(html)) !== null) {
         const url = match[1];
         if (url && !url.startsWith("data:")) { // Skip data URLs
-            imageUrls.push(url);
+            const fullUrl = resolveUrl(url, baseUrl, parsedUrl.pathname);
+
+            // Check if this is likely a recipe image
+            if (isValidImageUrl(fullUrl)) {
+                imageUrls.push(fullUrl);
+            }
+        }
+    }
+
+    // Also look for JSON-LD structured data which often contains the best recipe images
+    const jsonLdRegex =
+        /<script type="application\/ld\+json">([^<]+)<\/script>/g;
+    let jsonLdMatch;
+    while ((jsonLdMatch = jsonLdRegex.exec(html)) !== null) {
+        try {
+            const jsonLdContent = jsonLdMatch[1].trim();
+            const jsonData = JSON.parse(jsonLdContent);
+
+            // Check for recipe schema
+            if (
+                jsonData &&
+                (jsonData["@type"] === "Recipe" ||
+                    (Array.isArray(jsonData["@type"]) &&
+                        jsonData["@type"].includes("Recipe")))
+            ) {
+                if (jsonData.image) {
+                    // Handle both string and array image formats
+                    const images = Array.isArray(jsonData.image)
+                        ? jsonData.image
+                        : [jsonData.image];
+                    images.forEach((img: { url?: string } | string) => {
+                        const imgUrl = typeof img === "string" ? img : img.url;
+                        if (imgUrl && typeof imgUrl === "string") {
+                            const fullUrl = resolveUrl(
+                                imgUrl,
+                                baseUrl,
+                                parsedUrl.pathname,
+                            );
+                            if (isValidImageUrl(fullUrl)) {
+                                // Prioritize schema images by adding them to the front
+                                imageUrls.unshift(fullUrl);
+                            }
+                        }
+                    });
+                }
+            }
+        } catch {
+            // Ignore JSON parsing errors
         }
     }
 
@@ -221,10 +272,57 @@ function extractMainContent(html: string): ExtractedContent {
         .replace(/&quot;/g, '"')
         .replace(/&#039;/g, "'");
 
+    // Remove duplicates and limit to 6 images
+    const uniqueImages = [...new Set(imageUrls)];
+
     return {
         text: html,
-        images: imageUrls.slice(0, 6), // Limit to 6 images
+        images: uniqueImages.slice(0, 6), // Limit to 6 images
     };
+}
+
+// Helper function to resolve relative URLs
+function resolveUrl(url: string, baseUrl: string, pathname: string): string {
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+        return url; // Already absolute
+    }
+
+    if (url.startsWith("//")) {
+        // Protocol-relative URL
+        return `https:${url}`;
+    }
+
+    if (url.startsWith("/")) {
+        // Root-relative URL
+        return `${baseUrl}${url}`;
+    }
+
+    // Path-relative URL
+    const pathParts = pathname.split("/");
+    pathParts.pop(); // Remove the filename part
+    const directory = pathParts.join("/");
+    return `${baseUrl}${directory}/${url}`;
+}
+
+// Helper function to check if URL is a valid image
+function isValidImageUrl(url: string): boolean {
+    // Check if it has a valid image extension
+    const validExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+    const urlLower = url.toLowerCase();
+
+    // If URL has a query string or no extension, try to determine from path
+    const hasValidExtension = validExtensions.some((ext) =>
+        urlLower.endsWith(ext) || urlLower.includes(`${ext}?`)
+    );
+
+    // Skip common tracking pixels and icons
+    const isTrackingPixel = urlLower.includes("tracking") ||
+        urlLower.includes("pixel") ||
+        urlLower.includes("1x1") ||
+        urlLower.includes("favicon") ||
+        urlLower.includes("icon");
+
+    return hasValidExtension && !isTrackingPixel;
 }
 
 // Update the RawRecipe interface to include id property
@@ -308,7 +406,7 @@ serve(async (req) => {
             const html = await response.text();
 
             // Extract main content and images
-            const { text: mainContent, images } = extractMainContent(html);
+            const { text: mainContent, images } = extractMainContent(html, url);
 
             // Extract recipe using OpenAI with Zod schema
             const completion = await openai.chat.completions.create({
