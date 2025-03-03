@@ -1,4 +1,4 @@
-import { FC, ReactNode } from 'react';
+import { FC, ReactNode, useEffect, useState } from 'react';
 import {
     AppBar,
     Box,
@@ -18,9 +18,7 @@ import AddIcon from '@mui/icons-material/Add';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
-import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-
 interface AppLayoutProps {
     children: ReactNode;
     headerContent?: ReactNode;

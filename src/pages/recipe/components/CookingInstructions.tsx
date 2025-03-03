@@ -72,8 +72,11 @@ const CookingInstructions: FC<CookingInstructionsProps> = ({
                 Instructions
             </Typography>
 
-            {recipe.instructions.map((section) => (
-                <Box key={section.section_title} sx={{ mb: 4 }}>
+            {recipe.instructions.map((section, sectionIndex) => (
+                <Box
+                    key={`section-${sectionIndex}-${section.section_title}`}
+                    sx={{ mb: 4 }}
+                >
                     <Typography
                         variant="subtitle1"
                         sx={{
@@ -185,6 +188,7 @@ const CookingInstructions: FC<CookingInstructionsProps> = ({
 
                                     {/* Instruction text */}
                                     <Typography
+                                        component="div"
                                         sx={{
                                             color: 'text.primary',
                                             fontSize: {

@@ -22,6 +22,7 @@ import CarrotPlusIcon from '../../components/icons/CarrotPlusIcon';
 import AppLayout from '../../components/layout/AppLayout';
 import { Recipe, TimeEstimate } from '../../types/recipe';
 import TimeEstimateForm from './components/TimeEstimateForm';
+import ServingSizeForm from './components/ServingSizeForm';
 import TagInput from './components/TagInput';
 import ImageIcon from '@mui/icons-material/Image';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -71,6 +72,7 @@ const EditRecipePage: FC = () => {
     const [title, setTitle] = useState(recipe?.title || '');
     const [description, setDescription] = useState(recipe?.description || '');
     const [images, setImages] = useState<string[]>(recipe?.images || []);
+    const [servings, setServings] = useState<number>(recipe?.servings || 2);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -229,13 +231,18 @@ const EditRecipePage: FC = () => {
                 time_estimate: timeEstimate,
                 tags,
                 images,
+                servings,
             };
 
             // Save the recipe, passing the current user ID for ownership verification
-            await RecipeService.saveRecipe(updatedRecipe, user.id);
-            // Check if there's a returnTo path in the location state
-            const returnTo = location.state?.returnTo || '/';
-            navigate(returnTo);
+            const savedRecipe = await RecipeService.saveRecipe(
+                updatedRecipe,
+                user.id
+            );
+
+            // Navigate to the saved recipe page instead of the returnTo path
+            // This ensures users can immediately view their recipe after saving, even on first save
+            navigate(`/recipe/${savedRecipe.id}`);
         } catch (error: unknown) {
             console.error('Error saving recipe:', error);
 
@@ -966,10 +973,16 @@ const EditRecipePage: FC = () => {
                         sx={{ mb: { xs: 4, md: 6 } }}
                     >
                         <Grid item xs={12} md={5}>
-                            <TimeEstimateForm
-                                timeEstimate={timeEstimate}
-                                onChange={setTimeEstimate}
-                            />
+                            <Stack spacing={3}>
+                                <ServingSizeForm
+                                    servings={servings}
+                                    onChange={setServings}
+                                />
+                                <TimeEstimateForm
+                                    timeEstimate={timeEstimate}
+                                    onChange={setTimeEstimate}
+                                />
+                            </Stack>
                         </Grid>
                         <Grid item xs={12} md={7}>
                             <TagInput tags={tags} onChange={setTags} />
@@ -1224,7 +1237,7 @@ const EditRecipePage: FC = () => {
                                     {instructions.map(
                                         (section, sectionIndex) => (
                                             <Box
-                                                key={section.section_title}
+                                                key={`section-${sectionIndex}-${section.section_title}`}
                                                 sx={{
                                                     position: 'relative',
                                                     '&:hover .delete-section': {

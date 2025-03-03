@@ -169,6 +169,7 @@ const StepContent: FC<StepContentProps> = ({
                     <Box sx={{ flex: 1 }}>
                         <Typography
                             variant="body1"
+                            component="div"
                             sx={{
                                 fontSize: { xs: '1.125rem', sm: '1.25rem' },
                                 lineHeight: 1.6,
