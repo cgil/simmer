@@ -19,16 +19,18 @@ export interface Database {
                     notes: string[];
                     prep_time: number | null;
                     cook_time: number | null;
+                    rest_time: number | null;
                     total_time: number | null;
+                    user_id: string | null;
                     created_at: string;
                     updated_at: string;
                 };
                 Insert: Omit<
-                    Database['public']['Tables']['recipes']['Row'],
-                    'id' | 'created_at' | 'updated_at'
+                    Database["public"]["Tables"]["recipes"]["Row"],
+                    "id" | "created_at" | "updated_at"
                 >;
                 Update: Partial<
-                    Database['public']['Tables']['recipes']['Insert']
+                    Database["public"]["Tables"]["recipes"]["Insert"]
                 >;
             };
             recipe_images: {
@@ -40,11 +42,11 @@ export interface Database {
                     created_at: string;
                 };
                 Insert: Omit<
-                    Database['public']['Tables']['recipe_images']['Row'],
-                    'id' | 'created_at'
+                    Database["public"]["Tables"]["recipe_images"]["Row"],
+                    "id" | "created_at"
                 >;
                 Update: Partial<
-                    Database['public']['Tables']['recipe_images']['Insert']
+                    Database["public"]["Tables"]["recipe_images"]["Insert"]
                 >;
             };
             recipe_ingredients: {
@@ -58,11 +60,11 @@ export interface Database {
                     position: number;
                 };
                 Insert: Omit<
-                    Database['public']['Tables']['recipe_ingredients']['Row'],
-                    'id'
+                    Database["public"]["Tables"]["recipe_ingredients"]["Row"],
+                    "id"
                 >;
                 Update: Partial<
-                    Database['public']['Tables']['recipe_ingredients']['Insert']
+                    Database["public"]["Tables"]["recipe_ingredients"]["Insert"]
                 >;
             };
             recipe_instruction_sections: {
@@ -73,11 +75,15 @@ export interface Database {
                     position: number;
                 };
                 Insert: Omit<
-                    Database['public']['Tables']['recipe_instruction_sections']['Row'],
-                    'id'
+                    Database["public"]["Tables"]["recipe_instruction_sections"][
+                        "Row"
+                    ],
+                    "id"
                 >;
                 Update: Partial<
-                    Database['public']['Tables']['recipe_instruction_sections']['Insert']
+                    Database["public"]["Tables"]["recipe_instruction_sections"][
+                        "Insert"
+                    ]
                 >;
             };
             recipe_instruction_steps: {
@@ -87,15 +93,19 @@ export interface Database {
                     text: string;
                     timing_min: number | null;
                     timing_max: number | null;
-                    timing_units: 'seconds' | 'minutes' | 'hours' | null;
+                    timing_units: "seconds" | "minutes" | "hours" | null;
                     position: number;
                 };
                 Insert: Omit<
-                    Database['public']['Tables']['recipe_instruction_steps']['Row'],
-                    'id'
+                    Database["public"]["Tables"]["recipe_instruction_steps"][
+                        "Row"
+                    ],
+                    "id"
                 >;
                 Update: Partial<
-                    Database['public']['Tables']['recipe_instruction_steps']['Insert']
+                    Database["public"]["Tables"]["recipe_instruction_steps"][
+                        "Insert"
+                    ]
                 >;
             };
         };

@@ -30,10 +30,13 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import NotebookButton from '../../components/common/NotebookButton';
 import IngredientReferenceInput from './components/IngredientReferenceInput';
 import { convertRecipeIngredientMentions } from '../../utils/ingredientMentions';
+import { useAuth } from '../../context/AuthContext';
+import { RecipeService } from '../../services/RecipeService';
 
 const EditRecipePage: FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const recipe = location.state?.recipe as Recipe;
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [activeStepIndex, setActiveStepIndex] = useState<
@@ -69,27 +72,43 @@ const EditRecipePage: FC = () => {
     const [images, setImages] = useState<string[]>(recipe?.images || []);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isDragging, setIsDragging] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     if (!recipe) {
         navigate('/');
         return null;
     }
 
-    const handleSave = () => {
-        const updatedRecipe: Recipe = {
-            ...recipe,
-            title,
-            description,
-            ingredients,
-            instructions,
-            notes: notes.map((note) => note.text),
-            time_estimate: timeEstimate,
-            tags,
-            images,
-        };
-        // TODO: Implement save functionality
-        console.log('Saving recipe:', updatedRecipe);
-        navigate('/');
+    const handleSave = async () => {
+        if (!user) {
+            setSaveError('You must be logged in to save recipes');
+            return;
+        }
+
+        setIsSaving(true);
+        setSaveError(null);
+
+        try {
+            const updatedRecipe: Recipe = {
+                ...recipe,
+                title,
+                description,
+                ingredients,
+                instructions,
+                notes: notes.map((note) => note.text),
+                time_estimate: timeEstimate,
+                tags,
+                images,
+            };
+
+            await RecipeService.saveRecipe(updatedRecipe, user.id);
+            navigate('/');
+        } catch (error) {
+            console.error('Error saving recipe:', error);
+            setSaveError('Failed to save recipe. Please try again.');
+            setIsSaving(false);
+        }
     };
 
     const handleIngredientClick = (ingredient: Recipe['ingredients'][0]) => {
@@ -307,17 +326,32 @@ const EditRecipePage: FC = () => {
                     Back
                 </Typography>
             </Box>
-            <Button
-                variant="contained"
-                startIcon={<SaveIcon />}
-                onClick={handleSave}
+            <Box
                 sx={{
-                    height: 42,
-                    px: 3,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
                 }}
             >
-                Save Recipe
-            </Button>
+                {saveError && (
+                    <Typography color="error" variant="body2" sx={{ mb: 1 }}>
+                        {saveError}
+                    </Typography>
+                )}
+                <Button
+                    variant="contained"
+                    startIcon={isSaving ? null : <SaveIcon />}
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    sx={{
+                        height: 42,
+                        px: 3,
+                        minWidth: 140,
+                    }}
+                >
+                    {isSaving ? 'Saving...' : 'Save Recipe'}
+                </Button>
+            </Box>
         </Box>
     );
 

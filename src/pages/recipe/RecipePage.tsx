@@ -1,5 +1,5 @@
-import { FC, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { FC, useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
     Box,
     Typography,
@@ -9,26 +9,85 @@ import {
     useTheme,
     useMediaQuery,
     Paper,
+    CircularProgress,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AppLayout from '../../components/layout/AppLayout';
-import { MOCK_RECIPES } from '../../mocks/recipes';
 import IngredientsList from './components/IngredientsList';
 import CookingInstructions from './components/CookingInstructions';
 import RecipeGallery from './components/RecipeGallery';
 import RecipeNotes from './components/RecipeNotes';
 import TimeEstimate from './components/TimeEstimate';
+import { RecipeService } from '../../services/RecipeService';
+import { useAuth } from '../../context/AuthContext';
+import { Recipe } from '../../types/recipe';
 
 const RecipePage: FC = () => {
     const { id } = useParams();
+    const location = useLocation();
     const navigate = useNavigate();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const { user } = useAuth();
 
-    const recipe = MOCK_RECIPES.find((r) => r.id === id);
-    const [servings, setServings] = useState(2);
+    // Check if recipe was passed through location state (from CatalogPage)
+    const initialRecipe = location.state?.recipe as Recipe | undefined;
 
-    if (!recipe) {
+    const [recipe, setRecipe] = useState<Recipe | null>(initialRecipe || null);
+    const [loading, setLoading] = useState(!initialRecipe);
+    const [error, setError] = useState<string | null>(null);
+    const [servings, setServings] = useState<number>(
+        initialRecipe?.servings || 2
+    );
+
+    // Fetch recipe if not provided in location state
+    useEffect(() => {
+        if (!id || !user || initialRecipe) return;
+
+        const fetchRecipe = async () => {
+            setLoading(true);
+            setError(null);
+
+            try {
+                const fetchedRecipe = await RecipeService.getRecipeById(
+                    id,
+                    user.id
+                );
+                if (fetchedRecipe) {
+                    setRecipe(fetchedRecipe);
+                    setServings(fetchedRecipe.servings || 2);
+                } else {
+                    setError('Recipe not found');
+                }
+            } catch (err) {
+                console.error('Error fetching recipe:', err);
+                setError('Failed to load recipe. Please try again.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchRecipe();
+    }, [id, user, initialRecipe]);
+
+    if (loading) {
+        return (
+            <AppLayout>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        height: '50vh',
+                    }}
+                >
+                    <CircularProgress />
+                </Box>
+            </AppLayout>
+        );
+    }
+
+    if (error || !recipe) {
         return (
             <AppLayout>
                 <Box sx={{ textAlign: 'center', py: 4 }}>
@@ -39,7 +98,7 @@ const RecipePage: FC = () => {
                             color: 'primary.main',
                         }}
                     >
-                        Recipe not found
+                        {error || 'Recipe not found'}
                     </Typography>
                     <Button
                         onClick={() => navigate('/')}
