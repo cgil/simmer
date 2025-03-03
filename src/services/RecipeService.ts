@@ -749,8 +749,8 @@ export class RecipeService {
             images,
             ingredients,
             instructions,
-            notes: [], // Notes are handled differently now
-            tags: [], // Tags are handled differently now
+            notes: dbRecipe.notes || [], // Use database notes
+            tags: dbRecipe.tags || [], // Use database tags
             time_estimate: timeEstimate,
             user_id: dbRecipe.user_id || undefined, // Include user_id for ownership verification
         };

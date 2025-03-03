@@ -150,25 +150,43 @@ const EditRecipePage: FC = () => {
         setSaveError(null);
 
         try {
-            // Ensure all ingredients have proper UUID IDs before saving
-            const processedIngredients = ingredients.map((ingredient) => {
-                // Use our UUID utility to ensure valid UUIDs
-                if (!isValidUuid(ingredient.id)) {
-                    return {
-                        ...ingredient,
-                        id: ensureUuid(ingredient.id),
-                    };
-                }
-                return ingredient;
-            });
+            // Ensure all ingredients have proper UUID IDs before saving and filter out empty ingredients
+            const processedIngredients = ingredients
+                // Filter out ingredients without a name
+                .filter(
+                    (ingredient) =>
+                        ingredient.name && ingredient.name.trim() !== ''
+                )
+                .map((ingredient) => {
+                    // Use our UUID utility to ensure valid UUIDs
+                    if (!isValidUuid(ingredient.id)) {
+                        return {
+                            ...ingredient,
+                            id: ensureUuid(ingredient.id),
+                        };
+                    }
+                    return ingredient;
+                });
 
             // Create a mapping from old IDs to new UUIDs for reference updates
             const idMapping = new Map();
-            ingredients.forEach((origIngredient, index) => {
-                if (origIngredient.id !== processedIngredients[index].id) {
+            // Only map the ingredients that have valid names and are included in processedIngredients
+            processedIngredients.forEach((processedIngredient) => {
+                // Find the original ingredient with the same ID
+                const originalIngredient = ingredients.find(
+                    (ing) =>
+                        ing.id === processedIngredient.id ||
+                        (processedIngredient.id === ensureUuid(ing.id) &&
+                            ing.id !== processedIngredient.id)
+                );
+
+                if (
+                    originalIngredient &&
+                    originalIngredient.id !== processedIngredient.id
+                ) {
                     idMapping.set(
-                        origIngredient.id,
-                        processedIngredients[index].id
+                        originalIngredient.id,
+                        processedIngredient.id
                     );
                 }
             });
@@ -215,7 +233,9 @@ const EditRecipePage: FC = () => {
 
             // Save the recipe, passing the current user ID for ownership verification
             await RecipeService.saveRecipe(updatedRecipe, user.id);
-            navigate('/');
+            // Check if there's a returnTo path in the location state
+            const returnTo = location.state?.returnTo || '/';
+            navigate(returnTo);
         } catch (error: unknown) {
             console.error('Error saving recipe:', error);
 
@@ -481,7 +501,11 @@ const EditRecipePage: FC = () => {
             }}
         >
             <Box
-                onClick={() => navigate('/')}
+                onClick={() => {
+                    // Navigate to the returnTo path or home if not available
+                    const returnTo = location.state?.returnTo || '/';
+                    navigate(returnTo);
+                }}
                 sx={{
                     display: 'flex',
                     alignItems: 'center',

@@ -12,6 +12,7 @@ import {
     CircularProgress,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import EditIcon from '@mui/icons-material/Edit';
 import AppLayout from '../../components/layout/AppLayout';
 import IngredientsList from './components/IngredientsList';
 import CookingInstructions from './components/CookingInstructions';
@@ -70,6 +71,19 @@ const RecipePage: FC = () => {
         fetchRecipe();
     }, [id, user, initialRecipe]);
 
+    // When edit button is clicked, navigate to edit page with recipe data
+    const handleEditClick = () => {
+        if (recipe) {
+            // Navigate to the edit page with the recipe data
+            navigate('/recipe/edit', {
+                state: {
+                    recipe: recipe,
+                    returnTo: `/recipe/${recipe.id}`,
+                },
+            });
+        }
+    };
+
     if (loading) {
         return (
             <AppLayout>
@@ -117,31 +131,57 @@ const RecipePage: FC = () => {
         );
     }
 
+    // Content for the header
     const headerContent = (
         <Box
-            onClick={() => navigate('/')}
             sx={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 2,
-                cursor: 'pointer',
-                color: 'text.primary',
-                '&:hover': {
-                    color: 'primary.main',
-                },
+                justifyContent: 'space-between',
+                width: '100%',
             }}
         >
-            <ArrowBackIcon sx={{ fontSize: 24 }} />
-            <Typography
-                variant="body1"
+            <Box
+                onClick={() => navigate('/')}
                 sx={{
-                    fontWeight: 500,
-                    fontSize: { xs: '1rem', sm: '1.125rem' },
-                    fontFamily: "'Inter', sans-serif",
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    cursor: 'pointer',
+                    color: 'text.primary',
+                    '&:hover': {
+                        color: 'primary.main',
+                    },
                 }}
             >
-                Back
-            </Typography>
+                <ArrowBackIcon sx={{ fontSize: 24 }} />
+                <Typography
+                    variant="body1"
+                    sx={{
+                        fontWeight: 500,
+                        fontSize: { xs: '1rem', sm: '1.125rem' },
+                        fontFamily: "'Inter', sans-serif",
+                    }}
+                >
+                    Back
+                </Typography>
+            </Box>
+
+            {/* Show edit button only for recipe owners and only in view mode */}
+            {user && recipe && user.id === recipe.user_id && (
+                <Button
+                    variant="outlined"
+                    startIcon={<EditIcon />}
+                    onClick={handleEditClick}
+                    sx={{
+                        borderRadius: 1,
+                        textTransform: 'none',
+                        fontFamily: "'Inter', sans-serif",
+                    }}
+                >
+                    Edit Recipe
+                </Button>
+            )}
         </Box>
     );
 

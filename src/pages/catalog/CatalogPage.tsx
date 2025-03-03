@@ -457,8 +457,8 @@ const CatalogPage: FC = () => {
                                                         display: 'flex',
                                                         gap: 0.75,
                                                         flexWrap: 'wrap',
-                                                        mb: 'auto',
-                                                        mt: 1,
+                                                        mb: 1,
+                                                        mt: 'auto',
                                                     }}
                                                 >
                                                     {recipe.tags
