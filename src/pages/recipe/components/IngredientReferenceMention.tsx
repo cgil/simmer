@@ -1,6 +1,6 @@
 import React, { FC } from 'react';
 import { styled } from '@mui/material/styles';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Tooltip } from '@mui/material';
 import { Ingredient } from '../../../types/recipe';
 import { formatQuantity } from '../../../utils/recipe';
 
@@ -41,8 +41,24 @@ const DeletedMention = styled(Box)(({ theme }) => ({
     display: 'inline-flex',
     alignItems: 'center',
     fontWeight: 500,
-    textDecoration: 'line-through',
     opacity: 0.8,
+    wordBreak: 'break-word',
+    fontFamily: '"Inter", "system-ui", "sans-serif"',
+    fontSize: '16px',
+    lineHeight: '1.6',
+    letterSpacing: 'normal',
+}));
+
+// Style for invalid references (non-UUID)
+const InvalidReferenceMention = styled(Box)(({ theme }) => ({
+    backgroundColor: theme.palette.warning.light || '#FFF3E0',
+    borderRadius: '2px',
+    padding: '0 4px',
+    color: theme.palette.warning.dark || '#E65100',
+    display: 'inline-flex',
+    alignItems: 'center',
+    fontWeight: 500,
+    border: `1px dashed ${theme.palette.warning.main}`,
     wordBreak: 'break-word',
     fontFamily: '"Inter", "system-ui", "sans-serif"',
     fontSize: '16px',
@@ -52,28 +68,65 @@ const DeletedMention = styled(Box)(({ theme }) => ({
 
 const IngredientReferenceMention: FC<IngredientReferenceMentionProps> = ({
     ingredient,
+    id,
     display,
     servings,
     originalServings,
 }) => {
-    // If the ingredient doesn't exist (deleted), show a deleted mention
-    if (!ingredient) {
-        return (
-            <DeletedMention>
-                <Typography
-                    variant="body2"
-                    component="span"
-                    sx={{
-                        fontFamily: '"Inter", "system-ui", "sans-serif"',
-                        fontSize: '16px',
-                        lineHeight: '1.6',
-                        letterSpacing: 'normal',
-                        fontWeight: 400,
-                    }}
+    // If the ingredient doesn't exist but we have an ID
+    if (!ingredient && id) {
+        const isUuid =
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+                id
+            );
+
+        // If it's not a UUID, show as invalid reference
+        if (!isUuid) {
+            return (
+                <Tooltip
+                    title={`Invalid ingredient reference format: ${id}. Should be a UUID.`}
                 >
-                    {display} (deleted)
-                </Typography>
-            </DeletedMention>
+                    <InvalidReferenceMention>
+                        <Typography
+                            variant="body2"
+                            component="span"
+                            sx={{
+                                fontFamily:
+                                    '"Inter", "system-ui", "sans-serif"',
+                                fontSize: '16px',
+                                lineHeight: '1.6',
+                                letterSpacing: 'normal',
+                                fontWeight: 400,
+                            }}
+                        >
+                            {display} (format error)
+                        </Typography>
+                    </InvalidReferenceMention>
+                </Tooltip>
+            );
+        }
+
+        // If it's a UUID but not found
+        return (
+            <Tooltip
+                title={`Ingredient with ID "${id}" not found. It may have been deleted or renamed.`}
+            >
+                <DeletedMention>
+                    <Typography
+                        variant="body2"
+                        component="span"
+                        sx={{
+                            fontFamily: '"Inter", "system-ui", "sans-serif"',
+                            fontSize: '16px',
+                            lineHeight: '1.6',
+                            letterSpacing: 'normal',
+                            fontWeight: 400,
+                        }}
+                    >
+                        {display} (not found)
+                    </Typography>
+                </DeletedMention>
+            </Tooltip>
         );
     }
 
@@ -106,21 +159,23 @@ const IngredientReferenceMention: FC<IngredientReferenceMentionProps> = ({
     }
 
     return (
-        <StyledMention>
-            <Typography
-                variant="body2"
-                component="span"
-                sx={{
-                    fontFamily: '"Inter", "system-ui", "sans-serif"',
-                    fontSize: '16px',
-                    lineHeight: '1.6',
-                    letterSpacing: 'normal',
-                    fontWeight: 400,
-                }}
-            >
-                {displayText}
-            </Typography>
-        </StyledMention>
+        <Tooltip title={ingredient?.name || ''}>
+            <StyledMention>
+                <Typography
+                    variant="body2"
+                    component="span"
+                    sx={{
+                        fontFamily: '"Inter", "system-ui", "sans-serif"',
+                        fontSize: '16px',
+                        lineHeight: '1.6',
+                        letterSpacing: 'normal',
+                        fontWeight: 400,
+                    }}
+                >
+                    {displayText}
+                </Typography>
+            </StyledMention>
+        </Tooltip>
     );
 };
 

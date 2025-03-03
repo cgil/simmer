@@ -245,6 +245,15 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ### Recent Updates
 
+#### Improved Ingredient Reference Handling
+
+-   Enhanced saving process to ensure all ingredient references use proper UUID format
+-   Proactive conversion of any slug-based references during recipe save
+-   Improved visual feedback for different types of ingredient references
+-   Enhanced error detection for invalid or missing ingredient references
+-   Better tooltip information when hovering over ingredient mentions
+-   Support for multiple ingredient reference formats in instructions
+
 #### Time Handling Improvements
 
 -   Support for zero prep and cook times

@@ -18,6 +18,37 @@ const IngredientsList: FC<IngredientsListProps> = ({
         onServingsChange(value as number);
     };
 
+    // Handle empty ingredients array
+    if (!recipe.ingredients || recipe.ingredients.length === 0) {
+        return (
+            <Paper
+                elevation={0}
+                sx={{
+                    p: { xs: 2.5, sm: 4 },
+                    height: '100%',
+                    borderRadius: 4,
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                }}
+            >
+                <Typography
+                    variant="h5"
+                    component="h2"
+                    sx={{
+                        fontWeight: 700,
+                        color: 'primary.main',
+                        mb: 4,
+                        fontSize: { xs: '1.25rem', sm: '1.5rem' },
+                    }}
+                >
+                    Ingredients
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                    No ingredients available for this recipe.
+                </Typography>
+            </Paper>
+        );
+    }
+
     return (
         <Paper
             elevation={0}

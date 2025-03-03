@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Paper, Box, IconButton, useTheme, useMediaQuery } from '@mui/material';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
@@ -12,7 +12,9 @@ const RecipeGallery: React.FC<RecipeGalleryProps> = ({ images }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-    if (!images.length) return null;
+    if (!images.length) {
+        return null;
+    }
     if (images.length === 1) {
         return (
             <Box

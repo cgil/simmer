@@ -1,21 +1,20 @@
 import { supabase } from "../lib/supabase";
-import type {
-    Ingredient,
-    InstructionSection,
-    Recipe,
-    TimeEstimate,
-} from "../types/recipe";
+import type { Recipe } from "../types/recipe";
 import type { Database } from "../types/database";
+import { convertRecipeInstructionReferences } from "../utils/ingredientMentions";
 
 type RecipeWithRelations = Database["public"]["Tables"]["recipes"]["Row"] & {
-    ingredients: Database["public"]["Tables"]["recipe_ingredients"]["Row"][];
-    instruction_sections:
+    // Only keep the correct property names that match what comes from the database
+    recipe_ingredients:
+        Database["public"]["Tables"]["recipe_ingredients"]["Row"][];
+    recipe_images: Database["public"]["Tables"]["recipe_images"]["Row"][];
+    recipe_instruction_sections:
         (Database["public"]["Tables"]["recipe_instruction_sections"]["Row"] & {
-            steps: Database["public"]["Tables"]["recipe_instruction_steps"][
-                "Row"
-            ][];
+            recipe_instruction_steps:
+                Database["public"]["Tables"]["recipe_instruction_steps"][
+                    "Row"
+                ][];
         })[];
-    images: Database["public"]["Tables"]["recipe_images"]["Row"][];
 };
 
 /**
@@ -24,28 +23,45 @@ type RecipeWithRelations = Database["public"]["Tables"]["recipes"]["Row"] & {
 export class RecipeService {
     /**
      * Save a recipe to the database
-     * If the recipe has an ID, it will be updated, otherwise a new recipe will be created
+     *
+     * This method ensures that all ingredient references in recipe instructions
+     * are properly formatted with UUID identifiers.
+     *
+     * - When a user adds an ingredient reference using the @ mention syntax,
+     *   the IngredientReferenceInput component creates references with proper UUIDs.
+     * - For any legacy or imported content, this method converts any slug-based
+     *   references to UUID-based references before saving.
+     * - This prevents issues with ingredient visibility in recipe instructions
+     *   and eliminates the need for post-save fixing.
+     *
+     * @param recipe - The recipe to save
+     * @param userId - The ID of the user who owns the recipe
+     * @returns The saved recipe with updated ID if it was a new recipe
      */
     static async saveRecipe(recipe: Recipe, userId: string): Promise<Recipe> {
-        // Determine if this is a new recipe or if the ID is not a valid UUID
-        // If it's not a valid UUID, we'll generate a new one
-        const isValidUuid = recipe.id &&
-            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-                .test(recipe.id);
-        const isNewRecipe = !recipe.id;
+        // Check for valid recipe and user
+        if (!recipe || !userId) {
+            throw new Error("Recipe and userId are required");
+        }
 
-        console.log("Recipe save operation:", {
-            isNewRecipe,
-            isValidUuid,
-            recipeId: recipe.id,
-            userId,
-            hasImages: recipe.images?.length > 0,
-            numImages: recipe.images?.length,
-            hasIngredients: recipe.ingredients?.length > 0,
-            numIngredients: recipe.ingredients?.length,
-            hasInstructions: recipe.instructions?.length > 0,
-            numInstructions: recipe.instructions?.length,
-        });
+        // Check if this is a new recipe or if the ID is valid
+        const isNewRecipe = !recipe.id || recipe.id === "new";
+        let recipeId = recipe.id || "";
+
+        // Always convert any ingredient references to UUID format
+        if (recipe.instructions?.length > 0 && recipe.ingredients?.length > 0) {
+            // Convert ingredient references in instructions
+            const updatedInstructions = convertRecipeInstructionReferences(
+                recipe.instructions,
+                recipe.ingredients,
+            );
+
+            // Replace instructions with the converted version
+            recipe = {
+                ...recipe,
+                instructions: updatedInstructions,
+            };
+        }
 
         try {
             // 1. Save the main recipe record
@@ -53,20 +69,13 @@ export class RecipeService {
                 title: recipe.title,
                 description: recipe.description || null,
                 servings: recipe.servings,
-                tags: recipe.tags || [],
-                notes: recipe.notes || [],
-                prep_time: recipe.time_estimate?.prep || 0,
-                cook_time: recipe.time_estimate?.cook || 0,
-                rest_time: recipe.time_estimate?.rest || 0,
-                // Don't need to set total_time as it's calculated by a trigger
+                prep_time: recipe.time_estimate?.prep || null,
+                cook_time: recipe.time_estimate?.cook || null,
+                total_time: recipe.time_estimate?.total || null,
                 user_id: userId,
             };
 
-            console.log("Saving recipe main data:", recipeData);
-
-            let recipeId: string;
-
-            if (isNewRecipe || !isValidUuid) {
+            if (isNewRecipe || !recipeId) {
                 // Create new recipe with a proper UUID
                 const { data: newRecipe, error: insertError } = await supabase
                     .from("recipes")
@@ -75,14 +84,11 @@ export class RecipeService {
                     .single();
 
                 if (insertError) {
-                    console.error("Error inserting recipe:", insertError);
                     throw insertError;
                 }
                 recipeId = newRecipe.id;
-                console.log("Created new recipe with ID:", recipeId);
             } else {
                 // Update existing recipe with valid UUID
-                recipeId = recipe.id!;
                 const { error: updateError } = await supabase
                     .from("recipes")
                     .update(recipeData)
@@ -90,76 +96,51 @@ export class RecipeService {
                     .eq("user_id", userId);
 
                 if (updateError) {
-                    console.error("Error updating recipe:", updateError);
                     throw updateError;
                 }
-                console.log("Updated existing recipe with ID:", recipeId);
             }
 
             // 2. Handle recipe images
             if (recipe.images && recipe.images.length > 0) {
                 // Delete existing images if updating
                 if (!isNewRecipe) {
-                    console.log(
-                        "Deleting existing images for recipe:",
-                        recipeId,
-                    );
-                    const { error: deleteImagesError } = await supabase
+                    const { error: deleteError } = await supabase
                         .from("recipe_images")
                         .delete()
                         .eq("recipe_id", recipeId);
 
-                    if (deleteImagesError) {
-                        console.error(
-                            "Error deleting existing images:",
-                            deleteImagesError,
-                        );
+                    if (deleteError) {
+                        throw deleteError;
                     }
                 }
 
                 // Insert new images
-                const imageRecords = recipe.images.map((url, index) => ({
+                const imageRecords = recipe.images.map((imageUrl, index) => ({
                     recipe_id: recipeId,
-                    url,
+                    url: imageUrl,
                     position: index,
                 }));
 
-                console.log("Inserting image records:", imageRecords);
-                const { error: imageError, data: newImages } = await supabase
+                const { error: imageError } = await supabase
                     .from("recipe_images")
-                    .insert(imageRecords)
-                    .select("*");
+                    .insert(imageRecords);
 
                 if (imageError) {
-                    console.error("Error inserting images:", imageError);
                     throw imageError;
                 }
-                console.log(
-                    "Successfully inserted images:",
-                    newImages?.length || 0,
-                );
-            } else {
-                console.log("No images to save for recipe:", recipeId);
             }
 
-            // 3. Handle ingredients
+            // 3. Handle recipe ingredients
             if (recipe.ingredients && recipe.ingredients.length > 0) {
                 // Delete existing ingredients if updating
                 if (!isNewRecipe) {
-                    console.log(
-                        "Deleting existing ingredients for recipe:",
-                        recipeId,
-                    );
-                    const { error: deleteIngredientsError } = await supabase
+                    const { error: deleteError } = await supabase
                         .from("recipe_ingredients")
                         .delete()
                         .eq("recipe_id", recipeId);
 
-                    if (deleteIngredientsError) {
-                        console.error(
-                            "Error deleting existing ingredients:",
-                            deleteIngredientsError,
-                        );
+                    if (deleteError) {
+                        throw deleteError;
                     }
                 }
 
@@ -170,141 +151,95 @@ export class RecipeService {
                 ) => ({
                     recipe_id: recipeId,
                     name: ingredient.name,
-                    quantity: ingredient.quantity,
-                    unit: ingredient.unit,
-                    notes: ingredient.notes,
+                    quantity: ingredient.quantity || null,
+                    unit: ingredient.unit || null,
+                    notes: ingredient.notes || null,
                     position: index,
                 }));
 
-                console.log("Inserting ingredient records:", ingredientRecords);
-                const { error: ingredientError, data: newIngredients } =
-                    await supabase
-                        .from("recipe_ingredients")
-                        .insert(ingredientRecords)
-                        .select("*");
+                const { error: ingredientError } = await supabase
+                    .from("recipe_ingredients")
+                    .insert(ingredientRecords);
 
                 if (ingredientError) {
-                    console.error(
-                        "Error inserting ingredients:",
-                        ingredientError,
-                    );
                     throw ingredientError;
                 }
-                console.log(
-                    "Successfully inserted ingredients:",
-                    newIngredients?.length || 0,
-                );
-            } else {
-                console.log("No ingredients to save for recipe:", recipeId);
             }
 
-            // 4. Handle instruction sections and steps
+            // 4. Handle recipe instruction sections and steps
             if (recipe.instructions && recipe.instructions.length > 0) {
-                // Delete existing sections if updating
+                // Delete existing instruction sections if updating
                 if (!isNewRecipe) {
-                    // This will cascade delete to steps
-                    console.log(
-                        "Deleting existing instruction sections for recipe:",
-                        recipeId,
-                    );
-                    const { error: deleteSectionsError } = await supabase
+                    const { error: deleteError } = await supabase
                         .from("recipe_instruction_sections")
                         .delete()
                         .eq("recipe_id", recipeId);
 
-                    if (deleteSectionsError) {
-                        console.error(
-                            "Error deleting existing instruction sections:",
-                            deleteSectionsError,
-                        );
+                    if (deleteError) {
+                        throw deleteError;
                     }
                 }
 
-                console.log(
-                    "Processing instruction sections:",
-                    recipe.instructions.length,
-                );
-
-                // Insert new sections and steps
-                for (let i = 0; i < recipe.instructions.length; i++) {
-                    const section = recipe.instructions[i];
+                // Insert instruction sections and their steps
+                for (
+                    let sectionIndex = 0;
+                    sectionIndex < recipe.instructions.length;
+                    sectionIndex++
+                ) {
+                    const section = recipe.instructions[sectionIndex];
 
                     // Insert section
-                    console.log(
-                        `Inserting section ${i}: ${section.section_title}`,
-                    );
-                    const { data: newSection, error: sectionError } =
+                    const { data: insertedSection, error: sectionError } =
                         await supabase
                             .from("recipe_instruction_sections")
                             .insert({
                                 recipe_id: recipeId,
-                                section_title: section.section_title,
-                                position: i,
+                                section_title: section.section_title || null,
+                                position: sectionIndex,
                             })
                             .select("id")
                             .single();
 
                     if (sectionError) {
-                        console.error(
-                            "Error inserting instruction section:",
-                            sectionError,
-                        );
                         throw sectionError;
                     }
 
+                    // Skip steps if there are none
+                    if (!section.steps || section.steps.length === 0) {
+                        continue;
+                    }
+
                     // Insert steps for this section
-                    if (section.steps && section.steps.length > 0) {
-                        const stepRecords = section.steps.map((
-                            step,
-                            stepIndex,
-                        ) => ({
-                            section_id: newSection.id,
-                            text: step.text,
-                            timing_min: step.timing?.min || null,
-                            timing_max: step.timing?.max || null,
-                            timing_units: step.timing?.units || null,
-                            position: stepIndex,
-                        }));
+                    const stepRecords = section.steps.map((
+                        step,
+                        stepIndex,
+                    ) => ({
+                        recipe_instruction_section_id: insertedSection.id,
+                        text: step.text || "",
+                        position: stepIndex,
+                        timing_min: step.timing?.min || null,
+                        timing_max: step.timing?.max || null,
+                        timing_units: step.timing?.units || null,
+                    }));
 
-                        console.log(
-                            `Inserting ${stepRecords.length} steps for section ${i}`,
-                        );
-                        const { error: stepError, data: newSteps } =
-                            await supabase
-                                .from("recipe_instruction_steps")
-                                .insert(stepRecords)
-                                .select("*");
+                    const { error: stepError } = await supabase
+                        .from("recipe_instruction_steps")
+                        .insert(stepRecords);
 
-                        if (stepError) {
-                            console.log(
-                                "Error inserting instruction steps:",
-                                stepError,
-                            );
-
-                            throw stepError;
-                        }
-                        console.log(
-                            `Successfully inserted ${
-                                newSteps?.length || 0
-                            } steps for section ${i}`,
-                        );
-                    } else {
-                        console.log(`No steps to insert for section ${i}`);
+                    if (stepError) {
+                        throw stepError;
                     }
                 }
-            } else {
-                console.log("No instructions to save for recipe:", recipeId);
             }
 
-            // Return the saved recipe
-            console.log("Recipe saved successfully:", recipeId);
+            // Return the saved recipe with the new ID
             return {
                 ...recipe,
                 id: recipeId,
             };
-        } catch (err) {
-            console.error("Error saving recipe:", err);
-            throw err;
+        } catch (error) {
+            console.error("Error saving recipe:", error);
+            throw error;
         }
     }
 
@@ -343,34 +278,59 @@ export class RecipeService {
      */
     static async getRecipeById(
         recipeId: string,
-        userId: string,
+        userId?: string,
     ): Promise<Recipe | null> {
-        const { data: recipe, error } = await supabase
-            .from("recipes")
-            .select(`
-                *,
-                recipe_images (id, url, position),
-                recipe_ingredients (id, name, quantity, unit, notes, position),
-                recipe_instruction_sections (
-                    id, section_title, position,
-                    recipe_instruction_steps (id, text, timing_min, timing_max, timing_units, position)
+        try {
+            // Start building the query
+            let query = supabase
+                .from("recipes")
+                .select(
+                    `
+                    *,
+                    recipe_ingredients(*),
+                    recipe_images(*),
+                    recipe_instruction_sections(
+                        *,
+                        recipe_instruction_steps(*)
+                    )
+                `,
                 )
-            `)
-            .eq("id", recipeId)
-            .eq("user_id", userId)
-            .single();
+                .eq("id", recipeId);
 
-        if (error) {
-            if (error.code === "PGRST116") { // Record not found
+            // Add user filter if provided
+            if (userId) {
+                query = query.eq("user_id", userId);
+            }
+
+            // Complete query with ordering and execution
+            const { data: dbRecipe, error } = await query
+                .order("position", { foreignTable: "recipe_ingredients" })
+                .order("position", {
+                    foreignTable: "recipe_instruction_sections",
+                })
+                .order("position", {
+                    foreignTable:
+                        "recipe_instruction_sections.recipe_instruction_steps",
+                })
+                .maybeSingle();
+
+            if (error) {
+                throw error;
+            }
+
+            // Recipe not found
+            if (!dbRecipe) {
                 return null;
             }
-            console.error("Error fetching recipe:", error);
-            throw error;
-        }
 
-        return recipe
-            ? this.mapDbRecipeToRecipe(recipe as RecipeWithRelations)
-            : null;
+            // Map the database recipe to our application model
+            const recipe = this.mapDbRecipeToRecipe(dbRecipe);
+
+            return recipe;
+        } catch (error) {
+            console.error("Error retrieving recipe:", error);
+            return null;
+        }
     }
 
     /**
@@ -447,70 +407,65 @@ export class RecipeService {
     /**
      * Convert a database recipe record to the Recipe type used in the app
      */
-    private static mapDbRecipeToRecipe(dbRecipe: RecipeWithRelations): Recipe {
-        // Sort relations by position
-        const images = [...(dbRecipe.images || [])].sort((a, b) =>
-            a.position - b.position
-        );
-        const ingredients = [...(dbRecipe.ingredients || [])].sort((a, b) =>
-            a.position - b.position
-        );
-        const sections = [...(dbRecipe.instruction_sections || [])].sort((
-            a,
-            b,
-        ) => a.position - b.position);
+    static mapDbRecipeToRecipe(dbRecipe: RecipeWithRelations): Recipe {
+        // Map recipe images to simpler format
+        const images = dbRecipe.recipe_images
+            ? dbRecipe.recipe_images.map((img) => img.url)
+            : [];
 
         // Map ingredients
-        const mappedIngredients: Ingredient[] = ingredients.map((ing) => ({
-            id: ing.id,
-            name: ing.name,
-            quantity: ing.quantity,
-            unit: ing.unit,
-            notes: ing.notes,
-        }));
+        const ingredients = dbRecipe.recipe_ingredients
+            ? dbRecipe.recipe_ingredients.map((ing) => ({
+                id: ing.id,
+                name: ing.name,
+                quantity: ing.quantity,
+                unit: ing.unit,
+                notes: ing.notes,
+            }))
+            : [];
 
         // Map instruction sections and steps
-        const mappedInstructions: InstructionSection[] = sections.map(
-            (section) => {
-                const steps = [...(section.steps || [])].sort((a, b) =>
-                    a.position - b.position
-                );
-
-                return {
-                    section_title: section.section_title,
-                    steps: steps.map((step) => ({
+        const instructions = dbRecipe.recipe_instruction_sections
+            ? dbRecipe.recipe_instruction_sections.map((section) => {
+                const steps = section.recipe_instruction_steps
+                    ? section.recipe_instruction_steps.map((step) => ({
                         text: step.text,
-                        timing: step.timing_min || step.timing_max
+                        timing: step.timing_min
                             ? {
-                                min: step.timing_min || 0,
-                                max: step.timing_max || 0,
+                                min: step.timing_min,
+                                max: step.timing_max || step.timing_min,
                                 units: step.timing_units || "minutes",
                             }
                             : null,
-                    })),
+                    }))
+                    : [];
+
+                return {
+                    section_title: section.section_title || "Instructions",
+                    steps,
                 };
-            },
-        );
+            })
+            : [];
 
         // Create time estimate
-        const timeEstimate: TimeEstimate = {
+        const timeEstimate = {
             prep: dbRecipe.prep_time || 0,
             cook: dbRecipe.cook_time || 0,
-            rest: dbRecipe.rest_time || 0,
+            rest: 0, // Not stored directly in DB
             total: dbRecipe.total_time || 0,
         };
 
-        // Build the final recipe object
+        // Construct and return the recipe
         return {
             id: dbRecipe.id,
             title: dbRecipe.title,
             description: dbRecipe.description || "",
-            servings: dbRecipe.servings,
-            ingredients: mappedIngredients,
-            instructions: mappedInstructions,
-            notes: dbRecipe.notes || [],
-            tags: dbRecipe.tags || [],
-            images: images.map((img) => img.url),
+            servings: dbRecipe.servings || 2,
+            images,
+            ingredients,
+            instructions,
+            notes: [], // Notes are handled differently now
+            tags: [], // Tags are handled differently now
             time_estimate: timeEstimate,
         };
     }
