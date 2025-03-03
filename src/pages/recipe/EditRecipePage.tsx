@@ -39,6 +39,9 @@ const EditRecipePage: FC = () => {
     const [activeStepIndex, setActiveStepIndex] = useState<
         [number, number] | null
     >(null);
+    const [cursorPositions, setCursorPositions] = useState<
+        Record<string, number>
+    >({});
     const [instructions, setInstructions] = useState(
         recipe?.instructions
             ? convertRecipeIngredientMentions(
@@ -96,14 +99,23 @@ const EditRecipePage: FC = () => {
             const currentStep = newInstructions[sectionIndex].steps[stepIndex];
             const textToInsert = `@[${ingredient.name}](${ingredient.id})`;
 
-            // Update state directly for the new component
+            const stepId = `${sectionIndex}-${stepIndex}`;
+            const cursorPos =
+                cursorPositions[stepId] || currentStep.text.length;
+
+            const newText =
+                currentStep.text.substring(0, cursorPos) +
+                textToInsert +
+                ' ' +
+                currentStep.text.substring(cursorPos);
+
             newInstructions[sectionIndex].steps[stepIndex] = {
-                text: currentStep.text + textToInsert + ' ',
+                text: newText,
                 timing: currentStep.timing,
             };
 
             setInstructions(newInstructions);
-            setAnchorEl(null); // Close the menu after selecting an ingredient
+            setAnchorEl(null);
         }
     };
 
@@ -248,6 +260,17 @@ const EditRecipePage: FC = () => {
         const newInstructions = [...instructions];
         newInstructions[sectionIndex].section_title = e.target.value;
         setInstructions(newInstructions);
+    };
+
+    const handleCursorPositionChange = (
+        sectionIndex: number,
+        stepIndex: number,
+        position: number
+    ) => {
+        setCursorPositions((prev) => ({
+            ...prev,
+            [`${sectionIndex}-${stepIndex}`]: position,
+        }));
     };
 
     const headerContent = (
@@ -1088,6 +1111,15 @@ const EditRecipePage: FC = () => {
                                                                             ingredients
                                                                         }
                                                                         placeholder="Describe this step..."
+                                                                        onCursorPositionChange={(
+                                                                            position
+                                                                        ) =>
+                                                                            handleCursorPositionChange(
+                                                                                sectionIndex,
+                                                                                stepIndex,
+                                                                                position
+                                                                            )
+                                                                        }
                                                                     />
                                                                     <Box
                                                                         className="step-actions"

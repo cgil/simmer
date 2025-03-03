@@ -1,4 +1,4 @@
-import React, { FC } from 'react';
+import React, { FC, useRef, useState, useEffect } from 'react';
 import { MentionsInput, Mention } from 'react-mentions';
 import { Box, Typography, useTheme } from '@mui/material';
 import { Ingredient } from '../../../types/recipe';
@@ -15,6 +15,7 @@ interface IngredientReferenceInputProps {
     onChange: (value: string) => void;
     ingredients: Ingredient[];
     placeholder?: string;
+    onCursorPositionChange?: (position: number) => void;
 }
 
 // Font styling for consistent rendering
@@ -31,9 +32,34 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
     onChange,
     ingredients,
     placeholder = 'Describe this step...',
+    onCursorPositionChange,
 }) => {
     // Get theme
     const theme = useTheme();
+    // Track current cursor position
+    const [cursorPosition, setCursorPosition] = useState<number>(value.length);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
+
+    // Update cursor position when input is focused, clicked, or cursor position changes
+    const handleCursorPositionChange = () => {
+        if (inputRef.current) {
+            const position = inputRef.current.selectionStart || 0;
+            setCursorPosition(position);
+            if (onCursorPositionChange) {
+                onCursorPositionChange(position);
+            }
+        }
+    };
+
+    // Update cursor position when value changes externally
+    useEffect(() => {
+        if (cursorPosition > value.length) {
+            setCursorPosition(value.length);
+            if (onCursorPositionChange) {
+                onCursorPositionChange(value.length);
+            }
+        }
+    }, [value, cursorPosition, onCursorPositionChange]);
 
     // Custom styles using the expected format for react-mentions
     const mentionsInputStyle = {
@@ -47,6 +73,8 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
             margin: '0px',
             width: '100%',
             position: 'relative' as const,
+            display: 'block',
+            minWidth: '100%',
         },
         input: {
             ...fontStyle,
@@ -55,6 +83,7 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
             border: 'none',
             outline: 'none',
             background: 'transparent',
+            width: '100%',
         },
         highlighter: {
             ...fontStyle,
@@ -62,6 +91,7 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
             margin: '0px',
             border: 'none',
             color: 'transparent',
+            width: '100%',
         },
         suggestions: {
             list: {
@@ -77,7 +107,7 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
                 marginTop: '8px',
             },
             item: {
-                padding: 0, // Required property for MentionsSuggestionItemStyle
+                padding: 0,
                 '&focus': {
                     backgroundColor: theme.palette.action.hover,
                 },
@@ -97,7 +127,7 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
     const ingredientSuggestions = ingredients.map((ingredient) => ({
         id: ingredient.id,
         display: ingredient.name,
-        ingredient, // Include the full ingredient object for reference
+        ingredient,
     }));
 
     // Function to find an ingredient by ID
@@ -112,6 +142,7 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
       font-size: 16px !important;
       line-height: 1.6 !important;
       letter-spacing: 0px !important;
+      width: 100% !important;
     }
 
     .react-mentions__input {
@@ -119,6 +150,7 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
       font-size: 16px !important;
       line-height: 1.6 !important;
       letter-spacing: 0px !important;
+      width: 100% !important;
     }
 
     .react-mentions__mention {
@@ -128,10 +160,19 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
       padding: 0 4px !important;
       font-weight: 500 !important;
     }
+
+    .react-mentions__suggestions__list {
+      width: 100% !important;
+    }
+
+    .react-mentions__input-container {
+      width: 100% !important;
+      display: block !important;
+    }
     `;
 
     return (
-        <React.Fragment>
+        <Box sx={{ width: '100%' }}>
             <style>{customCSS}</style>
             <MentionsInput
                 value={value}
@@ -141,6 +182,11 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
                 style={mentionsInputStyle}
                 className="react-mentions__input-container"
                 allowSuggestionsAboveCursor={true}
+                inputRef={inputRef}
+                onSelect={handleCursorPositionChange}
+                onClick={handleCursorPositionChange}
+                onKeyUp={handleCursorPositionChange}
+                onFocus={handleCursorPositionChange}
             >
                 <Mention
                     trigger="@"
@@ -218,7 +264,7 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
                     style={mentionStyle}
                 />
             </MentionsInput>
-        </React.Fragment>
+        </Box>
     );
 };
 
