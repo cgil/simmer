@@ -6,20 +6,16 @@ import {
     TextField,
     Button,
     Paper,
-    Link,
     CircularProgress,
     Alert,
     InputAdornment,
     IconButton,
-    Tabs,
-    Tab,
     Divider,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import GoogleIcon from '@mui/icons-material/Google';
-import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import { useAuth } from '../../context/AuthContext';
 
 // Custom styled components to match the paper notebook aesthetic
@@ -69,48 +65,7 @@ const StyledButton = styled(Button)(({ theme }) => ({
     },
 }));
 
-const GoogleButton = styled(StyledButton)(({ theme }) => ({
-    backgroundColor: '#fff',
-    color: theme.palette.text.primary,
-    border: `1px solid ${theme.palette.divider}`,
-    '&:hover': {
-        backgroundColor: theme.palette.grey[100],
-        border: `1px solid ${theme.palette.divider}`,
-        boxShadow: 'none',
-    },
-}));
-
-interface TabPanelProps {
-    children?: React.ReactNode;
-    index: number;
-    value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-    const { children, value, index, ...other } = props;
-
-    return (
-        <div
-            role="tabpanel"
-            hidden={value !== index}
-            id={`auth-tabpanel-${index}`}
-            aria-labelledby={`auth-tab-${index}`}
-            {...other}
-        >
-            {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
-        </div>
-    );
-}
-
-function a11yProps(index: number) {
-    return {
-        id: `auth-tab-${index}`,
-        'aria-controls': `auth-tabpanel-${index}`,
-    };
-}
-
 const SignUpPage = () => {
-    const [tabValue, setTabValue] = useState(0);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -118,21 +73,35 @@ const SignUpPage = () => {
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [passwordError, setPasswordError] = useState<string | null>(null);
 
-    const { user, signUp, signInWithMagicLink, signInWithGoogle } = useAuth();
+    const { user, signUp, signInWithGoogle } = useAuth();
 
     // If user is already logged in, redirect to home page
     if (user) {
         return <Navigate to="/" replace />;
     }
 
-    const handleTabChange = (
-        _event: React.SyntheticEvent,
-        newValue: number
-    ) => {
-        setTabValue(newValue);
+    const validatePassword = (password: string): boolean => {
+        if (password.length < 6) {
+            setPasswordError('Password must be at least 6 characters');
+            setError(
+                'Your password needs to be between 6-30 characters. Please try again!'
+            );
+            return false;
+        }
+
+        if (password.length > 30) {
+            setPasswordError('Password must be less than 30 characters');
+            setError(
+                'Your password needs to be between 6-30 characters. Please try again!'
+            );
+            return false;
+        }
+
+        setPasswordError(null);
         setError(null);
-        setSuccessMessage(null);
+        return true;
     };
 
     const handleSignUp = async (e: React.FormEvent) => {
@@ -140,9 +109,17 @@ const SignUpPage = () => {
         setIsLoading(true);
         setError(null);
 
+        // Validate password length
+        if (!validatePassword(password)) {
+            setIsLoading(false);
+            return;
+        }
+
         // Validate passwords match
         if (password !== confirmPassword) {
-            setError('Passwords do not match');
+            setError(
+                'Passwords do not match. Please make sure both entries are the same.'
+            );
             setIsLoading(false);
             return;
         }
@@ -155,26 +132,6 @@ const SignUpPage = () => {
                 setSuccessMessage(
                     'Success! Please check your email to confirm your account.'
                 );
-            }
-        } catch (err) {
-            setError('An unexpected error occurred. Please try again.');
-            console.error(err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleMagicLinkSignUp = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            const { error } = await signInWithMagicLink(email);
-            if (error) {
-                setError(error.message);
-            } else {
-                setSuccessMessage('Check your email for the signup link!');
             }
         } catch (err) {
             setError('An unexpected error occurred. Please try again.');
@@ -264,45 +221,26 @@ const SignUpPage = () => {
                         Sign up to start your recipe journey
                     </Typography>
 
-                    <Tabs
-                        value={tabValue}
-                        onChange={handleTabChange}
-                        variant="fullWidth"
-                        sx={{
-                            mb: 2,
-                            '& .MuiTabs-indicator': {
-                                backgroundColor: 'primary.main',
-                            },
-                            '& .MuiTab-root': {
-                                '&:focus': {
-                                    outline: 'none',
-                                },
-                                '&.Mui-focusVisible': {
-                                    outline: 'none',
-                                },
-                            },
-                        }}
-                    >
-                        <Tab
-                            label="Email & Password"
-                            {...a11yProps(0)}
-                            sx={{
-                                fontFamily: '"Inter", sans-serif',
-                                textTransform: 'none',
-                            }}
-                        />
-                        <Tab
-                            label="Magic Link"
-                            {...a11yProps(1)}
-                            sx={{
-                                fontFamily: '"Inter", sans-serif',
-                                textTransform: 'none',
-                            }}
-                        />
-                    </Tabs>
-
                     {error && (
-                        <Alert severity="error" sx={{ mb: 2 }}>
+                        <Alert
+                            severity="error"
+                            sx={{
+                                mb: 2,
+                                backgroundColor: (theme) =>
+                                    theme.palette.error.light,
+                                border: (theme) =>
+                                    `1px solid ${theme.palette.error.main}`,
+                                '& .MuiAlert-icon': {
+                                    color: (theme) =>
+                                        theme.palette.error.contrastText,
+                                },
+                                '& .MuiAlert-message': {
+                                    color: (theme) =>
+                                        theme.palette.error.contrastText,
+                                    fontWeight: 500,
+                                },
+                            }}
+                        >
                             {error}
                         </Alert>
                     )}
@@ -313,162 +251,146 @@ const SignUpPage = () => {
                         </Alert>
                     )}
 
-                    <TabPanel value={tabValue} index={0}>
-                        <form onSubmit={handleSignUp}>
-                            <TextField
-                                label="Email"
-                                type="email"
-                                fullWidth
-                                variant="outlined"
-                                margin="normal"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                disabled={isLoading || !!successMessage}
-                                required
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        borderRadius: 1,
-                                    },
-                                }}
-                            />
-                            <TextField
-                                label="Password"
-                                type={showPassword ? 'text' : 'password'}
-                                fullWidth
-                                variant="outlined"
-                                margin="normal"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                disabled={isLoading || !!successMessage}
-                                required
-                                InputProps={{
-                                    endAdornment: (
-                                        <InputAdornment position="end">
-                                            <IconButton
-                                                onClick={() =>
-                                                    setShowPassword(
-                                                        !showPassword
-                                                    )
-                                                }
-                                                edge="end"
-                                                aria-label={
-                                                    showPassword
-                                                        ? 'Hide password'
-                                                        : 'Show password'
-                                                }
-                                            >
-                                                {showPassword ? (
-                                                    <VisibilityOffIcon />
-                                                ) : (
-                                                    <VisibilityIcon />
-                                                )}
-                                            </IconButton>
-                                        </InputAdornment>
-                                    ),
-                                }}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        borderRadius: 1,
-                                    },
-                                }}
-                            />
-                            <TextField
-                                label="Confirm Password"
-                                type={showPassword ? 'text' : 'password'}
-                                fullWidth
-                                variant="outlined"
-                                margin="normal"
-                                value={confirmPassword}
-                                onChange={(e) =>
-                                    setConfirmPassword(e.target.value)
+                    <form onSubmit={handleSignUp}>
+                        <TextField
+                            label="Email"
+                            type="email"
+                            fullWidth
+                            variant="outlined"
+                            margin="normal"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            disabled={isLoading || !!successMessage}
+                            required
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: 1,
+                                },
+                            }}
+                        />
+                        <TextField
+                            label="Password"
+                            type={showPassword ? 'text' : 'password'}
+                            fullWidth
+                            variant="outlined"
+                            margin="normal"
+                            value={password}
+                            onChange={(e) => {
+                                setPassword(e.target.value);
+                                if (e.target.value) {
+                                    validatePassword(e.target.value);
+                                } else {
+                                    setPasswordError(null);
+                                    setError(null);
                                 }
-                                disabled={isLoading || !!successMessage}
-                                required
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        borderRadius: 1,
-                                    },
-                                }}
-                            />
-                            <StyledButton
-                                type="submit"
-                                fullWidth
-                                variant="contained"
-                                color="primary"
-                                disabled={isLoading || !!successMessage}
-                            >
-                                {isLoading ? (
-                                    <CircularProgress size={24} />
-                                ) : (
-                                    'Sign Up'
-                                )}
-                            </StyledButton>
-                        </form>
-                    </TabPanel>
-
-                    <TabPanel value={tabValue} index={1}>
-                        <form onSubmit={handleMagicLinkSignUp}>
-                            <TextField
-                                label="Email"
-                                type="email"
-                                fullWidth
-                                variant="outlined"
-                                margin="normal"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                disabled={isLoading || !!successMessage}
-                                required
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        borderRadius: 1,
-                                    },
-                                }}
-                            />
-                            <StyledButton
-                                type="submit"
-                                fullWidth
-                                variant="contained"
-                                color="primary"
-                                disabled={isLoading || !!successMessage}
-                                startIcon={<MailOutlineIcon />}
-                            >
-                                {isLoading ? (
-                                    <CircularProgress size={24} />
-                                ) : successMessage ? (
-                                    'Email Sent'
-                                ) : (
-                                    'Email Me a Sign Up Link'
-                                )}
-                            </StyledButton>
-                        </form>
-                    </TabPanel>
+                            }}
+                            disabled={isLoading || !!successMessage}
+                            required
+                            error={!!passwordError}
+                            InputProps={{
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconButton
+                                            onClick={() =>
+                                                setShowPassword(!showPassword)
+                                            }
+                                            edge="end"
+                                            aria-label={
+                                                showPassword
+                                                    ? 'Hide password'
+                                                    : 'Show password'
+                                            }
+                                        >
+                                            {showPassword ? (
+                                                <VisibilityOffIcon />
+                                            ) : (
+                                                <VisibilityIcon />
+                                            )}
+                                        </IconButton>
+                                    </InputAdornment>
+                                ),
+                            }}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: 1,
+                                },
+                            }}
+                        />
+                        <TextField
+                            label="Confirm Password"
+                            type={showPassword ? 'text' : 'password'}
+                            fullWidth
+                            variant="outlined"
+                            margin="normal"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            disabled={isLoading || !!successMessage}
+                            required
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: 1,
+                                },
+                            }}
+                        />
+                        <StyledButton
+                            type="submit"
+                            fullWidth
+                            variant="contained"
+                            color="primary"
+                            disabled={isLoading || !!successMessage}
+                        >
+                            {isLoading ? (
+                                <CircularProgress size={24} />
+                            ) : (
+                                'Sign Up'
+                            )}
+                        </StyledButton>
+                    </form>
 
                     <Divider sx={{ my: 3, color: 'text.secondary' }}>
                         or
                     </Divider>
 
-                    <GoogleButton
+                    <StyledButton
                         fullWidth
                         onClick={handleGoogleSignUp}
                         startIcon={<GoogleIcon />}
+                        sx={{
+                            backgroundColor: '#fff',
+                            color: (theme) => theme.palette.text.primary,
+                            border: (theme) =>
+                                `1px solid ${theme.palette.divider}`,
+                            '&:hover': {
+                                backgroundColor: (theme) =>
+                                    theme.palette.grey[100],
+                                border: (theme) =>
+                                    `1px solid ${theme.palette.divider}`,
+                                boxShadow: 'none',
+                            },
+                        }}
                     >
                         Continue with Google
-                    </GoogleButton>
+                    </StyledButton>
 
-                    <Box sx={{ mt: 3, textAlign: 'center' }}>
-                        <Typography variant="body2">
+                    <Box
+                        sx={{
+                            mt: 3,
+                            display: 'flex',
+                            justifyContent: 'center',
+                        }}
+                    >
+                        <Typography variant="body2" color="text.secondary">
                             Already have an account?{' '}
-                            <Link
-                                component={RouterLink}
+                            <RouterLink
                                 to="/login"
-                                sx={{
-                                    color: 'secondary.contrastText',
+                                style={{
+                                    color: '#F1C40F',
                                     textDecoration: 'none',
                                     fontWeight: 500,
                                 }}
                             >
                                 Sign in
-                            </Link>
+                            </RouterLink>
                         </Typography>
                     </Box>
                 </ContentBox>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Navigate, Link as RouterLink } from 'react-router-dom';
 import {
     Box,
@@ -6,17 +6,14 @@ import {
     TextField,
     Button,
     Paper,
-    Divider,
     CircularProgress,
     Alert,
-    Tabs,
-    Tab,
     InputAdornment,
     IconButton,
+    Divider,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import GoogleIcon from '@mui/icons-material/Google';
-import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { useAuth } from '../../context/AuthContext';
@@ -68,70 +65,19 @@ const StyledButton = styled(Button)(({ theme }) => ({
     },
 }));
 
-const GoogleButton = styled(StyledButton)(({ theme }) => ({
-    backgroundColor: '#fff',
-    color: theme.palette.text.primary,
-    border: `1px solid ${theme.palette.divider}`,
-    '&:hover': {
-        backgroundColor: theme.palette.grey[100],
-        border: `1px solid ${theme.palette.divider}`,
-        boxShadow: 'none',
-    },
-}));
-
-interface TabPanelProps {
-    children?: React.ReactNode;
-    index: number;
-    value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-    const { children, value, index, ...other } = props;
-
-    return (
-        <div
-            role="tabpanel"
-            hidden={value !== index}
-            id={`auth-tabpanel-${index}`}
-            aria-labelledby={`auth-tab-${index}`}
-            {...other}
-        >
-            {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
-        </div>
-    );
-}
-
-function a11yProps(index: number) {
-    return {
-        id: `auth-tab-${index}`,
-        'aria-controls': `auth-tabpanel-${index}`,
-    };
-}
-
 const LoginPage = () => {
-    const [tabValue, setTabValue] = useState(0);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
-    const { user, signIn, signInWithMagicLink, signInWithGoogle } = useAuth();
+    const { user, signIn, signInWithGoogle } = useAuth();
 
     // If user is already logged in, redirect to home page
     if (user) {
         return <Navigate to="/" replace />;
     }
-
-    const handleTabChange = (
-        _event: React.SyntheticEvent,
-        newValue: number
-    ) => {
-        setTabValue(newValue);
-        setError(null);
-        setSuccessMessage(null);
-    };
 
     const handleEmailLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -142,26 +88,6 @@ const LoginPage = () => {
             const { error } = await signIn(email, password);
             if (error) {
                 setError(error.message);
-            }
-        } catch (err) {
-            setError('An unexpected error occurred. Please try again.');
-            console.error(err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleMagicLinkLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            const { error } = await signInWithMagicLink(email);
-            if (error) {
-                setError(error.message);
-            } else {
-                setSuccessMessage('Check your email for the login link!');
             }
         } catch (err) {
             setError('An unexpected error occurred. Please try again.');
@@ -251,186 +177,129 @@ const LoginPage = () => {
                         Your digital recipe notebook
                     </Typography>
 
-                    <Tabs
-                        value={tabValue}
-                        onChange={handleTabChange}
-                        variant="fullWidth"
-                        sx={{
-                            mb: 2,
-                            '& .MuiTabs-indicator': {
-                                backgroundColor: 'primary.main',
-                            },
-                            '& .MuiTab-root': {
-                                '&:focus': {
-                                    outline: 'none',
-                                },
-                                '&.Mui-focusVisible': {
-                                    outline: 'none',
-                                },
-                            },
-                        }}
-                    >
-                        <Tab
-                            label="Email & Password"
-                            {...a11yProps(0)}
-                            sx={{
-                                fontFamily: '"Inter", sans-serif',
-                                textTransform: 'none',
-                            }}
-                        />
-                        <Tab
-                            label="Magic Link"
-                            {...a11yProps(1)}
-                            sx={{
-                                fontFamily: '"Inter", sans-serif',
-                                textTransform: 'none',
-                            }}
-                        />
-                    </Tabs>
-
                     {error && (
-                        <Alert severity="error" sx={{ mb: 2 }}>
+                        <Alert
+                            severity="error"
+                            sx={{
+                                mb: 2,
+                                backgroundColor: (theme) =>
+                                    theme.palette.error.light,
+                                border: (theme) =>
+                                    `1px solid ${theme.palette.error.main}`,
+                                '& .MuiAlert-icon': {
+                                    color: (theme) =>
+                                        theme.palette.error.contrastText,
+                                },
+                                '& .MuiAlert-message': {
+                                    color: (theme) =>
+                                        theme.palette.error.contrastText,
+                                    fontWeight: 500,
+                                },
+                            }}
+                        >
                             {error}
                         </Alert>
                     )}
 
-                    {successMessage && (
-                        <Alert severity="success" sx={{ mb: 2 }}>
-                            {successMessage}
-                        </Alert>
-                    )}
-
-                    <TabPanel value={tabValue} index={0}>
-                        <form onSubmit={handleEmailLogin}>
-                            <TextField
-                                label="Email"
-                                type="email"
-                                fullWidth
-                                variant="outlined"
-                                margin="normal"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                disabled={isLoading}
-                                required
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        borderRadius: 1,
-                                    },
-                                }}
-                            />
-                            <TextField
-                                label="Password"
-                                type={showPassword ? 'text' : 'password'}
-                                fullWidth
-                                variant="outlined"
-                                margin="normal"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                disabled={isLoading}
-                                required
-                                InputProps={{
-                                    endAdornment: (
-                                        <InputAdornment position="end">
-                                            <IconButton
-                                                onClick={() =>
-                                                    setShowPassword(
-                                                        !showPassword
-                                                    )
-                                                }
-                                                edge="end"
-                                                aria-label={
-                                                    showPassword
-                                                        ? 'Hide password'
-                                                        : 'Show password'
-                                                }
-                                            >
-                                                {showPassword ? (
-                                                    <VisibilityOffIcon />
-                                                ) : (
-                                                    <VisibilityIcon />
-                                                )}
-                                            </IconButton>
-                                        </InputAdornment>
-                                    ),
-                                }}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        borderRadius: 1,
-                                    },
-                                }}
-                            />
-                            <StyledButton
-                                type="submit"
-                                fullWidth
-                                variant="contained"
-                                color="primary"
-                                disabled={isLoading}
-                            >
-                                {isLoading ? (
-                                    <CircularProgress size={24} />
-                                ) : (
-                                    'Sign In'
-                                )}
-                            </StyledButton>
-                        </form>
-                    </TabPanel>
-
-                    <TabPanel value={tabValue} index={1}>
-                        <form onSubmit={handleMagicLinkLogin}>
-                            <TextField
-                                label="Email"
-                                type="email"
-                                fullWidth
-                                variant="outlined"
-                                margin="normal"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                disabled={isLoading}
-                                required
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        borderRadius: 1,
-                                    },
-                                }}
-                            />
-                            <StyledButton
-                                type="submit"
-                                fullWidth
-                                variant="contained"
-                                color="primary"
-                                disabled={isLoading || !!successMessage}
-                                startIcon={<MailOutlineIcon />}
-                            >
-                                {isLoading ? (
-                                    <CircularProgress size={24} />
-                                ) : successMessage ? (
-                                    'Email Sent'
-                                ) : (
-                                    'Email Me a Login Link'
-                                )}
-                            </StyledButton>
-                        </form>
-                    </TabPanel>
+                    <form onSubmit={handleEmailLogin}>
+                        <TextField
+                            label="Email"
+                            type="email"
+                            fullWidth
+                            variant="outlined"
+                            margin="normal"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            disabled={isLoading}
+                            required
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: 1,
+                                },
+                            }}
+                        />
+                        <TextField
+                            label="Password"
+                            type={showPassword ? 'text' : 'password'}
+                            fullWidth
+                            variant="outlined"
+                            margin="normal"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            disabled={isLoading}
+                            required
+                            InputProps={{
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconButton
+                                            onClick={() =>
+                                                setShowPassword(!showPassword)
+                                            }
+                                            edge="end"
+                                            aria-label={
+                                                showPassword
+                                                    ? 'Hide password'
+                                                    : 'Show password'
+                                            }
+                                        >
+                                            {showPassword ? (
+                                                <VisibilityOffIcon />
+                                            ) : (
+                                                <VisibilityIcon />
+                                            )}
+                                        </IconButton>
+                                    </InputAdornment>
+                                ),
+                            }}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: 1,
+                                },
+                            }}
+                        />
+                        <StyledButton
+                            type="submit"
+                            fullWidth
+                            variant="contained"
+                            color="primary"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? (
+                                <CircularProgress size={24} />
+                            ) : (
+                                'Sign In'
+                            )}
+                        </StyledButton>
+                    </form>
 
                     <Divider sx={{ my: 3, color: 'text.secondary' }}>
                         or
                     </Divider>
 
-                    <GoogleButton
+                    <StyledButton
                         fullWidth
-                        onClick={handleGoogleLogin}
+                        variant="outlined"
+                        color="primary"
                         startIcon={<GoogleIcon />}
+                        onClick={handleGoogleLogin}
+                        disabled={isLoading}
                     >
-                        Continue with Google
-                    </GoogleButton>
+                        Sign in with Google
+                    </StyledButton>
 
-                    <Box sx={{ mt: 3, textAlign: 'center' }}>
-                        <Typography variant="body2">
+                    <Box
+                        sx={{
+                            mt: 3,
+                            display: 'flex',
+                            justifyContent: 'center',
+                        }}
+                    >
+                        <Typography variant="body2" color="text.secondary">
                             Don't have an account?{' '}
                             <RouterLink
                                 to="/signup"
                                 style={{
-                                    color: 'secondary.contrastText',
+                                    color: '#F1C40F',
                                     textDecoration: 'none',
                                     fontWeight: 500,
                                 }}
