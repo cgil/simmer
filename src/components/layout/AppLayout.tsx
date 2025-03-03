@@ -361,7 +361,7 @@ const AppLayout: FC<AppLayoutProps> = ({
                 </Container>
             </AppBar>
 
-            <Toolbar sx={{ mb: { xs: 1, sm: 2 } }} />
+            <Toolbar sx={{ mb: { xs: 0, sm: 0 } }} />
 
             <Box
                 component="main"
