@@ -178,6 +178,8 @@ const StepContent: FC<StepContentProps> = ({
                             <HighlightedInstruction
                                 text={step.text}
                                 ingredients={recipe.ingredients}
+                                servings={servings}
+                                originalServings={recipe.servings}
                             />
                         </Typography>
 

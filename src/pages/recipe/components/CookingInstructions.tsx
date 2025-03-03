@@ -99,7 +99,7 @@ const CookingInstructions: FC<CookingInstructionsProps> = ({
                                                 fontFamily: "'Kalam', cursive",
                                                 fontSize: {
                                                     xs: '1.0rem',
-                                                    sm: '1.5rem',
+                                                    sm: '1.0rem',
                                                 },
                                                 fontWeight: 700,
                                                 lineHeight: 1.4,
@@ -167,11 +167,17 @@ const CookingInstructions: FC<CookingInstructionsProps> = ({
                                         }}
                                     >
                                         <HighlightedInstruction
-                                            text={parseIngredientReferences(
-                                                step.text,
-                                                recipe,
-                                                servings
-                                            )}
+                                            text={
+                                                // First apply any scaling to ingredient quantities
+                                                parseIngredientReferences(
+                                                    step.text,
+                                                    recipe,
+                                                    servings
+                                                )
+                                            }
+                                            ingredients={recipe.ingredients}
+                                            servings={servings}
+                                            originalServings={recipe.servings}
                                         />
                                     </Typography>
                                 </Box>

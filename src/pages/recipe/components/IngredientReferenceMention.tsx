@@ -2,11 +2,14 @@ import React, { FC } from 'react';
 import { styled } from '@mui/material/styles';
 import { Box, Typography } from '@mui/material';
 import { Ingredient } from '../../../types/recipe';
+import { formatQuantity } from '../../../utils/recipe';
 
 interface IngredientReferenceMentionProps {
     ingredient?: Ingredient;
     id?: string;
     display: string;
+    servings?: number;
+    originalServings?: number;
 }
 
 // Styling for the mention component (highlighted ingredient references)
@@ -50,6 +53,8 @@ const DeletedMention = styled(Box)(({ theme }) => ({
 const IngredientReferenceMention: FC<IngredientReferenceMentionProps> = ({
     ingredient,
     display,
+    servings,
+    originalServings,
 }) => {
     // If the ingredient doesn't exist (deleted), show a deleted mention
     if (!ingredient) {
@@ -75,8 +80,23 @@ const IngredientReferenceMention: FC<IngredientReferenceMentionProps> = ({
     // Determine the display text
     let displayText = display;
 
-    if (ingredient && ingredient.quantity !== null) {
-        displayText = `${ingredient.quantity}${
+    // When servings and originalServings are provided, scale the quantity
+    if (
+        ingredient &&
+        ingredient.quantity !== null &&
+        servings &&
+        originalServings
+    ) {
+        // Scale the quantity based on the servings ratio
+        const scaledQuantity =
+            (ingredient.quantity * servings) / originalServings;
+        displayText = `${formatQuantity(scaledQuantity)}${
+            ingredient.unit ? ' ' + ingredient.unit : ''
+        } ${ingredient.name}`;
+    }
+    // Use the original quantity if no scaling is requested
+    else if (ingredient && ingredient.quantity !== null) {
+        displayText = `${formatQuantity(ingredient.quantity)}${
             ingredient.unit ? ' ' + ingredient.unit : ''
         } ${ingredient.name}`;
     }

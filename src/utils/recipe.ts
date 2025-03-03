@@ -1,16 +1,16 @@
-import { Recipe } from '../types';
+import { Recipe } from "../types";
 
 export const scaleQuantity = (
     originalQuantity: number | null,
     originalServings: number,
-    newServings: number
+    newServings: number,
 ): number | null => {
     if (originalQuantity === null) return null;
     return (originalQuantity * newServings) / originalServings;
 };
 
 export const formatQuantity = (quantity: number | null): string => {
-    if (quantity === null) return '';
+    if (quantity === null) return "";
 
     // Handle whole numbers
     if (Number.isInteger(quantity)) return quantity.toString();
@@ -20,11 +20,11 @@ export const formatQuantity = (quantity: number | null): string => {
 
     // Common fractions mapping
     const fractions: { [key: string]: string } = {
-        '0.25': '¼',
-        '0.5': '½',
-        '0.75': '¾',
-        '0.33': '⅓',
-        '0.67': '⅔',
+        "0.25": "¼",
+        "0.5": "½",
+        "0.75": "¾",
+        "0.33": "⅓",
+        "0.67": "⅔",
     };
 
     // Check if we have a common fraction
@@ -35,28 +35,32 @@ export const formatQuantity = (quantity: number | null): string => {
 export const parseIngredientReferences = (
     step: string,
     recipe: Recipe,
-    currentServings: number
+    currentServings: number,
 ): string => {
-    return step.replace(/\[INGREDIENT=([^\]]+)\]/g, (match, ingredientId) => {
-        const ingredient = recipe.ingredients.find(
-            (item) => item.id === ingredientId
-        );
+    // Handle the new @-mention format
+    return step.replace(
+        /@\[([^\]]+)\]\(([^)]+)\)/g,
+        (match, display, ingredientId) => {
+            const ingredient = recipe.ingredients.find(
+                (item) => item.id === ingredientId,
+            );
 
-        if (!ingredient) return match;
+            if (!ingredient) return match;
 
-        const scaledQuantity = ingredient.quantity
-            ? scaleQuantity(
-                  ingredient.quantity,
-                  recipe.servings,
-                  currentServings
-              )
-            : null;
+            const scaledQuantity = ingredient.quantity
+                ? scaleQuantity(
+                    ingredient.quantity,
+                    recipe.servings || 1, // Ensure we have a valid servings value (default to 1)
+                    currentServings,
+                )
+                : null;
 
-        const quantityStr = scaledQuantity
-            ? `${formatQuantity(scaledQuantity)} ${ingredient.unit || ''} `
-            : '';
+            const quantityStr = scaledQuantity
+                ? `${formatQuantity(scaledQuantity)} ${ingredient.unit || ""} `
+                : "";
 
-        // Return the ingredient with its quantity but keep it wrapped in a tag
-        return `[INGREDIENT=${quantityStr}${ingredient.name}]`;
-    });
+            // Use the ingredient name for display but maintain the same @-mention format
+            return `@[${quantityStr}${ingredient.name}](${ingredientId})`;
+        },
+    );
 };

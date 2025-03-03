@@ -10,12 +10,26 @@ import IngredientReferenceMention from './IngredientReferenceMention';
 interface HighlightedInstructionProps {
     text: string;
     ingredients: Ingredient[];
+    servings?: number;
+    originalServings?: number;
 }
 
 const HighlightedInstruction: FC<HighlightedInstructionProps> = ({
     text,
     ingredients,
+    servings,
+    originalServings,
 }) => {
+    if (!text) return null;
+    if (!ingredients || !Array.isArray(ingredients)) {
+        // Handle the case where ingredients is undefined or not an array
+        return (
+            <Typography variant="body1" component="div">
+                {text}
+            </Typography>
+        );
+    }
+
     // Parse the text to get segments (text or ingredient mentions)
     const segments = parseIngredientMentions(text, ingredients);
 
@@ -38,6 +52,8 @@ const HighlightedInstruction: FC<HighlightedInstructionProps> = ({
                         key={`mention-${mention.id}-${index}`}
                         ingredient={mention.ingredient}
                         display={mention.display}
+                        servings={servings}
+                        originalServings={originalServings}
                     />
                 );
             })}
