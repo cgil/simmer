@@ -89,9 +89,8 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
     const mentionStyle = {
         backgroundColor: theme.palette.secondary.light,
         borderRadius: '2px',
-        padding: '0 0',
+        padding: '2px 0',
         color: theme.palette.secondary.dark,
-        fontWeight: 500,
     };
 
     // Transform ingredients to the format expected by react-mentions
