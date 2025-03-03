@@ -100,6 +100,11 @@ The app follows a "Paper Notebook Recipe Journal" aesthetic with these key eleme
 -   Ingredient organization
 -   Instruction sections
 -   Notes and tags
+-   Ingredient references:
+    -   @-mention style ingredient references in instructions
+    -   Auto-formatting of ingredient quantities and units
+    -   Visual highlighting of referenced ingredients
+    -   Quick ingredient selection via dropdown or carrot button
 
 ### 3.4. Recipe Catalog
 

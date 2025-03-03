@@ -13,6 +13,7 @@ Simmer is a modern web application that brings the warmth and personality of a p
 -   ⏲️ Multi-timer tracking across recipe steps
 -   ⚖️ Flexible time handling (supports zero prep/cook times)
 -   🎨 Whimsical loading states with recipe-themed progress indicators
+-   🔖 @-mention style ingredient references in instructions
 
 ## Local Development Setup
 
@@ -257,3 +258,10 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 -   Whimsical loading states during extraction
 -   Better error handling and user feedback
 -   Enhanced progress tracking with themed steps
+
+#### Ingredient Reference System
+
+-   @-mention style references for ingredients in instructions
+-   Visual highlighting of referenced ingredients
+-   Auto-formatting of ingredient quantities and units
+-   Easy ingredient selection via dropdown or carrot button

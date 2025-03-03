@@ -136,7 +136,52 @@ src/
       Typography.tsx
 ```
 
-### 3.4. Timer System
+### 3.4. Ingredient Reference System
+
+```typescript
+// IngredientReferenceInput component for mentioning ingredients in instructions
+interface IngredientReferenceInputProps {
+    value: string;
+    onChange: (value: string) => void;
+    ingredients: Ingredient[];
+    placeholder?: string;
+}
+
+// Styling configuration for ingredient references
+const mentionStyle = {
+    control: {
+        /* Input styling */
+    },
+    input: {
+        /* Input field styling */
+    },
+    highlighter: {
+        /* Highlight styling */
+    },
+    suggestions: {
+        /* Dropdown styling */
+    },
+    mention: {
+        backgroundColor: '#FFF8C5',
+        color: '#9C6D00',
+        borderRadius: '2px',
+        boxShadow: 'none',
+        border: 'none',
+        textShadow: 'none',
+    },
+};
+
+// Reference format and transforms
+const referenceFormat = {
+    markup: '@[__display__](__id__)',
+    displayTransform: (id, display) => {
+        // Format ingredient display based on quantity/unit
+        return formattedIngredientText;
+    },
+};
+```
+
+### 3.5. Timer System
 
 ```typescript
 interface ActiveTimer {
