@@ -1,4 +1,4 @@
-import React, { FC } from 'react';
+import { FC } from 'react';
 import { styled } from '@mui/material/styles';
 import { Box, Typography, Tooltip } from '@mui/material';
 import { Ingredient } from '../../../types/recipe';
@@ -10,6 +10,7 @@ interface IngredientReferenceMentionProps {
     display: string;
     servings?: number;
     originalServings?: number;
+    scaledQuantity?: number | null;
 }
 
 // Styling for the mention component (highlighted ingredient references)
@@ -66,12 +67,34 @@ const InvalidReferenceMention = styled(Box)(({ theme }) => ({
     letterSpacing: 'normal',
 }));
 
+/**
+ * Formats an ingredient display text including quantity and units when available
+ */
+export const formatIngredientDisplayText = (
+    ingredient: Ingredient,
+    scaledQuantity?: number | null
+): string => {
+    const quantity =
+        scaledQuantity !== undefined ? scaledQuantity : ingredient.quantity;
+
+    if (quantity !== null && quantity !== undefined) {
+        return `${formatQuantity(quantity)}${
+            ingredient.unit && ingredient.unit.trim()
+                ? ' ' + ingredient.unit
+                : ''
+        } ${ingredient.name}`;
+    }
+
+    return ingredient.name;
+};
+
 const IngredientReferenceMention: FC<IngredientReferenceMentionProps> = ({
     ingredient,
     id,
     display,
     servings,
     originalServings,
+    scaledQuantity: providedScaledQuantity,
 }) => {
     // If the ingredient doesn't exist but we have an ID
     if (!ingredient && id) {
@@ -130,36 +153,37 @@ const IngredientReferenceMention: FC<IngredientReferenceMentionProps> = ({
         );
     }
 
-    // Determine the display text
+    // When ingredient is available, always show with quantity and units if possible
     let displayText = display;
 
-    // When servings and originalServings are provided, scale the quantity
-    if (
-        ingredient &&
-        ingredient.quantity !== null &&
-        servings &&
-        originalServings
-    ) {
-        // Scale the quantity based on the servings ratio
-        const scaledQuantity =
-            (ingredient.quantity * servings) / originalServings;
-        displayText = `${formatQuantity(scaledQuantity)}${
-            ingredient.unit && ingredient.unit.trim()
-                ? ' ' + ingredient.unit
-                : ''
-        } ${ingredient.name}`;
-    }
-    // Use the original quantity if no scaling is requested
-    else if (ingredient && ingredient.quantity !== null) {
-        displayText = `${formatQuantity(ingredient.quantity)}${
-            ingredient.unit && ingredient.unit.trim()
-                ? ' ' + ingredient.unit
-                : ''
-        } ${ingredient.name}`;
+    if (ingredient) {
+        // Use provided scaledQuantity from the mention if available, otherwise calculate it
+        let scaledQuantity = providedScaledQuantity;
+        if (
+            scaledQuantity === undefined &&
+            ingredient.quantity !== null &&
+            ingredient.quantity !== undefined &&
+            servings &&
+            originalServings
+        ) {
+            scaledQuantity =
+                (ingredient.quantity * servings) / originalServings;
+        }
+
+        // Format the display text with quantity and units
+        displayText = formatIngredientDisplayText(ingredient, scaledQuantity);
     }
 
     return (
-        <Tooltip title={ingredient?.name || ''}>
+        <Tooltip
+            title={
+                ingredient
+                    ? `${ingredient.name}${
+                          ingredient.notes ? ` (${ingredient.notes})` : ''
+                      }`
+                    : ''
+            }
+        >
             <StyledMention>
                 <Typography
                     variant="body2"

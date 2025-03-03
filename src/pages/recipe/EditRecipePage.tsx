@@ -1,4 +1,4 @@
-import { FC, useState, useRef, DragEvent } from 'react';
+import { FC, useState, useRef, DragEvent, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
     Box,
@@ -32,6 +32,7 @@ import IngredientReferenceInput from './components/IngredientReferenceInput';
 import { convertRecipeIngredientMentions } from '../../utils/ingredientMentions';
 import { useAuth } from '../../context/AuthContext';
 import { RecipeService } from '../../services/RecipeService';
+import { generateUuidV4, ensureUuid, isValidUuid } from '../../utils/uuid';
 
 const EditRecipePage: FC = () => {
     const location = useLocation();
@@ -75,6 +76,54 @@ const EditRecipePage: FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
 
+    // Ensure all ingredients have valid UUIDs when component mounts
+    useEffect(() => {
+        if (!recipe) return;
+
+        if (recipe.ingredients && recipe.ingredients.length > 0) {
+            // Create a mapping of invalid IDs to new UUIDs
+            const idMapping = new Map<string, string>();
+
+            // Check and update ingredients with valid UUIDs
+            const validatedIngredients = recipe.ingredients.map((ing) => {
+                if (!isValidUuid(ing.id)) {
+                    const newUuid = ensureUuid(ing.id);
+                    idMapping.set(ing.id, newUuid);
+                    return { ...ing, id: newUuid };
+                }
+                return ing;
+            });
+
+            // Only update if we had to change any IDs
+            if (idMapping.size > 0) {
+                setIngredients(validatedIngredients);
+
+                // Also update any references in instructions
+                if (recipe.instructions && recipe.instructions.length > 0) {
+                    const updatedInstructions = recipe.instructions.map(
+                        (section) => ({
+                            ...section,
+                            steps: section.steps.map((step) => ({
+                                ...step,
+                                text: step.text.replace(
+                                    /@\[([^\]]+)\]\(([^)]+)\)/g,
+                                    (match, display, id) => {
+                                        const newId = idMapping.get(id);
+                                        return newId
+                                            ? `@[${display}](${newId})`
+                                            : match;
+                                    }
+                                ),
+                            })),
+                        })
+                    );
+
+                    setInstructions(updatedInstructions);
+                }
+            }
+        }
+    }, [recipe]);
+
     if (!recipe) {
         navigate('/');
         return null;
@@ -86,27 +135,114 @@ const EditRecipePage: FC = () => {
             return;
         }
 
+        // Check if the recipe belongs to the current user
+        if (
+            recipe.id &&
+            recipe.id !== 'new' &&
+            recipe.user_id &&
+            recipe.user_id !== user.id
+        ) {
+            setSaveError('You do not have permission to edit this recipe');
+            return;
+        }
+
         setIsSaving(true);
         setSaveError(null);
 
         try {
+            // Ensure all ingredients have proper UUID IDs before saving
+            const processedIngredients = ingredients.map((ingredient) => {
+                // Use our UUID utility to ensure valid UUIDs
+                if (!isValidUuid(ingredient.id)) {
+                    return {
+                        ...ingredient,
+                        id: ensureUuid(ingredient.id),
+                    };
+                }
+                return ingredient;
+            });
+
+            // Create a mapping from old IDs to new UUIDs for reference updates
+            const idMapping = new Map();
+            ingredients.forEach((origIngredient, index) => {
+                if (origIngredient.id !== processedIngredients[index].id) {
+                    idMapping.set(
+                        origIngredient.id,
+                        processedIngredients[index].id
+                    );
+                }
+            });
+
+            // Update instructions to use the new UUIDs if any were changed
+            let processedInstructions = instructions;
+            if (idMapping.size > 0) {
+                processedInstructions = instructions.map((section) => ({
+                    ...section,
+                    steps: section.steps.map((step) => ({
+                        ...step,
+                        text: step.text.replace(
+                            /@\[([^\]]+)\]\(([^)]+)\)/g,
+                            (match, display, id) => {
+                                const newId = idMapping.get(id);
+                                return newId
+                                    ? `@[${display}](${newId})`
+                                    : match;
+                            }
+                        ),
+                    })),
+                }));
+            }
+
+            // Validate recipe ID - ensure it's a UUID for database operations
+            let recipeId = recipe.id;
+            if (recipeId && recipeId !== 'new' && !isValidUuid(recipeId)) {
+                recipeId = ensureUuid(recipeId);
+            }
+
+            // Now create the updated recipe with processed ingredients and instructions
             const updatedRecipe: Recipe = {
                 ...recipe,
+                id: recipeId,
                 title,
                 description,
-                ingredients,
-                instructions,
+                ingredients: processedIngredients,
+                instructions: processedInstructions,
                 notes: notes.map((note) => note.text),
                 time_estimate: timeEstimate,
                 tags,
                 images,
             };
 
+            // Save the recipe, passing the current user ID for ownership verification
             await RecipeService.saveRecipe(updatedRecipe, user.id);
             navigate('/');
-        } catch (error) {
+        } catch (error: unknown) {
             console.error('Error saving recipe:', error);
-            setSaveError('Failed to save recipe. Please try again.');
+
+            // Extract a more user-friendly error message if possible
+            let errorMessage = 'Failed to save recipe. Please try again.';
+
+            // Type guard to check if error is an object with message property
+            if (error && typeof error === 'object') {
+                const err = error as { message?: string; code?: string };
+
+                if (err.message) {
+                    if (
+                        err.message.includes('permission') ||
+                        err.message.includes("don't have")
+                    ) {
+                        errorMessage = err.message; // Use the permission error directly
+                    } else if (err.code === '42501') {
+                        errorMessage =
+                            'You do not have permission to modify this recipe.';
+                    } else if (err.message.includes('RLS')) {
+                        errorMessage =
+                            'Permission denied: You cannot modify this recipe.';
+                    }
+                }
+            }
+
+            setSaveError(errorMessage);
             setIsSaving(false);
         }
     };
@@ -139,13 +275,16 @@ const EditRecipePage: FC = () => {
     };
 
     const handleAddIngredient = () => {
-        const newIngredient = {
-            id: `new-${Date.now()}`,
-            name: '',
-            quantity: null,
-            unit: null,
-        };
-        setIngredients([...ingredients, newIngredient]);
+        setIngredients([
+            ...ingredients,
+            {
+                id: generateUuidV4(), // Use UUID v4 for new ingredients
+                name: '',
+                quantity: null,
+                unit: null,
+                notes: '',
+            },
+        ]);
     };
 
     const handleAddStep = (sectionIndex: number) => {
@@ -155,6 +294,12 @@ const EditRecipePage: FC = () => {
             timing: null,
         });
         setInstructions(newInstructions);
+
+        // Set focus to the new step
+        setTimeout(() => {
+            const newStepIndex = newInstructions[sectionIndex].steps.length - 1;
+            setActiveStepIndex([sectionIndex, newStepIndex]);
+        }, 100);
     };
 
     const handleAddSection = () => {
@@ -170,6 +315,12 @@ const EditRecipePage: FC = () => {
                 ],
             },
         ]);
+
+        // Set focus to the new step
+        setTimeout(() => {
+            const newSectionIndex = instructions.length;
+            setActiveStepIndex([newSectionIndex, 0]);
+        }, 100);
     };
 
     const handleAddNote = () => {
@@ -290,6 +441,34 @@ const EditRecipePage: FC = () => {
             ...prev,
             [`${sectionIndex}-${stepIndex}`]: position,
         }));
+    };
+
+    // Add onChange handlers for ingredient fields
+    const handleIngredientNameChange = (index: number, value: string) => {
+        const newIngredients = [...ingredients];
+        newIngredients[index] = {
+            ...newIngredients[index],
+            name: value,
+        };
+        setIngredients(newIngredients);
+    };
+
+    const handleIngredientQuantityChange = (index: number, value: string) => {
+        const newIngredients = [...ingredients];
+        newIngredients[index] = {
+            ...newIngredients[index],
+            quantity: value === '' ? null : parseFloat(value),
+        };
+        setIngredients(newIngredients);
+    };
+
+    const handleIngredientUnitChange = (index: number, value: string) => {
+        const newIngredients = [...ingredients];
+        newIngredients[index] = {
+            ...newIngredients[index],
+            unit: value === '' ? null : value,
+        };
+        setIngredients(newIngredients);
     };
 
     const headerContent = (
@@ -438,7 +617,8 @@ const EditRecipePage: FC = () => {
                                 },
                                 '& .MuiInputBase-input': {
                                     color: 'text.primary',
-                                    fontFamily: "'Inter', sans-serif",
+                                    fontFamily:
+                                        "'Inter', system-ui, sans-serif",
                                 },
                             }}
                         >
@@ -817,7 +997,7 @@ const EditRecipePage: FC = () => {
                                     Ingredients
                                 </Typography>
                                 <Stack spacing={3}>
-                                    {ingredients.map((ingredient) => (
+                                    {ingredients.map((ingredient, index) => (
                                         <Box
                                             key={ingredient.id}
                                             sx={{
@@ -837,8 +1017,16 @@ const EditRecipePage: FC = () => {
                                             <TextField
                                                 size="small"
                                                 placeholder="amount"
-                                                defaultValue={
-                                                    ingredient.quantity
+                                                value={
+                                                    ingredient.quantity === null
+                                                        ? ''
+                                                        : ingredient.quantity
+                                                }
+                                                onChange={(e) =>
+                                                    handleIngredientQuantityChange(
+                                                        index,
+                                                        e.target.value
+                                                    )
                                                 }
                                                 variant="standard"
                                                 type="number"
@@ -871,7 +1059,13 @@ const EditRecipePage: FC = () => {
                                             <TextField
                                                 size="small"
                                                 placeholder="unit"
-                                                defaultValue={ingredient.unit}
+                                                value={ingredient.unit || ''}
+                                                onChange={(e) =>
+                                                    handleIngredientUnitChange(
+                                                        index,
+                                                        e.target.value
+                                                    )
+                                                }
                                                 variant="standard"
                                                 sx={{
                                                     width: 160,
@@ -888,7 +1082,13 @@ const EditRecipePage: FC = () => {
                                             <TextField
                                                 size="small"
                                                 placeholder="ingredient name"
-                                                defaultValue={ingredient.name}
+                                                value={ingredient.name}
+                                                onChange={(e) =>
+                                                    handleIngredientNameChange(
+                                                        index,
+                                                        e.target.value
+                                                    )
+                                                }
                                                 variant="standard"
                                                 fullWidth
                                                 sx={{

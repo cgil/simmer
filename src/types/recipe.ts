@@ -9,6 +9,7 @@ export interface Recipe {
     notes: string[];
     tags: string[];
     time_estimate?: TimeEstimate;
+    user_id?: string;
 }
 
 export interface Ingredient {

@@ -1,7 +1,9 @@
-import React, { FC, useRef, useState, useEffect } from 'react';
+import { FC, useRef, useState, useEffect } from 'react';
 import { MentionsInput, Mention } from 'react-mentions';
 import { Box, Typography, useTheme } from '@mui/material';
 import { Ingredient } from '../../../types/recipe';
+import { formatIngredientDisplayText } from './IngredientReferenceMention';
+import { isValidUuid, ensureUuid } from '../../../utils/uuid';
 
 // Extend SuggestionDataItem type to include our ingredient data
 declare module 'react-mentions' {
@@ -60,6 +62,14 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
             }
         }
     }, [value, cursorPosition, onCursorPositionChange]);
+
+    // Validate ingredient IDs and create a validated copy for use in component
+    const validatedIngredients = ingredients.map((ing) => {
+        if (!isValidUuid(ing.id)) {
+            return { ...ing, id: ensureUuid(ing.id) };
+        }
+        return ing;
+    });
 
     // Custom styles using the expected format for react-mentions
     const mentionsInputStyle = {
@@ -124,7 +134,7 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
     };
 
     // Transform ingredients to the format expected by react-mentions
-    const ingredientSuggestions = ingredients.map((ingredient) => ({
+    const ingredientSuggestions = validatedIngredients.map((ingredient) => ({
         id: ingredient.id,
         display: ingredient.name,
         ingredient,
@@ -132,7 +142,26 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
 
     // Function to find an ingredient by ID
     const findIngredientById = (id: string) => {
-        return ingredients.find((ingredient) => ingredient.id === id);
+        return validatedIngredients.find((ingredient) => ingredient.id === id);
+    };
+
+    // Handle changes in input value, ensuring proper UUID formats
+    const handleInputChange = (_: unknown, newValue: string) => {
+        // Process the value to ensure all IDs are valid UUIDs
+        const processedValue = newValue.replace(
+            /@\[([^\]]+)\]\(([^)]+)\)/g,
+            (match, display, id) => {
+                // If already a valid UUID, leave it as is
+                if (isValidUuid(id)) {
+                    return match;
+                }
+                // Generate a deterministic UUID from the id
+                const validUuid = ensureUuid(id);
+                return `@[${display}](${validUuid})`;
+            }
+        );
+
+        onChange(processedValue);
     };
 
     // Custom CSS to ensure consistent text styling
@@ -176,7 +205,7 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
             <style>{customCSS}</style>
             <MentionsInput
                 value={value}
-                onChange={(_event, newValue) => onChange(newValue)}
+                onChange={handleInputChange}
                 placeholder={placeholder}
                 a11ySuggestionsListLabel="Suggested ingredients"
                 style={mentionsInputStyle}
@@ -246,18 +275,8 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
                         const ingredient = findIngredientById(id);
                         if (!ingredient) return display;
 
-                        // Format the display text with quantity and unit if available
-                        if (
-                            ingredient.quantity !== null &&
-                            ingredient.quantity !== undefined
-                        ) {
-                            return `${ingredient.quantity}${
-                                ingredient.unit ? ' ' + ingredient.unit : ''
-                            } ${ingredient.name}`;
-                        }
-
-                        // Otherwise just return the name
-                        return ingredient.name;
+                        // Use the formatIngredientDisplayText utility for consistent display
+                        return formatIngredientDisplayText(ingredient);
                     }}
                     markup="@[__display__](__id__)"
                     appendSpaceOnAdd

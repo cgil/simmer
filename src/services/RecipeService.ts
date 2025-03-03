@@ -2,6 +2,7 @@ import { supabase } from "../lib/supabase";
 import type { Recipe } from "../types/recipe";
 import type { Database } from "../types/database";
 import { convertRecipeInstructionReferences } from "../utils/ingredientMentions";
+import { ensureUuid, isValidUuid } from "../utils/uuid";
 
 type RecipeWithRelations = Database["public"]["Tables"]["recipes"]["Row"] & {
     // Only keep the correct property names that match what comes from the database
@@ -45,12 +46,77 @@ export class RecipeService {
         }
 
         // Check if this is a new recipe or if the ID is valid
-        const isNewRecipe = !recipe.id || recipe.id === "new";
+        let isNewRecipe = !recipe.id || recipe.id === "new";
         let recipeId = recipe.id || "";
+
+        // Ensure recipe ID is a valid UUID before using it with Supabase
+        if (!isNewRecipe && !isValidUuid(recipeId)) {
+            console.warn(
+                `Converting non-UUID recipe ID '${recipeId}' to a proper UUID format`,
+            );
+            recipeId = ensureUuid(recipeId);
+            // Update the recipe object with the validated UUID to maintain consistency
+            recipe = {
+                ...recipe,
+                id: recipeId,
+            };
+        }
+
+        // Ensure all ingredient IDs are proper UUIDs
+        const validatedIngredients = recipe.ingredients.map((ingredient) => {
+            // Check if the ID is a valid UUID
+            if (!isValidUuid(ingredient.id)) {
+                console.warn(
+                    `Invalid UUID format for ingredient: ${ingredient.name} with ID: ${ingredient.id}`,
+                );
+                // Use our deterministic UUID generator for consistent IDs
+                return {
+                    ...ingredient,
+                    id: ensureUuid(ingredient.id),
+                };
+            }
+            return ingredient;
+        });
+
+        // Create a mapping of any changed IDs
+        const idMapping = new Map();
+        recipe.ingredients.forEach((origIngredient, index) => {
+            if (origIngredient.id !== validatedIngredients[index].id) {
+                idMapping.set(
+                    origIngredient.id,
+                    validatedIngredients[index].id,
+                );
+            }
+        });
+
+        // Update recipe with validated ingredients
+        recipe = {
+            ...recipe,
+            ingredients: validatedIngredients,
+        };
 
         // Always convert any ingredient references to UUID format
         if (recipe.instructions?.length > 0 && recipe.ingredients?.length > 0) {
-            // Convert ingredient references in instructions
+            // If we had to change any IDs, update references to use the new IDs
+            if (idMapping.size > 0) {
+                recipe.instructions = recipe.instructions.map((section) => ({
+                    ...section,
+                    steps: section.steps.map((step) => ({
+                        ...step,
+                        text: step.text.replace(
+                            /@\[([^\]]+)\]\(([^)]+)\)/g,
+                            (match, display, id) => {
+                                const newId = idMapping.get(id);
+                                return newId
+                                    ? `@[${display}](${newId})`
+                                    : match;
+                            },
+                        ),
+                    })),
+                }));
+            }
+
+            // Convert any remaining slug references to UUIDs
             const updatedInstructions = convertRecipeInstructionReferences(
                 recipe.instructions,
                 recipe.ingredients,
@@ -64,123 +130,323 @@ export class RecipeService {
         }
 
         try {
-            // 1. Save the main recipe record
-            const recipeData = {
-                title: recipe.title,
-                description: recipe.description || null,
-                servings: recipe.servings,
-                prep_time: recipe.time_estimate?.prep || null,
-                cook_time: recipe.time_estimate?.cook || null,
-                total_time: recipe.time_estimate?.total || null,
-                user_id: userId,
-            };
+            let savedRecipeId;
 
-            if (isNewRecipe || !recipeId) {
-                // Create new recipe with a proper UUID
-                const { data: newRecipe, error: insertError } = await supabase
+            // STEP 1: Insert or update the base recipe
+            if (isNewRecipe) {
+                console.log(`Creating new recipe: "${recipe.title}"`);
+
+                // Create a new recipe - explicitly setting user_id for ownership
+                const { data: newRecipe, error: createError } = await supabase
                     .from("recipes")
-                    .insert(recipeData)
+                    .insert({
+                        title: recipe.title || "Untitled Recipe",
+                        description: recipe.description || "",
+                        user_id: userId, // Set explicit ownership
+                        prep_time: recipe.time_estimate?.prep || 0,
+                        cook_time: recipe.time_estimate?.cook || 0,
+                        total_time: recipe.time_estimate?.total ||
+                            (recipe.time_estimate?.prep || 0) +
+                                (recipe.time_estimate?.cook || 0),
+                        servings: recipe.servings || 2,
+                        tags: recipe.tags || [],
+                        notes: recipe.notes || [],
+                    })
                     .select("id")
                     .single();
 
-                if (insertError) {
-                    throw insertError;
+                if (createError) {
+                    console.error("Error creating recipe:", createError);
+                    throw createError;
                 }
-                recipeId = newRecipe.id;
+
+                if (!newRecipe?.id) {
+                    throw new Error("Failed to create recipe - no ID returned");
+                }
+
+                savedRecipeId = newRecipe.id;
+                console.log(
+                    `Successfully created recipe with ID: ${savedRecipeId}`,
+                );
             } else {
-                // Update existing recipe with valid UUID
-                const { error: updateError } = await supabase
-                    .from("recipes")
-                    .update(recipeData)
-                    .eq("id", recipeId)
-                    .eq("user_id", userId);
+                console.log(
+                    `Updating existing recipe: "${recipe.title}" with ID: ${recipeId}`,
+                );
 
-                if (updateError) {
-                    throw updateError;
+                // Verify ownership before updating - with improved error handling
+                try {
+                    const { data: existingRecipe, error: getError } =
+                        await supabase
+                            .from("recipes")
+                            .select("id, user_id")
+                            .eq("id", recipeId)
+                            .maybeSingle(); // Use maybeSingle instead of single to prevent errors on zero rows
+
+                    if (getError) {
+                        console.error(
+                            "Error retrieving recipe for ownership verification:",
+                            getError,
+                        );
+                        throw getError;
+                    }
+
+                    // Handle the case where the recipe doesn't exist or user doesn't have access
+                    if (!existingRecipe) {
+                        console.log(
+                            `Recipe with ID ${recipeId} not found or not accessible - attempting to create a new one`,
+                        );
+
+                        // Create a new recipe instead of trying to update a non-existent one
+                        const { data: newRecipe, error: createError } =
+                            await supabase
+                                .from("recipes")
+                                .insert({
+                                    id: recipeId, // Use the provided ID
+                                    title: recipe.title || "Untitled Recipe",
+                                    description: recipe.description || "",
+                                    user_id: userId, // Set explicit ownership
+                                    prep_time: recipe.time_estimate?.prep || 0,
+                                    cook_time: recipe.time_estimate?.cook || 0,
+                                    total_time: recipe.time_estimate?.total ||
+                                        (recipe.time_estimate?.prep || 0) +
+                                            (recipe.time_estimate?.cook || 0),
+                                    servings: recipe.servings || 2,
+                                    tags: recipe.tags || [],
+                                    notes: recipe.notes || [],
+                                })
+                                .select("id")
+                                .single();
+
+                        if (createError) {
+                            console.error(
+                                "Error creating recipe:",
+                                createError,
+                            );
+                            throw createError;
+                        }
+
+                        savedRecipeId = newRecipe?.id || recipeId;
+                        console.log(
+                            `Created new recipe with ID: ${savedRecipeId}`,
+                        );
+
+                        // Skip to step 2 - no need to clear existing data as we just created a new recipe
+                        isNewRecipe = true;
+                    } else if (existingRecipe.user_id !== userId) {
+                        throw new Error(
+                            `You don't have permission to update this recipe. Recipe belongs to user ${existingRecipe.user_id}, but you are ${userId}`,
+                        );
+                    } else {
+                        // Update the recipe now that we've verified ownership
+                        const { error: updateError } = await supabase
+                            .from("recipes")
+                            .update({
+                                title: recipe.title || "Untitled Recipe",
+                                description: recipe.description || "",
+                                prep_time: recipe.time_estimate?.prep || 0,
+                                cook_time: recipe.time_estimate?.cook || 0,
+                                total_time: recipe.time_estimate?.total ||
+                                    (recipe.time_estimate?.prep || 0) +
+                                        (recipe.time_estimate?.cook || 0),
+                                servings: recipe.servings || 2,
+                                tags: recipe.tags || [],
+                                notes: recipe.notes || [],
+                            })
+                            .eq("id", recipeId)
+                            .eq("user_id", userId); // Double-check ownership in the update query
+
+                        if (updateError) {
+                            console.error(
+                                "Error updating recipe:",
+                                updateError,
+                            );
+                            throw updateError;
+                        }
+
+                        savedRecipeId = recipeId;
+                        console.log(
+                            `Successfully updated recipe with ID: ${savedRecipeId}`,
+                        );
+                    }
+                } catch (error) {
+                    // If there was an error during the ownership check, but it's due to the recipe not existing
+                    // (which would be a 406 Not Acceptable error from Supabase REST API),
+                    // we'll try to create the recipe instead
+                    if (
+                        error && typeof error === "object" && "code" in error &&
+                        error.code === "PGRST116"
+                    ) {
+                        console.log(
+                            `Recipe with ID ${recipeId} not found - creating a new one`,
+                        );
+
+                        // Create a new recipe with the specified ID
+                        const { data: newRecipe, error: createError } =
+                            await supabase
+                                .from("recipes")
+                                .insert({
+                                    id: recipeId, // Use the provided ID
+                                    title: recipe.title || "Untitled Recipe",
+                                    description: recipe.description || "",
+                                    user_id: userId, // Set explicit ownership
+                                    prep_time: recipe.time_estimate?.prep || 0,
+                                    cook_time: recipe.time_estimate?.cook || 0,
+                                    total_time: recipe.time_estimate?.total ||
+                                        (recipe.time_estimate?.prep || 0) +
+                                            (recipe.time_estimate?.cook || 0),
+                                    servings: recipe.servings || 2,
+                                    tags: recipe.tags || [],
+                                    notes: recipe.notes || [],
+                                })
+                                .select("id")
+                                .single();
+
+                        if (createError) {
+                            console.error(
+                                "Error creating recipe:",
+                                createError,
+                            );
+                            throw createError;
+                        }
+
+                        savedRecipeId = newRecipe?.id || recipeId;
+                        console.log(
+                            `Created new recipe with ID: ${savedRecipeId}`,
+                        );
+
+                        // Skip to step 2 - no need to clear existing data as we just created a new recipe
+                        isNewRecipe = true;
+                    } else {
+                        // Re-throw any other errors
+                        throw error;
+                    }
                 }
             }
 
-            // 2. Handle recipe images
-            if (recipe.images && recipe.images.length > 0) {
-                // Delete existing images if updating
-                if (!isNewRecipe) {
-                    const { error: deleteError } = await supabase
-                        .from("recipe_images")
-                        .delete()
-                        .eq("recipe_id", recipeId);
+            // STEP 2: Clear out existing related data if updating
+            if (!isNewRecipe) {
+                console.log(
+                    `Clearing existing related data for recipe ${savedRecipeId}`,
+                );
 
-                    if (deleteError) {
-                        throw deleteError;
-                    }
+                // Delete in correct order: steps -> sections -> ingredients -> images
+
+                // First clear instruction sections (cascades to steps via foreign key)
+                const { error: clearSectionsError } = await supabase
+                    .from("recipe_instruction_sections")
+                    .delete()
+                    .eq("recipe_id", savedRecipeId);
+
+                if (clearSectionsError) {
+                    console.error(
+                        "Error clearing instruction sections:",
+                        clearSectionsError,
+                    );
+                    throw clearSectionsError;
                 }
 
-                // Insert new images
-                const imageRecords = recipe.images.map((imageUrl, index) => ({
-                    recipe_id: recipeId,
-                    url: imageUrl,
-                    position: index,
-                }));
+                // Clear ingredients
+                const { error: clearIngredientsError } = await supabase
+                    .from("recipe_ingredients")
+                    .delete()
+                    .eq("recipe_id", savedRecipeId);
 
-                const { error: imageError } = await supabase
+                if (clearIngredientsError) {
+                    console.error(
+                        "Error clearing ingredients:",
+                        clearIngredientsError,
+                    );
+                    throw clearIngredientsError;
+                }
+
+                // Clear images
+                const { error: clearImagesError } = await supabase
                     .from("recipe_images")
-                    .insert(imageRecords);
+                    .delete()
+                    .eq("recipe_id", savedRecipeId);
 
-                if (imageError) {
-                    throw imageError;
+                if (clearImagesError) {
+                    console.error("Error clearing images:", clearImagesError);
+                    throw clearImagesError;
                 }
+
+                console.log("Successfully cleared existing recipe data");
             }
 
-            // 3. Handle recipe ingredients
-            if (recipe.ingredients && recipe.ingredients.length > 0) {
-                // Delete existing ingredients if updating
-                if (!isNewRecipe) {
-                    const { error: deleteError } = await supabase
-                        .from("recipe_ingredients")
-                        .delete()
-                        .eq("recipe_id", recipeId);
+            // STEP 3: Insert related data
 
-                    if (deleteError) {
-                        throw deleteError;
-                    }
-                }
+            // 3.1: Insert ingredients
+            if (recipe.ingredients?.length > 0) {
+                console.log(
+                    `Inserting ${recipe.ingredients.length} ingredients for recipe ${savedRecipeId}`,
+                );
 
-                // Insert new ingredients
                 const ingredientRecords = recipe.ingredients.map((
                     ingredient,
                     index,
                 ) => ({
-                    recipe_id: recipeId,
+                    id: isValidUuid(ingredient.id)
+                        ? ingredient.id
+                        : ensureUuid(ingredient.id),
+                    recipe_id: savedRecipeId,
                     name: ingredient.name,
-                    quantity: ingredient.quantity || null,
-                    unit: ingredient.unit || null,
-                    notes: ingredient.notes || null,
+                    quantity: ingredient.quantity,
+                    unit: ingredient.unit,
+                    notes: ingredient.notes || "",
                     position: index,
                 }));
 
-                const { error: ingredientError } = await supabase
+                const { error: ingredientsError } = await supabase
                     .from("recipe_ingredients")
                     .insert(ingredientRecords);
 
-                if (ingredientError) {
-                    throw ingredientError;
+                if (ingredientsError) {
+                    console.error(
+                        "Error inserting ingredients:",
+                        ingredientsError,
+                    );
+                    console.error("First ingredient:", ingredientRecords[0]);
+                    throw ingredientsError;
                 }
+
+                console.log(
+                    `Successfully inserted ${recipe.ingredients.length} ingredients`,
+                );
             }
 
-            // 4. Handle recipe instruction sections and steps
-            if (recipe.instructions && recipe.instructions.length > 0) {
-                // Delete existing instruction sections if updating
-                if (!isNewRecipe) {
-                    const { error: deleteError } = await supabase
-                        .from("recipe_instruction_sections")
-                        .delete()
-                        .eq("recipe_id", recipeId);
+            // 3.2: Insert images
+            if (recipe.images?.length > 0) {
+                console.log(
+                    `Inserting ${recipe.images.length} images for recipe ${savedRecipeId}`,
+                );
 
-                    if (deleteError) {
-                        throw deleteError;
-                    }
+                const imageRecords = recipe.images.map((url, index) => ({
+                    recipe_id: savedRecipeId,
+                    url,
+                    position: index,
+                }));
+
+                const { error: imagesError } = await supabase
+                    .from("recipe_images")
+                    .insert(imageRecords);
+
+                if (imagesError) {
+                    console.error("Error inserting images:", imagesError);
+                    console.error("First image record:", imageRecords[0]);
+                    throw imagesError;
                 }
 
-                // Insert instruction sections and their steps
+                console.log(
+                    `Successfully inserted ${recipe.images.length} images`,
+                );
+            }
+
+            // 3.3: Insert instruction sections and their steps
+            if (recipe.instructions?.length > 0) {
+                console.log(
+                    `Inserting ${recipe.instructions.length} instruction sections`,
+                );
+
                 for (
                     let sectionIndex = 0;
                     sectionIndex < recipe.instructions.length;
@@ -188,33 +454,44 @@ export class RecipeService {
                 ) {
                     const section = recipe.instructions[sectionIndex];
 
-                    // Insert section
-                    const { data: insertedSection, error: sectionError } =
+                    // First insert the section
+                    const { data: newSection, error: sectionError } =
                         await supabase
                             .from("recipe_instruction_sections")
                             .insert({
-                                recipe_id: recipeId,
-                                section_title: section.section_title || null,
+                                recipe_id: savedRecipeId,
+                                section_title: section.section_title ||
+                                    "Instructions",
                                 position: sectionIndex,
                             })
                             .select("id")
                             .single();
 
                     if (sectionError) {
+                        console.error(
+                            "Error inserting instruction section:",
+                            sectionError,
+                        );
                         throw sectionError;
                     }
 
-                    // Skip steps if there are none
+                    if (!newSection?.id) {
+                        throw new Error(
+                            "Failed to insert instruction section - no ID returned",
+                        );
+                    }
+
+                    // Skip steps if none exist
                     if (!section.steps || section.steps.length === 0) {
                         continue;
                     }
 
-                    // Insert steps for this section
+                    // Then insert steps for this section
                     const stepRecords = section.steps.map((
                         step,
                         stepIndex,
                     ) => ({
-                        recipe_instruction_section_id: insertedSection.id,
+                        section_id: newSection.id,
                         text: step.text || "",
                         position: stepIndex,
                         timing_min: step.timing?.min || null,
@@ -222,23 +499,31 @@ export class RecipeService {
                         timing_units: step.timing?.units || null,
                     }));
 
-                    const { error: stepError } = await supabase
+                    const { error: stepsError } = await supabase
                         .from("recipe_instruction_steps")
                         .insert(stepRecords);
 
-                    if (stepError) {
-                        throw stepError;
+                    if (stepsError) {
+                        console.error(
+                            "Error inserting instruction steps:",
+                            stepsError,
+                        );
+                        throw stepsError;
                     }
                 }
+
+                console.log(
+                    "Successfully inserted all instruction sections and steps",
+                );
             }
 
-            // Return the saved recipe with the new ID
+            // Return the updated recipe with saved ID
             return {
                 ...recipe,
-                id: recipeId,
+                id: savedRecipeId,
             };
         } catch (error) {
-            console.error("Error saving recipe:", error);
+            console.error("Error in saveRecipe:", error);
             throw error;
         }
     }
@@ -467,6 +752,7 @@ export class RecipeService {
             notes: [], // Notes are handled differently now
             tags: [], // Tags are handled differently now
             time_estimate: timeEstimate,
+            user_id: dbRecipe.user_id || undefined, // Include user_id for ownership verification
         };
     }
 }

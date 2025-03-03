@@ -1,4 +1,5 @@
 import { Ingredient } from "../types/recipe";
+import { ensureUuid, isValidUuid } from "./uuid";
 
 // We can't import the component directly here to avoid a circular dependency
 // This will be rendered later at the component level
@@ -6,6 +7,7 @@ export interface IngredientMention {
     id: string;
     display: string;
     ingredient?: Ingredient;
+    scaledQuantity?: number | null;
 }
 
 // Define the step timing interface
@@ -34,6 +36,8 @@ interface InstructionSection {
 export const parseIngredientMentions = (
     text: string,
     ingredients: Ingredient[],
+    servings?: number,
+    originalServings?: number,
 ): (string | IngredientMention)[] => {
     if (!text) return [];
 
@@ -54,11 +58,24 @@ export const parseIngredientMentions = (
         // Find the referenced ingredient
         const ingredient = ingredients.find((ing) => ing.id === id);
 
+        // Calculate scaled quantity if applicable
+        let scaledQuantity = null;
+        if (
+            ingredient?.quantity !== null &&
+            ingredient?.quantity !== undefined &&
+            servings &&
+            originalServings
+        ) {
+            scaledQuantity = (ingredient.quantity * servings) /
+                originalServings;
+        }
+
         // Add the ingredient mention data
         segments.push({
             id,
             display,
             ingredient,
+            scaledQuantity,
         });
 
         lastIndex = match.index + fullMatch.length;
@@ -120,6 +137,19 @@ export const convertSlugReferencesToUuids = (
 ): string => {
     if (!text || !ingredients?.length) return text;
 
+    // Check if we have valid ingredients with UUIDs
+    const validIngredients = ingredients.filter((ing) => {
+        const hasValidUuid = isValidUuid(ing.id);
+        return hasValidUuid && ing.name;
+    });
+
+    if (validIngredients.length === 0) {
+        console.warn(
+            "No valid ingredients with UUIDs found for reference conversion",
+        );
+        return text;
+    }
+
     // Handle multiple reference formats
     // 1. @[display](slug-id)
     // 2. @[display](uuid)
@@ -130,7 +160,7 @@ export const convertSlugReferencesToUuids = (
     const ingredientSlugMap = new Map();
     const ingredientUuidMap = new Map();
 
-    ingredients.forEach((ing) => {
+    validIngredients.forEach((ing) => {
         // Store for lookup by name (case insensitive)
         ingredientNameMap.set(ing.name.toLowerCase(), ing);
 
@@ -139,9 +169,7 @@ export const convertSlugReferencesToUuids = (
         ingredientSlugMap.set(potentialSlug, ing);
 
         // Store for verification of valid UUIDs
-        if (ing.id) {
-            ingredientUuidMap.set(ing.id, ing);
-        }
+        ingredientUuidMap.set(ing.id, ing);
     });
 
     // First pass: handle @[display](slug-id) format
@@ -149,11 +177,10 @@ export const convertSlugReferencesToUuids = (
         /@\[([^\]]+)\]\(([^)]+)\)/g,
         (match, display, id) => {
             // Check if this is already a valid UUID
-            const isUuid =
-                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-                    .test(id);
-            if (isUuid && ingredientUuidMap.has(id)) {
-                // Already a valid UUID, no change needed
+            const isUuidFormat = isValidUuid(id);
+
+            // If it's a valid UUID and exists in our ingredients, no change needed
+            if (isUuidFormat && ingredientUuidMap.has(id)) {
                 return match;
             }
 
@@ -163,32 +190,74 @@ export const convertSlugReferencesToUuids = (
                 return `@[${display}](${ingredient.id})`;
             }
 
-            // If the ID doesn't match, try to match by name
+            // Try to match by name - strip any quantity and unit info from display
             const nameLower = display.toLowerCase();
 
-            // Try exact name match
+            // First try exact name match
             if (ingredientNameMap.has(nameLower)) {
                 const ingredient = ingredientNameMap.get(nameLower);
                 return `@[${display}](${ingredient.id})`;
             }
 
-            // Try partial name match (name might contain quantity and unit)
+            // Extract the likely name from the display text
+            // This handles cases like "2 cups flour" -> "flour"
             const nameWithoutQuantity = nameLower.replace(
-                /^\d+\.?\d*\s*[a-z]*\s+/i,
+                /^(\d+\.?\d*\s*([a-z]+\s+)?)/i,
                 "",
-            );
+            ).trim();
 
-            // Find ingredient with name contained in the display text or vice versa
-            const matchingIngredient = ingredients.find((ing) =>
-                ing.name.toLowerCase().includes(nameWithoutQuantity) ||
-                nameWithoutQuantity.includes(ing.name.toLowerCase())
-            );
+            // Try best match by ingredient name
+            if (nameWithoutQuantity) {
+                // Sort ingredients by name similarity, closest match first
+                const matches = validIngredients
+                    .map((ing) => ({
+                        ingredient: ing,
+                        // Simple similarity measure
+                        similarity: Math.max(
+                            nameWithoutQuantity.includes(ing.name.toLowerCase())
+                                ? 0.8
+                                : 0,
+                            ing.name.toLowerCase().includes(nameWithoutQuantity)
+                                ? 0.7
+                                : 0,
+                            ing.name.toLowerCase() === nameWithoutQuantity
+                                ? 1
+                                : 0,
+                        ),
+                    }))
+                    .filter((match) => match.similarity > 0)
+                    .sort((a, b) => b.similarity - a.similarity);
 
-            if (matchingIngredient) {
-                return `@[${display}](${matchingIngredient.id})`;
+                // Use the best match if found
+                if (matches.length > 0) {
+                    return `@[${display}](${matches[0].ingredient.id})`;
+                }
             }
 
-            // If no match found, leave it as is
+            // If we can't match to an existing ingredient, convert the ID to a valid UUID format
+            if (!isUuidFormat) {
+                const validUuid = ensureUuid(id);
+                console.warn(
+                    `Converting non-UUID reference ID '${id}' to UUID format: ${validUuid}`,
+                );
+                return `@[${display}](${validUuid})`;
+            }
+
+            // If we can't match, print a warning and keep the original
+            console.warn(
+                `Could not find a valid ingredient match for: "${display}" with ID: "${id}"`,
+            );
+
+            // Default to the first ingredient if we must replace with a valid UUID
+            if (validIngredients.length > 0) {
+                console.warn(
+                    `Using fallback ingredient: "${
+                        validIngredients[0].name
+                    }" for reference`,
+                );
+                return `@[${display}](${validIngredients[0].id})`;
+            }
+
             return match;
         },
     );
@@ -198,13 +267,20 @@ export const convertSlugReferencesToUuids = (
         const nameLower = name.toLowerCase();
 
         // Try to find matching ingredient
-        const matchingIngredient = ingredients.find((ing) =>
-            ing.name.toLowerCase().includes(nameLower) ||
-            nameLower.includes(ing.name.toLowerCase())
-        );
+        const matches = validIngredients
+            .map((ing) => ({
+                ingredient: ing,
+                similarity: Math.max(
+                    nameLower.includes(ing.name.toLowerCase()) ? 0.7 : 0,
+                    ing.name.toLowerCase().includes(nameLower) ? 0.6 : 0,
+                    ing.name.toLowerCase() === nameLower ? 1 : 0,
+                ),
+            }))
+            .filter((match) => match.similarity > 0)
+            .sort((a, b) => b.similarity - a.similarity);
 
-        if (matchingIngredient) {
-            return `@[${name}](${matchingIngredient.id})`;
+        if (matches.length > 0) {
+            return `@[${name}](${matches[0].ingredient.id})`;
         }
 
         // If no match found, leave it as is

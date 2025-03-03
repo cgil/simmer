@@ -31,7 +31,13 @@ const HighlightedInstruction: FC<HighlightedInstructionProps> = ({
     }
 
     // Parse the text to get segments (text or ingredient mentions)
-    const segments = parseIngredientMentions(text, ingredients);
+    // Pass servings information to properly handle ingredient scaling
+    const segments = parseIngredientMentions(
+        text,
+        ingredients,
+        servings,
+        originalServings
+    );
 
     return (
         <Typography variant="body1" component="div">
@@ -54,6 +60,7 @@ const HighlightedInstruction: FC<HighlightedInstructionProps> = ({
                         display={mention.display}
                         servings={servings}
                         originalServings={originalServings}
+                        scaledQuantity={mention.scaledQuantity}
                     />
                 );
             })}

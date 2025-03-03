@@ -1,4 +1,5 @@
 import { Recipe } from "../types";
+import { formatIngredientDisplayText } from "../pages/recipe/components/IngredientReferenceMention";
 
 export const scaleQuantity = (
     originalQuantity: number | null,
@@ -40,13 +41,14 @@ export const parseIngredientReferences = (
     // Handle the new @-mention format
     return step.replace(
         /@\[([^\]]+)\]\(([^)]+)\)/g,
-        (match, display, ingredientId) => {
+        (match, _display, ingredientId) => {
             const ingredient = recipe.ingredients.find(
                 (item) => item.id === ingredientId,
             );
 
             if (!ingredient) return match;
 
+            // Calculate scaled quantity
             const scaledQuantity = ingredient.quantity
                 ? scaleQuantity(
                     ingredient.quantity,
@@ -55,12 +57,14 @@ export const parseIngredientReferences = (
                 )
                 : null;
 
-            const quantityStr = scaledQuantity
-                ? `${formatQuantity(scaledQuantity)} ${ingredient.unit || ""} `
-                : "";
+            // Use the formatIngredientDisplayText utility for consistent display
+            const displayText = formatIngredientDisplayText(
+                ingredient,
+                scaledQuantity,
+            );
 
-            // Use the ingredient name for display but maintain the same @-mention format
-            return `@[${quantityStr}${ingredient.name}](${ingredientId})`;
+            // Maintain the same @-mention format with updated display text
+            return `@[${displayText}](${ingredientId})`;
         },
     );
 };
