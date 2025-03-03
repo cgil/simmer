@@ -12,9 +12,11 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import TimerIcon from '@mui/icons-material/Timer';
-import { MOCK_RECIPES } from '../../../mocks/recipes';
 import StepNavigation from './components/StepNavigation';
 import StepContent from './components/StepContent';
+import { RecipeService } from '../../../services/RecipeService';
+import { Recipe } from '../../../types/recipe';
+import { useAuth } from '../../../context/AuthContext';
 
 interface ActiveTimer {
     sectionIndex: number;
@@ -33,12 +35,44 @@ const CookingModePage: FC = () => {
     const location = useLocation();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const { user } = useAuth();
 
-    const recipe = MOCK_RECIPES.find((r) => r.id === id);
+    const [recipe, setRecipe] = useState<Recipe | null>(null);
+    const [loading, setLoading] = useState(true);
     const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
     const [currentStep, setCurrentStep] = useState(0);
     const [servings] = useState(location.state?.servings || 2);
     const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
+
+    // Fetch recipe data
+    useEffect(() => {
+        const fetchRecipe = async () => {
+            if (!id || !user) {
+                navigate('/');
+                return;
+            }
+
+            try {
+                const fetchedRecipe = await RecipeService.getRecipeById(
+                    id,
+                    user.id
+                );
+                if (fetchedRecipe) {
+                    setRecipe(fetchedRecipe);
+                } else {
+                    // Recipe not found
+                    navigate('/');
+                }
+            } catch (error) {
+                console.error('Error fetching recipe:', error);
+                navigate('/');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchRecipe();
+    }, [id, user, navigate]);
 
     // Calculate total steps and current overall step
     const { totalSteps, currentOverallStep } = useMemo(() => {
@@ -170,8 +204,37 @@ const CookingModePage: FC = () => {
         wakeLock();
     }, []);
 
+    // Handle navigation if recipe is not found
+    useEffect(() => {
+        if (!recipe && !loading) {
+            navigate('/');
+        }
+    }, [recipe, navigate, loading]);
+
+    // Early return if recipe is not found or still loading
+    if (loading) {
+        return (
+            <Box
+                sx={{
+                    p: 3,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: '50vh',
+                }}
+            >
+                <Typography variant="h5" sx={{ mb: 2 }}>
+                    Loading recipe...
+                </Typography>
+                <Typography variant="body1">
+                    Preparing your cooking mode experience
+                </Typography>
+            </Box>
+        );
+    }
+
     if (!recipe) {
-        navigate('/');
         return null;
     }
 
