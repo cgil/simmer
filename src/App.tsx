@@ -14,24 +14,74 @@ import RecipePage from './pages/recipe/RecipePage';
 import NewRecipePage from './pages/recipe/NewRecipePage';
 import EditRecipePage from './pages/recipe/EditRecipePage';
 import CookingModePage from './pages/recipe/cooking/CookingModePage';
+import LoginPage from './pages/auth/LoginPage';
+import SignUpPage from './pages/auth/SignUpPage';
+import AuthCallbackPage from './pages/auth/AuthCallbackPage';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import { AuthProvider } from './context/AuthContext';
 
 const App: FC = () => {
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
-            <Router>
-                <Routes>
-                    <Route path="/" element={<CatalogPage />} />
-                    <Route path="/recipe/new" element={<NewRecipePage />} />
-                    <Route path="/recipe/edit" element={<EditRecipePage />} />
-                    <Route path="/recipe/:id" element={<RecipePage />} />
-                    <Route
-                        path="/recipe/:id/cook"
-                        element={<CookingModePage />}
-                    />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-            </Router>
+            <AuthProvider>
+                <Router>
+                    <Routes>
+                        {/* Auth Routes */}
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/signup" element={<SignUpPage />} />
+                        <Route
+                            path="/auth/callback"
+                            element={<AuthCallbackPage />}
+                        />
+
+                        {/* Protected Routes */}
+                        <Route
+                            path="/"
+                            element={
+                                <ProtectedRoute>
+                                    <CatalogPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/recipe/new"
+                            element={
+                                <ProtectedRoute>
+                                    <NewRecipePage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/recipe/edit"
+                            element={
+                                <ProtectedRoute>
+                                    <EditRecipePage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/recipe/:id"
+                            element={
+                                <ProtectedRoute>
+                                    <RecipePage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/recipe/:id/cook"
+                            element={
+                                <ProtectedRoute>
+                                    <CookingModePage />
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* Fallback Route */}
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                </Router>
+            </AuthProvider>
             <SpeedInsights debug={false} />
         </ThemeProvider>
     );

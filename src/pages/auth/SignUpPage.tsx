@@ -1,0 +1,480 @@
+import { useState } from 'react';
+import { Link as RouterLink, Navigate } from 'react-router-dom';
+import {
+    Box,
+    Typography,
+    TextField,
+    Button,
+    Paper,
+    Link,
+    CircularProgress,
+    Alert,
+    InputAdornment,
+    IconButton,
+    Tabs,
+    Tab,
+    Divider,
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import GoogleIcon from '@mui/icons-material/Google';
+import MailOutlineIcon from '@mui/icons-material/MailOutline';
+import { useAuth } from '../../context/AuthContext';
+
+// Custom styled components to match the paper notebook aesthetic
+const StyledPaper = styled(Paper)(({ theme }) => ({
+    position: 'relative',
+    padding: theme.spacing(5),
+    maxWidth: 500,
+    width: 'calc(100% - 32px)',
+    margin: '0 auto',
+    backgroundColor: theme.palette.background.paper,
+    backgroundImage: 'none',
+    backgroundSize: 'cover',
+    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+    borderRadius: theme.spacing(1),
+    '&::before': {
+        content: '""',
+        position: 'absolute',
+        inset: 0,
+        backdropFilter: 'blur(8px)',
+        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+        zIndex: 0,
+        borderRadius: 'inherit',
+        border: '1px solid',
+        borderColor: theme.palette.divider,
+    },
+}));
+
+const ContentBox = styled(Box)({
+    position: 'relative',
+    zIndex: 1,
+});
+
+const StyledButton = styled(Button)(({ theme }) => ({
+    marginTop: theme.spacing(2),
+    borderRadius: theme.spacing(0.75),
+    padding: theme.spacing(1.25, 2),
+    textTransform: 'none',
+    boxShadow: 'none',
+    fontFamily: '"Kalam", cursive',
+    fontWeight: 'bold',
+    '&:focus': {
+        outline: 'none',
+        boxShadow: 'none',
+    },
+    '&.MuiButtonBase-root:focus-visible': {
+        outline: 'none',
+    },
+}));
+
+const GoogleButton = styled(StyledButton)(({ theme }) => ({
+    backgroundColor: '#fff',
+    color: theme.palette.text.primary,
+    border: `1px solid ${theme.palette.divider}`,
+    '&:hover': {
+        backgroundColor: theme.palette.grey[100],
+        border: `1px solid ${theme.palette.divider}`,
+        boxShadow: 'none',
+    },
+}));
+
+interface TabPanelProps {
+    children?: React.ReactNode;
+    index: number;
+    value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+    const { children, value, index, ...other } = props;
+
+    return (
+        <div
+            role="tabpanel"
+            hidden={value !== index}
+            id={`auth-tabpanel-${index}`}
+            aria-labelledby={`auth-tab-${index}`}
+            {...other}
+        >
+            {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+        </div>
+    );
+}
+
+function a11yProps(index: number) {
+    return {
+        id: `auth-tab-${index}`,
+        'aria-controls': `auth-tabpanel-${index}`,
+    };
+}
+
+const SignUpPage = () => {
+    const [tabValue, setTabValue] = useState(0);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const { user, signUp, signInWithMagicLink, signInWithGoogle } = useAuth();
+
+    // If user is already logged in, redirect to home page
+    if (user) {
+        return <Navigate to="/" replace />;
+    }
+
+    const handleTabChange = (
+        _event: React.SyntheticEvent,
+        newValue: number
+    ) => {
+        setTabValue(newValue);
+        setError(null);
+        setSuccessMessage(null);
+    };
+
+    const handleSignUp = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError(null);
+
+        // Validate passwords match
+        if (password !== confirmPassword) {
+            setError('Passwords do not match');
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            const { error, data } = await signUp(email, password);
+            if (error) {
+                setError(error.message);
+            } else if (data) {
+                setSuccessMessage(
+                    'Success! Please check your email to confirm your account.'
+                );
+            }
+        } catch (err) {
+            setError('An unexpected error occurred. Please try again.');
+            console.error(err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleMagicLinkSignUp = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const { error } = await signInWithMagicLink(email);
+            if (error) {
+                setError(error.message);
+            } else {
+                setSuccessMessage('Check your email for the signup link!');
+            }
+        } catch (err) {
+            setError('An unexpected error occurred. Please try again.');
+            console.error(err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleGoogleSignUp = async () => {
+        setError(null);
+        try {
+            await signInWithGoogle();
+        } catch (err) {
+            setError('An unexpected error occurred with Google signup.');
+            console.error(err);
+        }
+    };
+
+    return (
+        <Box
+            sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '100vh',
+                width: '100vw',
+                maxWidth: '100%',
+                margin: 0,
+                padding: 0,
+                backgroundColor: '#F8F7FA',
+                backgroundImage: 'none',
+                backgroundSize: 'cover',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    boxShadow: 'inset 0 0 100px rgba(62, 28, 0, 0.03)',
+                    pointerEvents: 'none',
+                },
+                '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    opacity: 0.3,
+                    pointerEvents: 'none',
+                    backgroundImage: `
+                        linear-gradient(rgba(62, 28, 0, 0.03) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(62, 28, 0, 0.03) 1px, transparent 1px),
+                        radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.03) 1px, transparent 1px)
+                    `,
+                    backgroundSize: '24px 24px, 24px 24px, 12px 12px',
+                    backgroundPosition: '-1px -1px, -1px -1px, -1px -1px',
+                    mixBlendMode: 'multiply',
+                },
+            }}
+        >
+            <StyledPaper elevation={3}>
+                <ContentBox>
+                    <Typography
+                        variant="h4"
+                        align="center"
+                        gutterBottom
+                        sx={{
+                            fontFamily: '"Kalam", cursive',
+                            fontWeight: 'bold',
+                            color: 'primary.main',
+                            mb: 3,
+                        }}
+                    >
+                        Create an Account
+                    </Typography>
+
+                    <Typography
+                        variant="body1"
+                        align="center"
+                        sx={{ mb: 4, color: 'text.secondary' }}
+                    >
+                        Sign up to start your recipe journey
+                    </Typography>
+
+                    <Tabs
+                        value={tabValue}
+                        onChange={handleTabChange}
+                        variant="fullWidth"
+                        sx={{
+                            mb: 2,
+                            '& .MuiTabs-indicator': {
+                                backgroundColor: 'primary.main',
+                            },
+                            '& .MuiTab-root': {
+                                '&:focus': {
+                                    outline: 'none',
+                                },
+                                '&.Mui-focusVisible': {
+                                    outline: 'none',
+                                },
+                            },
+                        }}
+                    >
+                        <Tab
+                            label="Email & Password"
+                            {...a11yProps(0)}
+                            sx={{
+                                fontFamily: '"Inter", sans-serif',
+                                textTransform: 'none',
+                            }}
+                        />
+                        <Tab
+                            label="Magic Link"
+                            {...a11yProps(1)}
+                            sx={{
+                                fontFamily: '"Inter", sans-serif',
+                                textTransform: 'none',
+                            }}
+                        />
+                    </Tabs>
+
+                    {error && (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            {error}
+                        </Alert>
+                    )}
+
+                    {successMessage && (
+                        <Alert severity="success" sx={{ mb: 2 }}>
+                            {successMessage}
+                        </Alert>
+                    )}
+
+                    <TabPanel value={tabValue} index={0}>
+                        <form onSubmit={handleSignUp}>
+                            <TextField
+                                label="Email"
+                                type="email"
+                                fullWidth
+                                variant="outlined"
+                                margin="normal"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                disabled={isLoading || !!successMessage}
+                                required
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: 1,
+                                    },
+                                }}
+                            />
+                            <TextField
+                                label="Password"
+                                type={showPassword ? 'text' : 'password'}
+                                fullWidth
+                                variant="outlined"
+                                margin="normal"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                disabled={isLoading || !!successMessage}
+                                required
+                                InputProps={{
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                onClick={() =>
+                                                    setShowPassword(
+                                                        !showPassword
+                                                    )
+                                                }
+                                                edge="end"
+                                                aria-label={
+                                                    showPassword
+                                                        ? 'Hide password'
+                                                        : 'Show password'
+                                                }
+                                            >
+                                                {showPassword ? (
+                                                    <VisibilityOffIcon />
+                                                ) : (
+                                                    <VisibilityIcon />
+                                                )}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: 1,
+                                    },
+                                }}
+                            />
+                            <TextField
+                                label="Confirm Password"
+                                type={showPassword ? 'text' : 'password'}
+                                fullWidth
+                                variant="outlined"
+                                margin="normal"
+                                value={confirmPassword}
+                                onChange={(e) =>
+                                    setConfirmPassword(e.target.value)
+                                }
+                                disabled={isLoading || !!successMessage}
+                                required
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: 1,
+                                    },
+                                }}
+                            />
+                            <StyledButton
+                                type="submit"
+                                fullWidth
+                                variant="contained"
+                                color="primary"
+                                disabled={isLoading || !!successMessage}
+                            >
+                                {isLoading ? (
+                                    <CircularProgress size={24} />
+                                ) : (
+                                    'Sign Up'
+                                )}
+                            </StyledButton>
+                        </form>
+                    </TabPanel>
+
+                    <TabPanel value={tabValue} index={1}>
+                        <form onSubmit={handleMagicLinkSignUp}>
+                            <TextField
+                                label="Email"
+                                type="email"
+                                fullWidth
+                                variant="outlined"
+                                margin="normal"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                disabled={isLoading || !!successMessage}
+                                required
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: 1,
+                                    },
+                                }}
+                            />
+                            <StyledButton
+                                type="submit"
+                                fullWidth
+                                variant="contained"
+                                color="primary"
+                                disabled={isLoading || !!successMessage}
+                                startIcon={<MailOutlineIcon />}
+                            >
+                                {isLoading ? (
+                                    <CircularProgress size={24} />
+                                ) : successMessage ? (
+                                    'Email Sent'
+                                ) : (
+                                    'Email Me a Sign Up Link'
+                                )}
+                            </StyledButton>
+                        </form>
+                    </TabPanel>
+
+                    <Divider sx={{ my: 3, color: 'text.secondary' }}>
+                        or
+                    </Divider>
+
+                    <GoogleButton
+                        fullWidth
+                        onClick={handleGoogleSignUp}
+                        startIcon={<GoogleIcon />}
+                    >
+                        Continue with Google
+                    </GoogleButton>
+
+                    <Box sx={{ mt: 3, textAlign: 'center' }}>
+                        <Typography variant="body2">
+                            Already have an account?{' '}
+                            <Link
+                                component={RouterLink}
+                                to="/login"
+                                sx={{
+                                    color: 'secondary.contrastText',
+                                    textDecoration: 'none',
+                                    fontWeight: 500,
+                                }}
+                            >
+                                Sign in
+                            </Link>
+                        </Typography>
+                    </Box>
+                </ContentBox>
+            </StyledPaper>
+        </Box>
+    );
+};
+
+export default SignUpPage;
