@@ -1350,7 +1350,11 @@ const EditRecipePage: FC = () => {
                 PaperProps={{
                     sx: {
                         maxHeight: 300,
-                        width: 200,
+                        width: 'auto',
+                        minWidth: 200,
+                        maxWidth: 400,
+                        border: '1px solid rgba(0, 0, 0, 0.23)',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
                     },
                 }}
             >
@@ -1359,13 +1363,41 @@ const EditRecipePage: FC = () => {
                         key={ingredient.id}
                         onClick={() => handleIngredientClick(ingredient)}
                         sx={{
-                            py: 1.5,
+                            display: 'flex',
+                            width: '100%',
                             '&:hover': {
                                 bgcolor: 'primary.lighter',
                             },
                         }}
                     >
-                        {ingredient.name}
+                        <Typography
+                            noWrap
+                            sx={{
+                                flexGrow: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                            }}
+                        >
+                            {ingredient.name}
+                        </Typography>
+                        {ingredient.quantity !== null &&
+                            ingredient.quantity !== undefined && (
+                                <Typography
+                                    component="span"
+                                    variant="body2"
+                                    color="text.secondary"
+                                    sx={{
+                                        ml: 1,
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    ({ingredient.quantity}
+                                    {ingredient.unit
+                                        ? ' ' + ingredient.unit
+                                        : ''}
+                                    )
+                                </Typography>
+                            )}
                     </MenuItem>
                 ))}
             </Menu>
