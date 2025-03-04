@@ -18,6 +18,7 @@ import AddIcon from '@mui/icons-material/Add';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
+import LoginIcon from '@mui/icons-material/Login';
 import { useAuth } from '../../context/AuthContext';
 interface AppLayoutProps {
     children: ReactNode;
@@ -56,6 +57,10 @@ const AppLayout: FC<AppLayoutProps> = ({
     const handleLogout = async () => {
         handleUserMenuClose();
         await signOut();
+        navigate('/login');
+    };
+
+    const handleSignIn = () => {
         navigate('/login');
     };
 
@@ -213,7 +218,7 @@ const AppLayout: FC<AppLayoutProps> = ({
                             {/* Display the action button if provided */}
                             {actionButton}
 
-                            {showAddButton && (
+                            {user && showAddButton && (
                                 <Button
                                     variant="contained"
                                     onClick={() => navigate('/recipe/new')}
@@ -260,105 +265,149 @@ const AppLayout: FC<AppLayoutProps> = ({
                                 </Button>
                             )}
 
-                            {/* User Account Menu */}
-                            <IconButton
-                                onClick={handleUserMenuClick}
-                                size="small"
-                                aria-controls={open ? 'user-menu' : undefined}
-                                aria-haspopup="true"
-                                aria-expanded={open ? 'true' : undefined}
-                                sx={{
-                                    ml: 1,
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    borderRadius: '50%',
-                                    padding: '4px',
-                                    bgcolor: 'background.paper',
-                                    '&:hover': {
+                            {/* User Account Menu for authenticated users */}
+                            {user ? (
+                                <>
+                                    <IconButton
+                                        onClick={handleUserMenuClick}
+                                        size="small"
+                                        aria-controls={
+                                            open ? 'user-menu' : undefined
+                                        }
+                                        aria-haspopup="true"
+                                        aria-expanded={
+                                            open ? 'true' : undefined
+                                        }
+                                        sx={{
+                                            ml: 1,
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                            borderRadius: '50%',
+                                            padding: '4px',
+                                            bgcolor: 'background.paper',
+                                            '&:hover': {
+                                                bgcolor: 'background.paper',
+                                                borderColor: 'primary.main',
+                                            },
+                                        }}
+                                    >
+                                        {user.user_metadata?.avatar_url ? (
+                                            <Avatar
+                                                src={
+                                                    user.user_metadata
+                                                        .avatar_url
+                                                }
+                                                alt={
+                                                    user.email?.charAt(0) || 'U'
+                                                }
+                                                sx={{ width: 30, height: 30 }}
+                                            />
+                                        ) : (
+                                            <AccountCircleIcon
+                                                sx={{
+                                                    fontSize: 30,
+                                                    color: 'primary.main',
+                                                }}
+                                            />
+                                        )}
+                                    </IconButton>
+                                    <Menu
+                                        id="user-menu"
+                                        anchorEl={anchorEl}
+                                        open={open}
+                                        onClose={handleUserMenuClose}
+                                        MenuListProps={{
+                                            'aria-labelledby': 'user-button',
+                                        }}
+                                        PaperProps={{
+                                            elevation: 2,
+                                            sx: {
+                                                mt: 1.5,
+                                                minWidth: 180,
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                borderRadius: 1,
+                                                bgcolor: 'paper.light',
+                                                backgroundImage: 'none',
+                                                backgroundSize: 'cover',
+                                                '&::before': {
+                                                    content: '""',
+                                                    position: 'absolute',
+                                                    inset: 0,
+                                                    backdropFilter: 'blur(8px)',
+                                                    backgroundColor:
+                                                        'rgba(255, 255, 255, 0.7)',
+                                                    zIndex: 0,
+                                                    borderRadius: 'inherit',
+                                                },
+                                            },
+                                        }}
+                                    >
+                                        <Box
+                                            sx={{
+                                                position: 'relative',
+                                                zIndex: 1,
+                                            }}
+                                        >
+                                            {user.email && (
+                                                <MenuItem
+                                                    sx={{
+                                                        fontSize: '0.875rem',
+                                                        color: 'text.secondary',
+                                                        pointerEvents: 'none',
+                                                        opacity: 0.8,
+                                                    }}
+                                                >
+                                                    {user.email}
+                                                </MenuItem>
+                                            )}
+                                            <MenuItem
+                                                onClick={handleLogout}
+                                                sx={{
+                                                    fontSize: '0.875rem',
+                                                    color: 'primary.main',
+                                                    '&:hover': {
+                                                        bgcolor:
+                                                            'rgba(44, 62, 80, 0.04)',
+                                                    },
+                                                }}
+                                            >
+                                                <ExitToAppIcon
+                                                    fontSize="small"
+                                                    sx={{ mr: 1 }}
+                                                />
+                                                Sign Out
+                                            </MenuItem>
+                                        </Box>
+                                    </Menu>
+                                </>
+                            ) : (
+                                // Sign In icon button for non-authenticated users
+                                <IconButton
+                                    onClick={handleSignIn}
+                                    size="small"
+                                    aria-label="Sign In"
+                                    sx={{
+                                        ml: 1,
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                        borderRadius: '50%',
+                                        padding: '4px',
                                         bgcolor: 'background.paper',
-                                        borderColor: 'primary.main',
-                                    },
-                                }}
-                            >
-                                {user?.user_metadata?.avatar_url ? (
-                                    <Avatar
-                                        src={user.user_metadata.avatar_url}
-                                        alt={user.email?.charAt(0) || 'U'}
-                                        sx={{ width: 30, height: 30 }}
-                                    />
-                                ) : (
-                                    <AccountCircleIcon
+                                        '&:hover': {
+                                            bgcolor: 'background.paper',
+                                            borderColor: 'primary.main',
+                                        },
+                                    }}
+                                >
+                                    <LoginIcon
                                         sx={{
                                             fontSize: 30,
                                             color: 'primary.main',
                                         }}
                                     />
-                                )}
-                            </IconButton>
-                            <Menu
-                                id="user-menu"
-                                anchorEl={anchorEl}
-                                open={open}
-                                onClose={handleUserMenuClose}
-                                MenuListProps={{
-                                    'aria-labelledby': 'user-button',
-                                }}
-                                PaperProps={{
-                                    elevation: 2,
-                                    sx: {
-                                        mt: 1.5,
-                                        minWidth: 180,
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                        borderRadius: 1,
-                                        bgcolor: 'paper.light',
-                                        backgroundImage: 'none',
-                                        backgroundSize: 'cover',
-                                        '&::before': {
-                                            content: '""',
-                                            position: 'absolute',
-                                            inset: 0,
-                                            backdropFilter: 'blur(8px)',
-                                            backgroundColor:
-                                                'rgba(255, 255, 255, 0.7)',
-                                            zIndex: 0,
-                                            borderRadius: 'inherit',
-                                        },
-                                    },
-                                }}
-                            >
-                                <Box sx={{ position: 'relative', zIndex: 1 }}>
-                                    {user?.email && (
-                                        <MenuItem
-                                            sx={{
-                                                fontSize: '0.875rem',
-                                                color: 'text.secondary',
-                                                pointerEvents: 'none',
-                                                opacity: 0.8,
-                                            }}
-                                        >
-                                            {user.email}
-                                        </MenuItem>
-                                    )}
-                                    <MenuItem
-                                        onClick={handleLogout}
-                                        sx={{
-                                            fontSize: '0.875rem',
-                                            color: 'primary.main',
-                                            '&:hover': {
-                                                bgcolor:
-                                                    'rgba(44, 62, 80, 0.04)',
-                                            },
-                                        }}
-                                    >
-                                        <ExitToAppIcon
-                                            fontSize="small"
-                                            sx={{ mr: 1 }}
-                                        />
-                                        Sign Out
-                                    </MenuItem>
-                                </Box>
-                            </Menu>
+                                </IconButton>
+                            )}
                         </Box>
                     </Toolbar>
                 </Container>

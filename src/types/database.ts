@@ -24,6 +24,7 @@ export interface Database {
                     user_id: string | null;
                     created_at: string;
                     updated_at: string;
+                    is_public: boolean;
                 };
                 Insert: Omit<
                     Database["public"]["Tables"]["recipes"]["Row"],

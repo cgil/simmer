@@ -10,6 +10,7 @@ export interface Recipe {
     tags: string[];
     time_estimate?: TimeEstimate;
     user_id?: string;
+    is_public?: boolean;
 }
 
 export interface Ingredient {

@@ -151,6 +151,7 @@ export class RecipeService {
                         servings: recipe.servings || 2,
                         tags: recipe.tags || [],
                         notes: recipe.notes || [],
+                        is_public: true, // Set is_public to true by default
                     })
                     .select("id")
                     .single();
@@ -213,6 +214,7 @@ export class RecipeService {
                                     servings: recipe.servings || 2,
                                     tags: recipe.tags || [],
                                     notes: recipe.notes || [],
+                                    is_public: true, // Set is_public to true by default
                                 })
                                 .select("id")
                                 .single();
@@ -297,6 +299,7 @@ export class RecipeService {
                                     servings: recipe.servings || 2,
                                     tags: recipe.tags || [],
                                     notes: recipe.notes || [],
+                                    is_public: true, // Set is_public to true by default
                                 })
                                 .select("id")
                                 .single();
@@ -560,6 +563,8 @@ export class RecipeService {
 
     /**
      * Get a recipe by ID
+     * If userId is provided, get recipe owned by that user
+     * If userId is not provided, only return the recipe if it's public
      */
     static async getRecipeById(
         recipeId: string,
@@ -582,9 +587,13 @@ export class RecipeService {
                 )
                 .eq("id", recipeId);
 
-            // Add user filter if provided
+            // Add user filter or public filter based on whether userId is provided
             if (userId) {
-                query = query.eq("user_id", userId);
+                // If userId is provided, get recipe owned by that user OR public recipes
+                query = query.or(`user_id.eq.${userId},is_public.eq.true`);
+            } else {
+                // If no userId, only return public recipes
+                query = query.eq("is_public", true);
             }
 
             // Complete query with ordering and execution
@@ -753,6 +762,71 @@ export class RecipeService {
             tags: dbRecipe.tags || [], // Use database tags
             time_estimate: timeEstimate,
             user_id: dbRecipe.user_id || undefined, // Include user_id for ownership verification
+            is_public: dbRecipe.is_public || false, // Include is_public flag
         };
+    }
+
+    /**
+     * Update the public status of a recipe
+     *
+     * @param recipeId - The ID of the recipe to update
+     * @param isPublic - The new public status
+     * @param userId - The ID of the user who owns the recipe
+     * @returns A boolean indicating whether the update was successful
+     */
+    static async updateRecipePublicStatus(
+        recipeId: string,
+        isPublic: boolean,
+        userId: string,
+    ): Promise<boolean> {
+        if (!recipeId || !userId) {
+            throw new Error("Recipe ID and user ID are required");
+        }
+
+        try {
+            // Verify ownership before updating
+            const { data: existingRecipe, error: getError } = await supabase
+                .from("recipes")
+                .select("id, user_id")
+                .eq("id", recipeId)
+                .maybeSingle();
+
+            if (getError) {
+                console.error(
+                    "Error retrieving recipe for ownership verification:",
+                    getError,
+                );
+                throw getError;
+            }
+
+            // Check if recipe exists and user has permission
+            if (!existingRecipe) {
+                throw new Error(`Recipe with ID ${recipeId} not found`);
+            } else if (existingRecipe.user_id !== userId) {
+                throw new Error(
+                    `You don't have permission to update this recipe. Recipe belongs to user ${existingRecipe.user_id}, but you are ${userId}`,
+                );
+            }
+
+            // Update the recipe's public status
+            const { error: updateError } = await supabase
+                .from("recipes")
+                .update({ is_public: isPublic })
+                .eq("id", recipeId)
+                .eq("user_id", userId); // Double-check ownership in the update query
+
+            if (updateError) {
+                console.error(
+                    "Error updating recipe public status:",
+                    updateError,
+                );
+                throw updateError;
+            }
+
+            return true;
+        } catch (error) {
+            console.error("Error in updateRecipePublicStatus:", error);
+            throw error;
+        }
     }
 }

@@ -47,16 +47,18 @@ const CookingModePage: FC = () => {
     // Fetch recipe data
     useEffect(() => {
         const fetchRecipe = async () => {
-            if (!id || !user) {
+            if (!id) {
                 navigate('/');
                 return;
             }
 
             try {
+                // Pass user ID if available, but don't require it for public recipes
                 const fetchedRecipe = await RecipeService.getRecipeById(
                     id,
-                    user.id
+                    user?.id
                 );
+
                 if (fetchedRecipe) {
                     setRecipe(fetchedRecipe);
                 } else {
@@ -72,7 +74,7 @@ const CookingModePage: FC = () => {
         };
 
         fetchRecipe();
-    }, [id, user, navigate]);
+    }, [id, navigate, user?.id]);
 
     // Calculate total steps and current overall step
     const { totalSteps, currentOverallStep } = useMemo(() => {
@@ -288,15 +290,39 @@ const CookingModePage: FC = () => {
                     boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                 }}
             >
-                <Typography
-                    variant={isMobile ? 'h6' : 'h5'}
-                    sx={{
-                        fontFamily: "'Kalam', cursive",
-                        color: 'primary.main',
-                    }}
-                >
-                    {recipe.title}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    {!user ? (
+                        // For non-authenticated users, show Simmer logo link
+                        <Box
+                            onClick={() => navigate('/login')}
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                cursor: 'pointer',
+                                mr: 2,
+                            }}
+                        >
+                            <Typography
+                                variant={isMobile ? 'h6' : 'h5'}
+                                sx={{
+                                    fontFamily: "'Kalam', cursive",
+                                    color: 'primary.main',
+                                }}
+                            >
+                                Simmer
+                            </Typography>
+                        </Box>
+                    ) : null}
+                    <Typography
+                        variant={isMobile ? 'h6' : 'h5'}
+                        sx={{
+                            fontFamily: "'Kalam', cursive",
+                            color: 'primary.main',
+                        }}
+                    >
+                        {recipe.title}
+                    </Typography>
+                </Box>
                 <IconButton
                     onClick={() => navigate(`/recipe/${recipe.id}`)}
                     size={isMobile ? 'small' : 'medium'}

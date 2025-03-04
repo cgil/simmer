@@ -67,17 +67,19 @@ const RecipePage: FC = () => {
 
     // Fetch recipe if not provided in location state
     useEffect(() => {
-        if (!id || !user || initialRecipe) return;
+        if (!id || initialRecipe) return;
 
         const fetchRecipe = async () => {
             setLoading(true);
             setError(null);
 
             try {
+                // Pass user ID if available, but don't require it for public recipes
                 const fetchedRecipe = await RecipeService.getRecipeById(
                     id,
-                    user.id
+                    user?.id
                 );
+
                 if (fetchedRecipe) {
                     setRecipe(fetchedRecipe);
                     setServings(fetchedRecipe.servings || 2);
@@ -93,7 +95,7 @@ const RecipePage: FC = () => {
         };
 
         fetchRecipe();
-    }, [id, user, initialRecipe]);
+    }, [id, initialRecipe, user?.id]);
 
     // When edit button is clicked, navigate to edit page with recipe data
     const handleEditClick = () => {
@@ -310,31 +312,57 @@ const RecipePage: FC = () => {
                 width: '100%',
             }}
         >
-            <Box
-                onClick={() => navigate('/')}
-                sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    cursor: 'pointer',
-                    color: 'text.primary',
-                    '&:hover': {
-                        color: 'primary.main',
-                    },
-                }}
-            >
-                <ArrowBackIcon sx={{ fontSize: 24 }} />
-                <Typography
-                    variant="body1"
+            {user ? (
+                // Show back button for authenticated users
+                <Box
+                    onClick={() => navigate('/')}
                     sx={{
-                        fontWeight: 500,
-                        fontSize: { xs: '1rem', sm: '1.125rem' },
-                        fontFamily: "'Inter', sans-serif",
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        cursor: 'pointer',
+                        color: 'text.primary',
+                        '&:hover': {
+                            color: 'primary.main',
+                        },
                     }}
                 >
-                    Back
-                </Typography>
-            </Box>
+                    <ArrowBackIcon sx={{ fontSize: 24 }} />
+                    <Typography
+                        variant="body1"
+                        sx={{
+                            fontWeight: 500,
+                            fontSize: { xs: '1rem', sm: '1.125rem' },
+                            fontFamily: "'Inter', sans-serif",
+                        }}
+                    >
+                        Back
+                    </Typography>
+                </Box>
+            ) : (
+                // Show Simmer logo for non-authenticated users
+                <Box
+                    onClick={() => navigate('/login')}
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                    }}
+                >
+                    <Typography
+                        variant={isMobile ? 'h6' : 'h5'}
+                        component="h1"
+                        sx={{
+                            fontWeight: 700,
+                            color: 'primary.main',
+                            letterSpacing: '-0.5px',
+                            fontFamily: "'Kalam', cursive",
+                        }}
+                    >
+                        Simmer
+                    </Typography>
+                </Box>
+            )}
         </Box>
     );
 

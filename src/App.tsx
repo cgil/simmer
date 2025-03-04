@@ -18,6 +18,7 @@ import LoginPage from './pages/auth/LoginPage';
 import SignUpPage from './pages/auth/SignUpPage';
 import AuthCallbackPage from './pages/auth/AuthCallbackPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import PublicRecipeRoute from './components/auth/PublicRecipeRoute';
 import { AuthProvider } from './context/AuthContext';
 
 const App: FC = () => {
@@ -63,17 +64,17 @@ const App: FC = () => {
                         <Route
                             path="/recipe/:id"
                             element={
-                                <ProtectedRoute>
+                                <PublicRecipeRoute>
                                     <RecipePage />
-                                </ProtectedRoute>
+                                </PublicRecipeRoute>
                             }
                         />
                         <Route
                             path="/recipe/:id/cook"
                             element={
-                                <ProtectedRoute>
+                                <PublicRecipeRoute>
                                     <CookingModePage />
-                                </ProtectedRoute>
+                                </PublicRecipeRoute>
                             }
                         />
 
