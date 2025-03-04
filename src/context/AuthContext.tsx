@@ -87,12 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         try {
-            // Check if this is a new sign-in
-            const {
-                data: { session },
-            } = await supabase.auth.getSession();
-            const existingUser = session?.user;
-
+            // We'll rely on the error response to determine if user exists
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
@@ -101,14 +96,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             });
 
             if (error) {
-                return { error };
+                // Check if error is related to user not existing (401 Unauthorized)
+                const isUserNotFound =
+                    error.message?.includes('user not found') ||
+                    error.message?.includes('Invalid login credentials') ||
+                    error.status === 401;
+
+                return {
+                    error,
+                    isNewUser: isUserNotFound,
+                };
             }
 
-            // If there was no existing user, this is likely a new sign-up
-            return {
-                error: null,
-                isNewUser: !existingUser,
-            };
+            return { error: null };
         } catch (error) {
             console.error('Error during Google sign-in:', error);
             return {

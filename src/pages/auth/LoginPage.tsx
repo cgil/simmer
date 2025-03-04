@@ -107,14 +107,17 @@ const LoginPage = () => {
             const { error, isNewUser } = await signInWithGoogle();
 
             if (error) {
-                setError(error.message);
-            } else if (isNewUser) {
-                // Show a friendly informational message about creating a new account
-                setInfoMessage(
-                    "We don't recognize that Google account. We're creating a new Simmer account for you now!"
-                );
-                // You could also redirect to a welcome page or onboarding flow here
+                if (isNewUser) {
+                    // If it's a new user trying to sign in, show friendly message
+                    setInfoMessage(
+                        "We don't recognize that Google account. We're creating a new Simmer account for you now!"
+                    );
+                } else {
+                    // Show the actual error for other issues
+                    setError(error.message);
+                }
             }
+            // If no error, the OAuth flow will handle the redirect automatically
         } catch (err) {
             setError('An unexpected error occurred with Google login.');
             console.error(err);
@@ -223,14 +226,16 @@ const LoginPage = () => {
                             sx={{
                                 mb: 2,
                                 backgroundColor: (theme) =>
-                                    theme.palette.info.light,
+                                    theme.palette.secondary.main,
                                 border: (theme) =>
-                                    `1px solid ${theme.palette.info.main}`,
+                                    `1px solid ${theme.palette.secondary.main}`,
                                 '& .MuiAlert-icon': {
-                                    color: (theme) => theme.palette.info.main,
+                                    color: (theme) =>
+                                        theme.palette.secondary.contrastText,
                                 },
                                 '& .MuiAlert-message': {
-                                    color: (theme) => theme.palette.info.dark,
+                                    color: (theme) =>
+                                        theme.palette.secondary.contrastText,
                                     fontWeight: 500,
                                 },
                             }}
