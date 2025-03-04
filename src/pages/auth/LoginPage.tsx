@@ -70,6 +70,7 @@ const LoginPage = () => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [infoMessage, setInfoMessage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
     const { user, signIn, signInWithGoogle } = useAuth();
@@ -83,6 +84,7 @@ const LoginPage = () => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
+        setInfoMessage(null);
 
         try {
             const { error } = await signIn(email, password);
@@ -99,11 +101,25 @@ const LoginPage = () => {
 
     const handleGoogleLogin = async () => {
         setError(null);
+        setInfoMessage(null);
+        setIsLoading(true);
         try {
-            await signInWithGoogle();
+            const { error, isNewUser } = await signInWithGoogle();
+
+            if (error) {
+                setError(error.message);
+            } else if (isNewUser) {
+                // Show a friendly informational message about creating a new account
+                setInfoMessage(
+                    "We don't recognize that Google account. We're creating a new Simmer account for you now!"
+                );
+                // You could also redirect to a welcome page or onboarding flow here
+            }
         } catch (err) {
             setError('An unexpected error occurred with Google login.');
             console.error(err);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -198,6 +214,28 @@ const LoginPage = () => {
                             }}
                         >
                             {error}
+                        </Alert>
+                    )}
+
+                    {infoMessage && (
+                        <Alert
+                            severity="info"
+                            sx={{
+                                mb: 2,
+                                backgroundColor: (theme) =>
+                                    theme.palette.info.light,
+                                border: (theme) =>
+                                    `1px solid ${theme.palette.info.main}`,
+                                '& .MuiAlert-icon': {
+                                    color: (theme) => theme.palette.info.main,
+                                },
+                                '& .MuiAlert-message': {
+                                    color: (theme) => theme.palette.info.dark,
+                                    fontWeight: 500,
+                                },
+                            }}
+                        >
+                            {infoMessage}
                         </Alert>
                     )}
 

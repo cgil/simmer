@@ -19,7 +19,10 @@ type AuthContextType = {
     ) => Promise<{
         error: Error | null;
     }>;
-    signInWithGoogle: () => Promise<void>;
+    signInWithGoogle: () => Promise<{
+        error: Error | null;
+        isNewUser?: boolean;
+    }>;
     signUp: (
         email: string,
         password: string
@@ -83,12 +86,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             redirectTo = 'https://simmer-app.vercel.app';
         }
 
-        await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo,
-            },
-        });
+        try {
+            // Check if this is a new sign-in
+            const {
+                data: { session },
+            } = await supabase.auth.getSession();
+            const existingUser = session?.user;
+
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo,
+                },
+            });
+
+            if (error) {
+                return { error };
+            }
+
+            // If there was no existing user, this is likely a new sign-up
+            return {
+                error: null,
+                isNewUser: !existingUser,
+            };
+        } catch (error) {
+            console.error('Error during Google sign-in:', error);
+            return {
+                error:
+                    error instanceof Error
+                        ? error
+                        : new Error('Unknown error during sign-in'),
+            };
+        }
     };
 
     const signUp = async (email: string, password: string) => {
