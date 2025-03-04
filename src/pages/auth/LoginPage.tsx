@@ -201,6 +201,22 @@ const LoginPage = () => {
                         </Alert>
                     )}
 
+                    <StyledButton
+                        fullWidth
+                        variant="contained"
+                        color="primary"
+                        startIcon={<GoogleIcon />}
+                        onClick={handleGoogleLogin}
+                        disabled={isLoading}
+                        sx={{ mb: 1 }}
+                    >
+                        Sign in with Google
+                    </StyledButton>
+
+                    <Divider sx={{ my: 3, color: 'text.secondary' }}>
+                        or continue with email
+                    </Divider>
+
                     <form onSubmit={handleEmailLogin}>
                         <TextField
                             label="Email"
@@ -271,21 +287,6 @@ const LoginPage = () => {
                             )}
                         </StyledButton>
                     </form>
-
-                    <Divider sx={{ my: 3, color: 'text.secondary' }}>
-                        or
-                    </Divider>
-
-                    <StyledButton
-                        fullWidth
-                        variant="outlined"
-                        color="primary"
-                        startIcon={<GoogleIcon />}
-                        onClick={handleGoogleLogin}
-                        disabled={isLoading}
-                    >
-                        Sign in with Google
-                    </StyledButton>
 
                     <Box
                         sx={{

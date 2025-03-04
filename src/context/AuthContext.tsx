@@ -7,6 +7,7 @@ import {
 } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import config from '../config';
 
 type AuthContextType = {
     user: User | null;
@@ -74,10 +75,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const signInWithGoogle = async () => {
+        // Determine the redirectTo URL based on the current environment
+        let redirectTo = window.location.origin;
+
+        // For production environment, use the production URL
+        if (config.environment === 'production') {
+            redirectTo = 'https://simmer-app.vercel.app';
+        }
+
         await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.origin,
+                redirectTo,
             },
         });
     };

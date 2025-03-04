@@ -251,6 +251,22 @@ const SignUpPage = () => {
                         </Alert>
                     )}
 
+                    <StyledButton
+                        fullWidth
+                        variant="contained"
+                        color="primary"
+                        onClick={handleGoogleSignUp}
+                        startIcon={<GoogleIcon />}
+                        disabled={isLoading || !!successMessage}
+                        sx={{ mb: 1 }}
+                    >
+                        Continue with Google
+                    </StyledButton>
+
+                    <Divider sx={{ my: 3, color: 'text.secondary' }}>
+                        or sign up with email
+                    </Divider>
+
                     <form onSubmit={handleSignUp}>
                         <TextField
                             label="Email"
@@ -346,31 +362,6 @@ const SignUpPage = () => {
                             )}
                         </StyledButton>
                     </form>
-
-                    <Divider sx={{ my: 3, color: 'text.secondary' }}>
-                        or
-                    </Divider>
-
-                    <StyledButton
-                        fullWidth
-                        onClick={handleGoogleSignUp}
-                        startIcon={<GoogleIcon />}
-                        sx={{
-                            backgroundColor: '#fff',
-                            color: (theme) => theme.palette.text.primary,
-                            border: (theme) =>
-                                `1px solid ${theme.palette.divider}`,
-                            '&:hover': {
-                                backgroundColor: (theme) =>
-                                    theme.palette.grey[100],
-                                border: (theme) =>
-                                    `1px solid ${theme.palette.divider}`,
-                                boxShadow: 'none',
-                            },
-                        }}
-                    >
-                        Continue with Google
-                    </StyledButton>
 
                     <Box
                         sx={{
