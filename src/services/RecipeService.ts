@@ -656,6 +656,7 @@ export class RecipeService {
         searchText?: string,
         tags?: string[],
     ): Promise<Recipe[]> {
+        // Base query to get recipes for the user
         let query = supabase
             .from("recipes")
             .select(`
@@ -669,33 +670,107 @@ export class RecipeService {
             `)
             .eq("user_id", userId);
 
-        // Add text search if provided
-        if (searchText && searchText.trim()) {
-            query = query.textSearch("title", searchText, {
-                config: "english",
-                type: "websearch",
-            });
-        }
-
         // Add tag filtering if provided
         if (tags && tags.length > 0) {
             // Use array containment operator
-            // This returns recipes where the recipes.tags array contains ANY of the provided tags
             query = query.contains("tags", tags);
         }
 
-        const { data: recipes, error } = await query.order("title");
+        const { data: recipes, error } = await query;
 
         if (error) {
-            console.error("Error searching recipes:", error);
+            console.error("Error fetching recipes:", error);
             throw error;
         }
 
-        return recipes
-            ? recipes.map((recipe) =>
-                this.mapDbRecipeToRecipe(recipe as RecipeWithRelations)
-            )
-            : [];
+        // If no search text, just return all recipes
+        if (!searchText || !searchText.trim()) {
+            return recipes
+                ? recipes.map((recipe) =>
+                    this.mapDbRecipeToRecipe(recipe as RecipeWithRelations)
+                ).sort((a, b) => a.title.localeCompare(b.title))
+                : [];
+        }
+
+        // Process search with priorities if we have search text
+        const normalizedSearchText = searchText.toLowerCase().trim();
+
+        // If we have recipes, filter and sort them by relevance
+        if (recipes && recipes.length > 0) {
+            const typedRecipes = recipes as RecipeWithRelations[];
+
+            // Create scoring object to track matches and their relevance
+            const scoredRecipes = typedRecipes.map((recipe) => {
+                let score = 0;
+                let titleMatch = false;
+                let tagMatch = false;
+                let ingredientMatch = false;
+
+                // Title match (highest priority)
+                if (recipe.title.toLowerCase().includes(normalizedSearchText)) {
+                    score += 100; // Higher score for title matches
+                    titleMatch = true;
+                }
+
+                // Tag match (medium priority)
+                if (recipe.tags && Array.isArray(recipe.tags)) {
+                    const hasTagMatch = recipe.tags.some((tag) =>
+                        typeof tag === "string" &&
+                        tag.toLowerCase().includes(normalizedSearchText)
+                    );
+
+                    if (hasTagMatch) {
+                        score += 50; // Medium score for tag matches
+                        tagMatch = true;
+                    }
+                }
+
+                // Ingredient match (lowest priority)
+                if (
+                    recipe.recipe_ingredients &&
+                    recipe.recipe_ingredients.length > 0
+                ) {
+                    const hasIngredientMatch = recipe.recipe_ingredients.some(
+                        (ingredient) =>
+                            ingredient.name.toLowerCase().includes(
+                                normalizedSearchText,
+                            ),
+                    );
+
+                    if (hasIngredientMatch) {
+                        score += 25; // Lower score for ingredient matches
+                        ingredientMatch = true;
+                    }
+                }
+
+                return {
+                    recipe,
+                    score,
+                    matches: { titleMatch, tagMatch, ingredientMatch },
+                };
+            });
+
+            // Filter out recipes with no matches
+            const matchedRecipes = scoredRecipes.filter(
+                (item) => item.score > 0,
+            );
+
+            // Sort by score (descending) and then by title (ascending)
+            matchedRecipes.sort((a, b) => {
+                if (a.score !== b.score) {
+                    return b.score - a.score; // Higher scores first
+                }
+                // If scores are equal, sort alphabetically by title
+                return a.recipe.title.localeCompare(b.recipe.title);
+            });
+
+            // Return only the recipe objects, properly mapped
+            return matchedRecipes.map((item) =>
+                this.mapDbRecipeToRecipe(item.recipe)
+            );
+        }
+
+        return [];
     }
 
     /**
