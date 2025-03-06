@@ -19,6 +19,7 @@ import { useAuth } from '../../context/AuthContext';
 import { RecipeService } from '../../services/RecipeService';
 import { Recipe } from '../../types/recipe';
 import EmptyRecipeBook from '../../components/icons/EmptyRecipeBook';
+import RecipeImagePlaceholder from '../../components/recipe/RecipeImagePlaceholder';
 
 const CatalogPage: FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -311,11 +312,6 @@ const CatalogPage: FC = () => {
                             columns={{ xs: 1, sm: 2, md: 3, lg: 4 }}
                         >
                             {filteredRecipes.map((recipe, index) => {
-                                const imageUrl =
-                                    recipe.images && recipe.images.length > 0
-                                        ? recipe.images[0]
-                                        : '/placeholder-recipe.jpg';
-
                                 // Check if this is the last recipe element for infinite scroll
                                 const isLastElement =
                                     index === filteredRecipes.length - 1;
@@ -385,15 +381,22 @@ const CatalogPage: FC = () => {
                                                 },
                                             }}
                                         >
-                                            <CardMedia
-                                                component="img"
-                                                height="180"
-                                                image={imageUrl}
-                                                alt={recipe.title}
-                                                sx={{
-                                                    objectFit: 'cover',
-                                                }}
-                                            />
+                                            {recipe.images &&
+                                            recipe.images.length > 0 ? (
+                                                <CardMedia
+                                                    component="img"
+                                                    height="180"
+                                                    image={recipe.images[0]}
+                                                    alt={recipe.title}
+                                                    sx={{
+                                                        objectFit: 'cover',
+                                                    }}
+                                                />
+                                            ) : (
+                                                <RecipeImagePlaceholder
+                                                    height={180}
+                                                />
+                                            )}
                                             <CardContent
                                                 sx={{
                                                     flexGrow: 1,
