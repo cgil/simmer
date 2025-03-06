@@ -20,6 +20,46 @@ import EmptyRecipeBook from '../../components/icons/EmptyRecipeBook';
 import RecipeImagePlaceholder from '../../components/recipe/RecipeImagePlaceholder';
 import SearchBar from '../../components/search-bar/SearchBar';
 import { useDebounce } from '../../hooks';
+import MatchCornerFold, {
+    MatchType,
+} from '../../components/recipe/MatchCornerFold';
+
+/**
+ * Determines the highest priority match type for a recipe
+ */
+const determineMatchType = (recipe: Recipe, searchQuery: string): MatchType => {
+    if (!searchQuery.trim()) return null;
+
+    const normalizedSearch = searchQuery.toLowerCase().trim();
+
+    // Check title match (highest priority)
+    if (recipe.title && recipe.title.toLowerCase().includes(normalizedSearch)) {
+        return 'title';
+    }
+
+    // Check tag match (medium priority)
+    if (recipe.tags && Array.isArray(recipe.tags)) {
+        const hasTagMatch = recipe.tags.some(
+            (tag) =>
+                typeof tag === 'string' &&
+                tag.toLowerCase().includes(normalizedSearch)
+        );
+        if (hasTagMatch) return 'tag';
+    }
+
+    // Check ingredient match (lowest priority)
+    if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
+        const hasIngredientMatch = recipe.ingredients.some(
+            (ingredient) =>
+                ingredient &&
+                ingredient.name &&
+                ingredient.name.toLowerCase().includes(normalizedSearch)
+        );
+        if (hasIngredientMatch) return 'ingredient';
+    }
+
+    return null;
+};
 
 const CatalogPage: FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -274,6 +314,14 @@ const CatalogPage: FC = () => {
                                     const isLastElement =
                                         index === visibleRecipes.length - 1;
 
+                                    // Determine match type if search is active
+                                    const matchType = searchQuery
+                                        ? determineMatchType(
+                                              recipe,
+                                              searchQuery
+                                          )
+                                        : null;
+
                                     return (
                                         <Grid
                                             item
@@ -293,6 +341,7 @@ const CatalogPage: FC = () => {
                                                     )
                                                 }
                                                 sx={{
+                                                    position: 'relative', // Added to support absolute positioning of the corner fold
                                                     height: '100%',
                                                     display: 'flex',
                                                     flexDirection: 'column',
@@ -309,7 +358,6 @@ const CatalogPage: FC = () => {
                                                     border: '1px solid',
                                                     borderColor: 'divider',
                                                     bgcolor: 'background.paper',
-                                                    position: 'relative',
                                                     '&::before': {
                                                         content: '""',
                                                         position: 'absolute',
@@ -340,6 +388,13 @@ const CatalogPage: FC = () => {
                                                     },
                                                 }}
                                             >
+                                                {/* Match Corner Fold - only appears during search */}
+                                                {searchQuery && (
+                                                    <MatchCornerFold
+                                                        matchType={matchType}
+                                                    />
+                                                )}
+
                                                 {recipe.images &&
                                                 recipe.images.length > 0 ? (
                                                     <CardMedia
