@@ -1,5 +1,11 @@
 import { FC, ChangeEvent } from 'react';
-import { Paper, InputBase, Typography } from '@mui/material';
+import {
+    Paper,
+    InputBase,
+    Typography,
+    CircularProgress,
+    Fade,
+} from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 
 interface SearchBarProps {
@@ -7,6 +13,7 @@ interface SearchBarProps {
     onChange: (value: string) => void;
     placeholder?: string;
     resultsCount?: number;
+    isSearching?: boolean;
 }
 
 const SearchBar: FC<SearchBarProps> = ({
@@ -14,6 +21,7 @@ const SearchBar: FC<SearchBarProps> = ({
     onChange,
     placeholder = 'Search recipes...',
     resultsCount,
+    isSearching = false,
 }) => {
     const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
         onChange(event.target.value);
@@ -85,22 +93,37 @@ const SearchBar: FC<SearchBarProps> = ({
                 inputProps={{ 'aria-label': 'search recipes' }}
                 fullWidth
             />
-            {value && resultsCount !== undefined && (
-                <Typography
-                    variant="body2"
-                    sx={{
-                        px: { xs: 1.5, sm: 2 },
-                        py: '2px',
-                        bgcolor: 'secondary.light',
-                        borderRadius: 1,
-                        fontSize: { xs: '0.75rem', sm: '0.8rem' },
-                        color: 'text.primary',
-                        fontFamily: "'Inter', sans-serif",
-                        userSelect: 'none',
-                    }}
-                >
-                    {resultsCount} {resultsCount === 1 ? 'recipe' : 'recipes'}
-                </Typography>
+            {isSearching ? (
+                <Fade in={isSearching}>
+                    <CircularProgress
+                        size={20}
+                        sx={{
+                            mr: 2,
+                            opacity: 0.7,
+                        }}
+                    />
+                </Fade>
+            ) : (
+                value &&
+                resultsCount !== undefined && (
+                    <Typography
+                        variant="body2"
+                        sx={{
+                            px: { xs: 1.5, sm: 2 },
+                            py: '2px',
+                            bgcolor: 'secondary.light',
+                            borderRadius: 1,
+                            fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                            color: 'text.primary',
+                            fontFamily: "'Inter', sans-serif",
+                            userSelect: 'none',
+                            mr: 1,
+                        }}
+                    >
+                        {resultsCount}{' '}
+                        {resultsCount === 1 ? 'recipe' : 'recipes'}
+                    </Typography>
+                )
             )}
         </Paper>
     );

@@ -1,5 +1,12 @@
 import { FC, useState, useEffect, useRef, useCallback } from 'react';
-import { Grid, Typography, Box, Chip, CircularProgress } from '@mui/material';
+import {
+    Grid,
+    Typography,
+    Box,
+    Chip,
+    CircularProgress,
+    Fade,
+} from '@mui/material';
 import AppLayout from '../../components/layout/AppLayout';
 import { Card, CardMedia, CardContent } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
@@ -18,7 +25,8 @@ const CatalogPage: FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [recipes, setRecipes] = useState<Recipe[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [initialLoading, setInitialLoading] = useState(true); // Initial loading state
+    const [searchLoading, setSearchLoading] = useState(false); // Search-specific loading state
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [page, setPage] = useState(0);
@@ -26,6 +34,7 @@ const CatalogPage: FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const RECIPES_PER_PAGE = 10;
+    const initialLoadCompleted = useRef(false);
 
     // Use debounce hook to delay search and reduce API calls
     const debouncedSearch = useDebounce(searchQuery, 500);
@@ -33,7 +42,11 @@ const CatalogPage: FC = () => {
     const observer = useRef<IntersectionObserver | null>(null);
     const lastRecipeElementRef = useCallback(
         (node: HTMLDivElement | null) => {
-            if (loading || loadingMore) return;
+            if (
+                (initialLoading && !initialLoadCompleted.current) ||
+                loadingMore
+            )
+                return;
             if (observer.current) observer.current.disconnect();
 
             observer.current = new IntersectionObserver((entries) => {
@@ -44,7 +57,7 @@ const CatalogPage: FC = () => {
 
             if (node) observer.current.observe(node);
         },
-        [loading, loadingMore, hasMore]
+        [initialLoading, loadingMore, hasMore]
     );
 
     // Update debounced search when debounced value changes
@@ -52,22 +65,61 @@ const CatalogPage: FC = () => {
         setDebouncedSearchQuery(debouncedSearch);
     }, [debouncedSearch]);
 
-    // Load recipes when user changes or debounced search query changes
+    // Handle initial load of recipes
     useEffect(() => {
-        if (user) {
-            loadRecipes();
+        if (user && !initialLoadCompleted.current) {
+            loadInitialRecipes();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user]);
+
+    // Handle search updates
+    useEffect(() => {
+        if (
+            user &&
+            initialLoadCompleted.current &&
+            debouncedSearchQuery !== null
+        ) {
+            performSearch();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user, debouncedSearchQuery]);
 
-    const loadRecipes = async () => {
+    // Initial load of recipes
+    const loadInitialRecipes = async () => {
         if (!user) return;
 
-        setLoading(true);
+        setInitialLoading(true);
         setError(null);
 
         try {
-            // Use the searchRecipes method with server-side filtering
+            const fetchedRecipes = await RecipeService.searchRecipes(
+                user.id,
+                '' // Empty search to get all recipes initially
+            );
+
+            setRecipes(fetchedRecipes);
+
+            // Update pagination
+            setHasMore(fetchedRecipes.length > RECIPES_PER_PAGE);
+            setPage(1);
+            initialLoadCompleted.current = true;
+        } catch (err) {
+            console.error('Error loading recipes:', err);
+            setError('Failed to load recipes. Please try again.');
+        } finally {
+            setInitialLoading(false);
+        }
+    };
+
+    // Perform search without resetting the UI
+    const performSearch = async () => {
+        if (!user) return;
+
+        setSearchLoading(true);
+        setError(null);
+
+        try {
             const fetchedRecipes = await RecipeService.searchRecipes(
                 user.id,
                 debouncedSearchQuery
@@ -79,10 +131,10 @@ const CatalogPage: FC = () => {
             setHasMore(fetchedRecipes.length > RECIPES_PER_PAGE);
             setPage(1);
         } catch (err) {
-            console.error('Error loading recipes:', err);
-            setError('Failed to load recipes. Please try again.');
+            console.error('Error searching recipes:', err);
+            setError('Failed to search recipes. Please try again.');
         } finally {
-            setLoading(false);
+            setSearchLoading(false);
         }
     };
 
@@ -120,6 +172,9 @@ const CatalogPage: FC = () => {
         setSearchQuery(value);
     };
 
+    // Calculate the visible recipes based on pagination
+    const visibleRecipes = recipes.slice(0, page * RECIPES_PER_PAGE);
+
     return (
         <AppLayout showAddButton>
             <Box
@@ -146,12 +201,13 @@ const CatalogPage: FC = () => {
                     overflow: 'hidden',
                 }}
             >
-                {/* Replace the custom search input with the SearchBar component */}
+                {/* SearchBar with search indicator */}
                 <SearchBar
                     value={searchQuery}
                     onChange={handleSearchChange}
                     placeholder="Search recipes by name, tags, or ingredients..."
                     resultsCount={recipes.length}
+                    isSearching={searchLoading}
                 />
 
                 <Box
@@ -165,7 +221,7 @@ const CatalogPage: FC = () => {
                         zIndex: 1,
                     }}
                 >
-                    {loading ? (
+                    {initialLoading ? (
                         <Box
                             sx={{
                                 display: 'flex',
@@ -206,18 +262,17 @@ const CatalogPage: FC = () => {
                                 connection.
                             </Typography>
                         </Box>
-                    ) : recipes.length > 0 ? (
-                        <Grid
-                            container
-                            spacing={{ xs: 2, sm: 3 }}
-                            columns={{ xs: 1, sm: 2, md: 3, lg: 4 }}
-                        >
-                            {recipes
-                                .slice(0, page * RECIPES_PER_PAGE)
-                                .map((recipe, index) => {
+                    ) : visibleRecipes.length > 0 ? (
+                        <Fade in={!initialLoading} timeout={300}>
+                            <Grid
+                                container
+                                spacing={{ xs: 2, sm: 3 }}
+                                columns={{ xs: 1, sm: 2, md: 3, lg: 4 }}
+                            >
+                                {visibleRecipes.map((recipe, index) => {
                                     // Check if this is the last recipe element for infinite scroll
                                     const isLastElement =
-                                        index === page * RECIPES_PER_PAGE - 1;
+                                        index === visibleRecipes.length - 1;
 
                                     return (
                                         <Grid
@@ -245,10 +300,10 @@ const CatalogPage: FC = () => {
                                                     borderRadius: 1,
                                                     overflow: 'hidden',
                                                     boxShadow: `
-                                                    0 1px 2px rgba(0,0,0,0.03),
-                                                    0 4px 20px rgba(0,0,0,0.06),
-                                                    inset 0 0 0 1px rgba(255,255,255,0.9)
-                                                `,
+                                                        0 1px 2px rgba(0,0,0,0.03),
+                                                        0 4px 20px rgba(0,0,0,0.06),
+                                                        inset 0 0 0 1px rgba(255,255,255,0.9)
+                                                    `,
                                                     transition:
                                                         'all 0.15s ease-in-out',
                                                     border: '1px solid',
@@ -515,66 +570,69 @@ const CatalogPage: FC = () => {
                                         </Grid>
                                     );
                                 })}
-                        </Grid>
+                            </Grid>
+                        </Fade>
                     ) : (
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                minHeight: '300px',
-                                width: '100%',
-                                p: 3,
-                            }}
-                        >
-                            <EmptyRecipeBook
+                        <Fade in={!initialLoading} timeout={300}>
+                            <Box
                                 sx={{
-                                    width: '120px',
-                                    height: '120px',
-                                    color: 'text.secondary',
-                                    opacity: 0.5,
-                                    mb: 2,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    minHeight: '300px',
+                                    width: '100%',
+                                    p: 3,
                                 }}
-                            />
-                            {searchQuery ? (
-                                <>
-                                    <Typography
-                                        variant="h6"
-                                        align="center"
-                                        gutterBottom
-                                    >
-                                        No recipes found
-                                    </Typography>
-                                    <Typography
-                                        variant="body2"
-                                        align="center"
-                                        color="text.secondary"
-                                    >
-                                        Try adjusting your search query or
-                                        adding new recipes.
-                                    </Typography>
-                                </>
-                            ) : (
-                                <>
-                                    <Typography
-                                        variant="h6"
-                                        align="center"
-                                        gutterBottom
-                                    >
-                                        Your recipe book is empty
-                                    </Typography>
-                                    <Typography
-                                        variant="body2"
-                                        align="center"
-                                        color="text.secondary"
-                                    >
-                                        Start adding recipes by clicking the +
-                                        button in the top right.
-                                    </Typography>
-                                </>
-                            )}
-                        </Box>
+                            >
+                                <EmptyRecipeBook
+                                    sx={{
+                                        width: '120px',
+                                        height: '120px',
+                                        color: 'text.secondary',
+                                        opacity: 0.5,
+                                        mb: 2,
+                                    }}
+                                />
+                                {searchQuery ? (
+                                    <>
+                                        <Typography
+                                            variant="h6"
+                                            align="center"
+                                            gutterBottom
+                                        >
+                                            No recipes found
+                                        </Typography>
+                                        <Typography
+                                            variant="body2"
+                                            align="center"
+                                            color="text.secondary"
+                                        >
+                                            Try adjusting your search query or
+                                            adding new recipes.
+                                        </Typography>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Typography
+                                            variant="h6"
+                                            align="center"
+                                            gutterBottom
+                                        >
+                                            Your recipe book is empty
+                                        </Typography>
+                                        <Typography
+                                            variant="body2"
+                                            align="center"
+                                            color="text.secondary"
+                                        >
+                                            Start adding recipes by clicking the
+                                            + button in the top right.
+                                        </Typography>
+                                    </>
+                                )}
+                            </Box>
+                        </Fade>
                     )}
 
                     {/* Loading indicator for infinite scroll */}
