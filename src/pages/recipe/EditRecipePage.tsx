@@ -12,6 +12,10 @@ import {
     Menu,
     MenuItem,
     Divider,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
@@ -35,6 +39,7 @@ import { useAuth } from '../../context/AuthContext';
 import { RecipeService } from '../../services/RecipeService';
 import { generateUuidV4, ensureUuid, isValidUuid } from '../../utils/uuid';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 
 const EditRecipePage: FC = () => {
     const location = useLocation();
@@ -76,10 +81,12 @@ const EditRecipePage: FC = () => {
     const [servings, setServings] = useState<number>(recipe?.servings || 2);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const cameraInputRef = useRef<HTMLInputElement>(null);
+    const galleryInputRef = useRef<HTMLInputElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [isMobileDevice, setIsMobileDevice] = useState<boolean>(false);
+    const [showMobilePhotoDialog, setShowMobilePhotoDialog] = useState(false);
 
     // Check if the device is mobile
     useEffect(() => {
@@ -525,13 +532,30 @@ const EditRecipePage: FC = () => {
     // Function to handle click on the add image box
     const handleAddImageClick = async () => {
         if (isMobileDevice) {
-            // On mobile, directly click the camera input which has the capture attribute
-            // This should trigger the device camera UI without needing separate permission checks
-            cameraInputRef.current?.click();
+            // On mobile, show dialog with options
+            setShowMobilePhotoDialog(true);
         } else {
             // On desktop, just use regular file input
             fileInputRef.current?.click();
         }
+    };
+
+    const handleTakePhoto = () => {
+        // Close the dialog
+        setShowMobilePhotoDialog(false);
+        // Trigger camera
+        cameraInputRef.current?.click();
+    };
+
+    const handleChooseFromGallery = () => {
+        // Close the dialog
+        setShowMobilePhotoDialog(false);
+        // Trigger gallery file input
+        galleryInputRef.current?.click();
+    };
+
+    const handleClosePhotoDialog = () => {
+        setShowMobilePhotoDialog(false);
     };
 
     const headerContent = (
@@ -981,6 +1005,17 @@ const EditRecipePage: FC = () => {
                                         }
                                         style={{ display: 'none' }}
                                         aria-label="Take photo with camera"
+                                    />
+                                    <input
+                                        ref={galleryInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        onChange={(e) =>
+                                            handleImageUpload(e.target.files)
+                                        }
+                                        style={{ display: 'none' }}
+                                        aria-label="Choose photos from gallery"
                                     />
                                     <Box
                                         sx={{
@@ -1757,6 +1792,74 @@ const EditRecipePage: FC = () => {
                     </MenuItem>
                 ))}
             </Menu>
+            <Dialog
+                open={showMobilePhotoDialog}
+                onClose={handleClosePhotoDialog}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 2,
+                        boxShadow: 3,
+                        maxWidth: '85%',
+                        width: '300px',
+                        mx: 'auto',
+                        bgcolor: 'background.paper',
+                        p: 1,
+                    },
+                }}
+            >
+                <DialogTitle
+                    sx={{
+                        fontFamily: "'Kalam', cursive",
+                        textAlign: 'center',
+                        pb: 1,
+                    }}
+                >
+                    Add Image
+                </DialogTitle>
+                <DialogContent sx={{ pt: 1, pb: 2 }}>
+                    <Stack spacing={2}>
+                        <Button
+                            variant="outlined"
+                            onClick={handleTakePhoto}
+                            startIcon={<PhotoCameraIcon />}
+                            sx={{
+                                borderRadius: 1.5,
+                                py: 1.5,
+                                borderColor: 'divider',
+                                color: 'text.primary',
+                                '&:hover': {
+                                    borderColor: 'primary.main',
+                                    bgcolor: 'rgba(0, 0, 0, 0.02)',
+                                },
+                            }}
+                        >
+                            Take Photo with Camera
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            onClick={handleChooseFromGallery}
+                            startIcon={<PhotoLibraryIcon />}
+                            sx={{
+                                borderRadius: 1.5,
+                                py: 1.5,
+                                borderColor: 'divider',
+                                color: 'text.primary',
+                                '&:hover': {
+                                    borderColor: 'primary.main',
+                                    bgcolor: 'rgba(0, 0, 0, 0.02)',
+                                },
+                            }}
+                        >
+                            Choose from Gallery
+                        </Button>
+                    </Stack>
+                </DialogContent>
+                <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
+                    <Button onClick={handleClosePhotoDialog} color="primary">
+                        Cancel
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </AppLayout>
     );
 };
