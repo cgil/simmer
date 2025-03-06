@@ -12,7 +12,6 @@ import {
     Menu,
     MenuItem,
     Divider,
-    Tooltip,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
@@ -80,7 +79,24 @@ const EditRecipePage: FC = () => {
     const [isDragging, setIsDragging] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
-    const [hasCameraSupport, setHasCameraSupport] = useState<boolean>(false);
+    const [isMobileDevice, setIsMobileDevice] = useState<boolean>(false);
+
+    // Check if the device is mobile
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobileDevice(
+                /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+                    window.innerWidth < 768
+            );
+        };
+
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+
+        return () => {
+            window.removeEventListener('resize', checkMobile);
+        };
+    }, []);
 
     // Ensure all ingredients have valid UUIDs when component mounts
     useEffect(() => {
@@ -129,37 +145,6 @@ const EditRecipePage: FC = () => {
             }
         }
     }, [recipe]);
-
-    // Check for camera support when component mounts
-    useEffect(() => {
-        // Check if the device has a camera using the MediaDevices API
-        const checkCameraSupport = async () => {
-            try {
-                if (
-                    navigator.mediaDevices &&
-                    navigator.mediaDevices.getUserMedia
-                ) {
-                    // Try to get camera stream to check if camera exists
-                    const stream = await navigator.mediaDevices.getUserMedia({
-                        video: true,
-                    });
-
-                    // If we got here, camera is available
-                    setHasCameraSupport(true);
-
-                    // Release the camera stream immediately
-                    stream.getTracks().forEach((track) => track.stop());
-                } else {
-                    setHasCameraSupport(false);
-                }
-            } catch {
-                // Camera access denied or camera not available
-                setHasCameraSupport(false);
-            }
-        };
-
-        checkCameraSupport();
-    }, []);
 
     if (!recipe) {
         navigate('/');
@@ -535,6 +520,37 @@ const EditRecipePage: FC = () => {
             unit: value === '' ? null : value,
         };
         setIngredients(newIngredients);
+    };
+
+    // Function to handle click on the add image box
+    const handleAddImageClick = async () => {
+        if (isMobileDevice) {
+            try {
+                // Only check for camera permissions when the user clicks
+                if (
+                    navigator.mediaDevices &&
+                    navigator.mediaDevices.getUserMedia
+                ) {
+                    // Request camera access
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: true,
+                    });
+
+                    // If successful, release the stream and open camera input
+                    stream.getTracks().forEach((track) => track.stop());
+                    cameraInputRef.current?.click();
+                } else {
+                    // No camera available, fall back to file input
+                    fileInputRef.current?.click();
+                }
+            } catch {
+                // Camera access denied or not available, fall back to file input
+                fileInputRef.current?.click();
+            }
+        } else {
+            // On desktop, just use file input
+            fileInputRef.current?.click();
+        }
     };
 
     const headerContent = (
@@ -960,10 +976,9 @@ const EditRecipePage: FC = () => {
                                             borderColor: 'primary.main',
                                             bgcolor: 'rgba(0, 0, 0, 0.02)',
                                         },
+                                        position: 'relative',
                                     }}
-                                    onClick={() =>
-                                        fileInputRef.current?.click()
-                                    }
+                                    onClick={handleAddImageClick}
                                 >
                                     <input
                                         ref={fileInputRef}
@@ -975,6 +990,17 @@ const EditRecipePage: FC = () => {
                                         }
                                         style={{ display: 'none' }}
                                     />
+                                    <input
+                                        ref={cameraInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        capture="environment"
+                                        onChange={(e) =>
+                                            handleCameraCapture(e.target.files)
+                                        }
+                                        style={{ display: 'none' }}
+                                        aria-label="Take photo with camera"
+                                    />
                                     <Box
                                         sx={{
                                             display: 'flex',
@@ -982,12 +1008,17 @@ const EditRecipePage: FC = () => {
                                             alignItems: 'center',
                                             gap: 1,
                                             color: 'text.secondary',
-                                            position: 'relative',
                                         }}
                                     >
-                                        <AddPhotoAlternateIcon
-                                            sx={{ fontSize: 24 }}
-                                        />
+                                        {isMobileDevice ? (
+                                            <PhotoCameraIcon
+                                                sx={{ fontSize: 24 }}
+                                            />
+                                        ) : (
+                                            <AddPhotoAlternateIcon
+                                                sx={{ fontSize: 24 }}
+                                            />
+                                        )}
                                         <Typography
                                             variant="body2"
                                             sx={{
@@ -996,74 +1027,11 @@ const EditRecipePage: FC = () => {
                                                 textAlign: 'center',
                                             }}
                                         >
-                                            Click to add or
-                                            <br />
-                                            drag images here
+                                            Click to{' '}
+                                            {isMobileDevice
+                                                ? 'add or take photos'
+                                                : 'add or drag images'}{' '}
                                         </Typography>
-
-                                        {/* Mobile camera button */}
-                                        {hasCameraSupport && (
-                                            <Tooltip
-                                                title="Take photo with camera"
-                                                placement="top"
-                                            >
-                                                <Box
-                                                    sx={{
-                                                        position: 'absolute',
-                                                        bottom: -40,
-                                                        right: -40,
-                                                        bgcolor:
-                                                            'primary.light',
-                                                        color: 'white',
-                                                        borderRadius: '50%',
-                                                        p: 1,
-                                                        boxShadow: 2,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent:
-                                                            'center',
-                                                        width: 40,
-                                                        height: 40,
-                                                        zIndex: 2,
-                                                        transition:
-                                                            'transform 0.2s ease',
-                                                        '&:hover': {
-                                                            transform:
-                                                                'scale(1.1)',
-                                                            bgcolor:
-                                                                'primary.main',
-                                                        },
-                                                        '&:active': {
-                                                            transform:
-                                                                'scale(0.95)',
-                                                        },
-                                                    }}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        cameraInputRef.current?.click();
-                                                    }}
-                                                >
-                                                    <PhotoCameraIcon
-                                                        sx={{ fontSize: 22 }}
-                                                    />
-                                                </Box>
-                                            </Tooltip>
-                                        )}
-
-                                        {/* Camera input */}
-                                        <input
-                                            ref={cameraInputRef}
-                                            type="file"
-                                            accept="image/*"
-                                            capture="environment"
-                                            onChange={(e) =>
-                                                handleCameraCapture(
-                                                    e.target.files
-                                                )
-                                            }
-                                            style={{ display: 'none' }}
-                                            aria-label="Take photo with camera"
-                                        />
                                     </Box>
                                 </Box>
                             </Box>
