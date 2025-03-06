@@ -12,6 +12,7 @@ import {
     Menu,
     MenuItem,
     Divider,
+    Tooltip,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
@@ -34,6 +35,7 @@ import { convertRecipeIngredientMentions } from '../../utils/ingredientMentions'
 import { useAuth } from '../../context/AuthContext';
 import { RecipeService } from '../../services/RecipeService';
 import { generateUuidV4, ensureUuid, isValidUuid } from '../../utils/uuid';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 
 const EditRecipePage: FC = () => {
     const location = useLocation();
@@ -74,9 +76,11 @@ const EditRecipePage: FC = () => {
     const [images, setImages] = useState<string[]>(recipe?.images || []);
     const [servings, setServings] = useState<number>(recipe?.servings || 2);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const cameraInputRef = useRef<HTMLInputElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [hasCameraSupport, setHasCameraSupport] = useState<boolean>(false);
 
     // Ensure all ingredients have valid UUIDs when component mounts
     useEffect(() => {
@@ -125,6 +129,37 @@ const EditRecipePage: FC = () => {
             }
         }
     }, [recipe]);
+
+    // Check for camera support when component mounts
+    useEffect(() => {
+        // Check if the device has a camera using the MediaDevices API
+        const checkCameraSupport = async () => {
+            try {
+                if (
+                    navigator.mediaDevices &&
+                    navigator.mediaDevices.getUserMedia
+                ) {
+                    // Try to get camera stream to check if camera exists
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: true,
+                    });
+
+                    // If we got here, camera is available
+                    setHasCameraSupport(true);
+
+                    // Release the camera stream immediately
+                    stream.getTracks().forEach((track) => track.stop());
+                } else {
+                    setHasCameraSupport(false);
+                }
+            } catch {
+                // Camera access denied or camera not available
+                setHasCameraSupport(false);
+            }
+        };
+
+        checkCameraSupport();
+    }, []);
 
     if (!recipe) {
         navigate('/');
@@ -416,6 +451,10 @@ const EditRecipePage: FC = () => {
             };
             reader.readAsDataURL(file);
         });
+    };
+
+    const handleCameraCapture = (files: FileList | null) => {
+        handleImageUpload(files);
     };
 
     const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
@@ -943,6 +982,7 @@ const EditRecipePage: FC = () => {
                                             alignItems: 'center',
                                             gap: 1,
                                             color: 'text.secondary',
+                                            position: 'relative',
                                         }}
                                     >
                                         <AddPhotoAlternateIcon
@@ -960,6 +1000,70 @@ const EditRecipePage: FC = () => {
                                             <br />
                                             drag images here
                                         </Typography>
+
+                                        {/* Mobile camera button */}
+                                        {hasCameraSupport && (
+                                            <Tooltip
+                                                title="Take photo with camera"
+                                                placement="top"
+                                            >
+                                                <Box
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        bottom: -40,
+                                                        right: -40,
+                                                        bgcolor:
+                                                            'primary.light',
+                                                        color: 'white',
+                                                        borderRadius: '50%',
+                                                        p: 1,
+                                                        boxShadow: 2,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent:
+                                                            'center',
+                                                        width: 40,
+                                                        height: 40,
+                                                        zIndex: 2,
+                                                        transition:
+                                                            'transform 0.2s ease',
+                                                        '&:hover': {
+                                                            transform:
+                                                                'scale(1.1)',
+                                                            bgcolor:
+                                                                'primary.main',
+                                                        },
+                                                        '&:active': {
+                                                            transform:
+                                                                'scale(0.95)',
+                                                        },
+                                                    }}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        cameraInputRef.current?.click();
+                                                    }}
+                                                >
+                                                    <PhotoCameraIcon
+                                                        sx={{ fontSize: 22 }}
+                                                    />
+                                                </Box>
+                                            </Tooltip>
+                                        )}
+
+                                        {/* Camera input */}
+                                        <input
+                                            ref={cameraInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            capture="environment"
+                                            onChange={(e) =>
+                                                handleCameraCapture(
+                                                    e.target.files
+                                                )
+                                            }
+                                            style={{ display: 'none' }}
+                                            aria-label="Take photo with camera"
+                                        />
                                     </Box>
                                 </Box>
                             </Box>
