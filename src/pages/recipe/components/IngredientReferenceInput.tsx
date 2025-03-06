@@ -194,9 +194,11 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
       width: 100% !important;
     }
 
-    .react-mentions__input-container {
+    .react-mentions__input-container__input {
       width: 100% !important;
       display: block !important;
+      margin: 0px !important;
+      color: ${theme.palette.secondary.contrastText} !important;
     }
     `;
 
