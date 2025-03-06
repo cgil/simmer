@@ -242,7 +242,7 @@ const IngredientsList: FC<IngredientsListProps> = ({
                                         sx={{
                                             fontWeight: 500,
                                             display: 'inline-block',
-                                            mr: 1,
+                                            mr: 0.5,
                                         }}
                                     >
                                         {formatQuantity(
