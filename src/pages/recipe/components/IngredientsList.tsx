@@ -18,6 +18,56 @@ const IngredientsList: FC<IngredientsListProps> = ({
         onServingsChange(value as number);
     };
 
+    // Calculate dynamic max serving size based on recipe's default serving size
+    const defaultServings = recipe.servings || 4;
+    const maxServings = defaultServings >= 6 ? defaultServings * 2 : 10;
+
+    // Generate dynamic marks based on maxServings
+    const generateMarks = () => {
+        const marks = [];
+
+        // For small ranges (max 10), show all numbers
+        if (maxServings <= 10) {
+            for (let i = 1; i <= maxServings; i++) {
+                marks.push({ value: i, label: i.toString() });
+            }
+            return marks;
+        }
+
+        // For larger ranges, we need a consistent interval approach
+        // Always show 1 as the minimum
+        marks.push({ value: 1, label: '1' });
+
+        // Determine the appropriate interval
+        // We want even intervals (typically 2) unless the range is very large
+        const interval =
+            maxServings <= 20 ? 2 : Math.ceil(maxServings / 10) * 2;
+
+        // Add marks at regular intervals starting from 2 (not 1)
+        for (let i = interval; i <= maxServings; i += interval) {
+            marks.push({ value: i, label: i.toString() });
+        }
+
+        // Always include the default recipe servings if not already included
+        if (
+            !marks.some((mark) => mark.value === defaultServings) &&
+            defaultServings > 1
+        ) {
+            marks.push({
+                value: defaultServings,
+                label: defaultServings.toString(),
+            });
+        }
+
+        // Always include the max value if not already included
+        if (!marks.some((mark) => mark.value === maxServings)) {
+            marks.push({ value: maxServings, label: maxServings.toString() });
+        }
+
+        // Sort marks by value and return
+        return marks.sort((a, b) => a.value - b.value);
+    };
+
     // Handle empty ingredients array
     if (!recipe.ingredients || recipe.ingredients.length === 0) {
         return (
@@ -118,20 +168,9 @@ const IngredientsList: FC<IngredientsListProps> = ({
                         onChange={handleServingsChange}
                         aria-labelledby="servings-slider"
                         step={1}
-                        marks={[
-                            { value: 1, label: '1' },
-                            { value: 2, label: '2' },
-                            { value: 3, label: '3' },
-                            { value: 4, label: '4' },
-                            { value: 5, label: '5' },
-                            { value: 6, label: '6' },
-                            { value: 7, label: '7' },
-                            { value: 8, label: '8' },
-                            { value: 9, label: '9' },
-                            { value: 10, label: '10' },
-                        ]}
+                        marks={generateMarks()}
                         min={1}
-                        max={10}
+                        max={maxServings}
                         valueLabelDisplay="off"
                         sx={{
                             '& .MuiSlider-thumb': {
@@ -196,23 +235,26 @@ const IngredientsList: FC<IngredientsListProps> = ({
                             }}
                         >
                             <Box sx={{ flex: 1 }}>
-                                <Box
-                                    component="span"
-                                    sx={{
-                                        fontWeight: 500,
-                                        display: 'inline-block',
-                                        mr: 1,
-                                    }}
-                                >
-                                    {formatQuantity(
-                                        scaleQuantity(
-                                            item.quantity,
-                                            recipe.servings,
-                                            servings
-                                        )
-                                    )}{' '}
-                                    {item.unit && `${item.unit} `}
-                                </Box>
+                                {(item.quantity !== null ||
+                                    item.unit !== null) && (
+                                    <Box
+                                        component="span"
+                                        sx={{
+                                            fontWeight: 500,
+                                            display: 'inline-block',
+                                            mr: 1,
+                                        }}
+                                    >
+                                        {formatQuantity(
+                                            scaleQuantity(
+                                                item.quantity,
+                                                recipe.servings,
+                                                servings
+                                            )
+                                        )}{' '}
+                                        {item.unit && `${item.unit} `}
+                                    </Box>
+                                )}
                                 {item.name}
                                 {item.notes && (
                                     <Box
