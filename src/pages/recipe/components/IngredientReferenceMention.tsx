@@ -14,16 +14,16 @@ interface IngredientReferenceMentionProps {
 }
 
 // Styling for the mention component (highlighted ingredient references)
-// Improved contrast for better visibility on mobile
+// Identical styling to the IngredientReferenceInput component
 const StyledMention = styled(Box)(({ theme }) => ({
     backgroundColor: theme.palette.secondary.light || '#FFF9C4',
     borderRadius: '2px',
     padding: '0 4px',
-    color: 'rgba(0,0,0,0.87)', // Darker text color for better contrast
+    color: theme.palette.secondary.dark || '#9C6D00',
     display: 'inline-flex',
     alignItems: 'center',
     fontWeight: 500,
-    boxShadow: '0 0 0 1px rgba(0,0,0,0.05)', // Subtle border for definition
+    boxShadow: 'none',
     border: 'none',
     textShadow: 'none',
     wordBreak: 'break-word',

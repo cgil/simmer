@@ -94,8 +94,6 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
             outline: 'none',
             background: 'transparent',
             width: '100%',
-            // Improved text color for better contrast on all devices
-            color: 'rgba(0,0,0,0.87)',
         },
         highlighter: {
             ...fontStyle,
@@ -127,12 +125,12 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
         },
     };
 
-    // Clean highlight styling for mentions with enhanced contrast
+    // Clean highlight styling for mentions
     const mentionStyle = {
         backgroundColor: theme.palette.secondary.light,
         borderRadius: '2px',
         padding: '2px 0',
-        color: 'rgba(0, 0, 0, 0.87)', // Darker text for better contrast
+        color: theme.palette.secondary.dark,
     };
 
     // Transform ingredients to the format expected by react-mentions
@@ -166,7 +164,7 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
         onChange(processedValue);
     };
 
-    // Custom CSS to ensure consistent text styling with improved contrast
+    // Custom CSS to ensure consistent text styling
     const customCSS = `
     .react-mentions__highlighter {
       font-family: "Inter", system-ui, sans-serif !important;
@@ -182,16 +180,14 @@ const IngredientReferenceInput: FC<IngredientReferenceInputProps> = ({
       line-height: 1.6 !important;
       letter-spacing: 0px !important;
       width: 100% !important;
-      color: rgba(0,0,0,0.87) !important; /* Darker text for better contrast */
     }
 
     .react-mentions__mention {
       background-color: ${theme.palette.secondary.light} !important;
-      color: rgba(0,0,0,0.87) !important; /* Darker text for better contrast */
+      color: ${theme.palette.secondary.dark} !important;
       border-radius: 2px !important;
       padding: 0 4px !important;
       font-weight: 500 !important;
-      box-shadow: 0 0 0 1px rgba(0,0,0,0.05) !important; /* Subtle border */
     }
 
     .react-mentions__suggestions__list {
