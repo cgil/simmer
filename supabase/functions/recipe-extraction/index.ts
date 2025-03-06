@@ -189,17 +189,50 @@ interface ExtractedContent {
     images: string[];
 }
 
+// Helper function to normalize image URLs for better deduplication
+function normalizeImageUrl(url: string): string {
+    try {
+        // Parse the URL
+        const parsedUrl = new URL(url);
+
+        // Get the pathname (file path)
+        let pathname = parsedUrl.pathname;
+
+        // Remove sizing parameters from the path (common in CDN URLs)
+        // Example: /image-800x600.jpg -> /image.jpg
+        pathname = pathname.replace(/-\d+x\d+(\.[a-zA-Z0-9]+)$/, "$1");
+
+        // Remove quality indicators
+        pathname = pathname.replace(/-quality\d+(\.[a-zA-Z0-9]+)$/, "$1");
+
+        // For WordPress images, remove size indicators
+        // Example: /image-large.jpg -> /image.jpg
+        pathname = pathname.replace(
+            /-(large|medium|small|thumbnail)(\.[a-zA-Z0-9]+)$/,
+            "$2",
+        );
+
+        // Return just the path for comparison (ignore query params and fragments)
+        return pathname;
+    } catch {
+        // If URL parsing fails, return the original URL
+        return url;
+    }
+}
+
 function extractMainContent(html: string, pageUrl: string): ExtractedContent {
     // Extract image URLs before removing HTML
     const imageUrls: string[] = [];
     const parsedUrl = new URL(pageUrl);
     const baseUrl = `${parsedUrl.protocol}//${parsedUrl.host}`;
 
-    // Extract regular image src attributes
-    const imgRegex = /<img[^>]+src="([^">]+)"[^>]*>/g;
+    // Extract regular image src attributes with improved regex
+    // This handles various image attributes: src, data-src, data-original, data-lazy-src
+    const imgRegex =
+        /<img[^>]+(src|data-src|data-original|data-lazy-src)=["']([^"']+)["'][^>]*>/gi;
     let match;
     while ((match = imgRegex.exec(html)) !== null) {
-        const url = match[1];
+        const url = match[2];
         if (url && !url.startsWith("data:")) { // Skip data URLs
             const fullUrl = resolveUrl(url, baseUrl, parsedUrl.pathname);
 
@@ -207,6 +240,44 @@ function extractMainContent(html: string, pageUrl: string): ExtractedContent {
             if (isValidImageUrl(fullUrl)) {
                 imageUrls.push(fullUrl);
             }
+        }
+    }
+
+    // Also extract images from srcset attributes
+    const srcsetRegex = /<img[^>]+srcset=["']([^"']+)["'][^>]*>/gi;
+    while ((match = srcsetRegex.exec(html)) !== null) {
+        const srcsetValue = match[1];
+        if (srcsetValue) {
+            // Extract the URLs from the srcset value (format: "url width, url width, ...")
+            const srcsetUrls = srcsetValue.split(",")
+                .map((part) => part.trim().split(/\s+/)[0]) // Get the URL part before the width
+                .filter((url) => url && !url.startsWith("data:"));
+
+            // Process each URL
+            srcsetUrls.forEach((url) => {
+                const fullUrl = resolveUrl(url, baseUrl, parsedUrl.pathname);
+                if (isValidImageUrl(fullUrl)) {
+                    imageUrls.push(fullUrl);
+                }
+            });
+        }
+    }
+
+    // Extract from data-srcset attributes (common in lazy-loaded images)
+    const dataSrcsetRegex = /<img[^>]+data-srcset=["']([^"']+)["'][^>]*>/gi;
+    while ((match = dataSrcsetRegex.exec(html)) !== null) {
+        const srcsetValue = match[1];
+        if (srcsetValue) {
+            const srcsetUrls = srcsetValue.split(",")
+                .map((part) => part.trim().split(/\s+/)[0])
+                .filter((url) => url && !url.startsWith("data:"));
+
+            srcsetUrls.forEach((url) => {
+                const fullUrl = resolveUrl(url, baseUrl, parsedUrl.pathname);
+                if (isValidImageUrl(fullUrl)) {
+                    imageUrls.push(fullUrl);
+                }
+            });
         }
     }
 
@@ -272,12 +343,53 @@ function extractMainContent(html: string, pageUrl: string): ExtractedContent {
         .replace(/&quot;/g, '"')
         .replace(/&#039;/g, "'");
 
-    // Remove duplicates and limit to 6 images
-    const uniqueImages = [...new Set(imageUrls)];
+    // Advanced deduplication using normalized URLs
+    const seenNormalizedUrls = new Set<string>();
+    const uniqueImages: string[] = [];
+
+    // Process in reverse so JSON-LD images (which are unshifted to the front) are prioritized
+    // This preserves the priority of structured data images
+    for (const imageUrl of imageUrls) {
+        const normalizedUrl = normalizeImageUrl(imageUrl);
+
+        // Check for similar images based on normalized path
+        if (!seenNormalizedUrls.has(normalizedUrl)) {
+            seenNormalizedUrls.add(normalizedUrl);
+            uniqueImages.push(imageUrl); // Keep the original URL for display
+        }
+    }
+
+    // Prefer higher quality images (typically larger file sizes) when possible
+    const sortedImages = uniqueImages.slice(0, 10).sort((a, b) => {
+        // Extract size indicators if present in filename (e.g., -800x600)
+        const sizeA = a.match(/-(\d+)x(\d+)/);
+        const sizeB = b.match(/-(\d+)x(\d+)/);
+
+        if (sizeA && sizeB) {
+            // Compare by total pixels if both have size indicators
+            const pixelsA = parseInt(sizeA[1]) * parseInt(sizeA[2]);
+            const pixelsB = parseInt(sizeB[1]) * parseInt(sizeB[2]);
+            // Prefer larger images (more pixels)
+            return pixelsB - pixelsA;
+        }
+
+        // If no size indicators, prefer images that don't have size-related query params
+        // (often the original/full-size images)
+        const hasResizeParamsA = a.includes("resize=") ||
+            a.includes("width=") || a.includes("size=");
+        const hasResizeParamsB = b.includes("resize=") ||
+            b.includes("width=") || b.includes("size=");
+
+        if (hasResizeParamsA !== hasResizeParamsB) {
+            return hasResizeParamsA ? 1 : -1; // Prefer URLs without resize parameters
+        }
+
+        return 0; // No clear preference
+    });
 
     return {
         text: html,
-        images: uniqueImages.slice(0, 6), // Limit to 6 images
+        images: sortedImages.slice(0, 6), // Limit to 6 images after deduplication and sorting
     };
 }
 
@@ -310,19 +422,47 @@ function isValidImageUrl(url: string): boolean {
     const validExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
     const urlLower = url.toLowerCase();
 
-    // If URL has a query string or no extension, try to determine from path
+    // If URL has a query string or no extension, try to determine from path or query params
     const hasValidExtension = validExtensions.some((ext) =>
-        urlLower.endsWith(ext) || urlLower.includes(`${ext}?`)
+        urlLower.endsWith(ext) ||
+        urlLower.includes(`${ext}?`) ||
+        urlLower.includes(`${ext}&`) ||
+        urlLower.match(new RegExp(`${ext.replace(".", "\\.")}[#?&]`))
     );
 
-    // Skip common tracking pixels and icons
+    // Check for common CDN patterns that may not have extensions
+    const hasValidCdnPattern = urlLower.includes("/images/") ||
+        urlLower.includes("/photos/") ||
+        urlLower.includes("/uploads/") ||
+        urlLower.includes("/wp-content/uploads/") ||
+        urlLower.includes("/cdn/") ||
+        urlLower.match(/\/(img|image)\/.*[?&]/) ||
+        urlLower.includes("cloudfront.net") ||
+        urlLower.includes("cloudinary.com");
+
+    // Skip common tracking pixels, icons, and tiny images
     const isTrackingPixel = urlLower.includes("tracking") ||
         urlLower.includes("pixel") ||
         urlLower.includes("1x1") ||
         urlLower.includes("favicon") ||
-        urlLower.includes("icon");
+        urlLower.includes("icon") ||
+        urlLower.includes("badge") ||
+        urlLower.includes("logo-small") ||
+        urlLower.includes("small-logo") ||
+        urlLower.includes("button") ||
+        urlLower.includes("avatar") ||
+        urlLower.includes("analytics");
 
-    return hasValidExtension && !isTrackingPixel;
+    // Skip social media icons
+    const isSocialIcon = urlLower.includes("facebook") ||
+        urlLower.includes("twitter") ||
+        urlLower.includes("instagram") ||
+        urlLower.includes("pinterest") ||
+        urlLower.includes("social") ||
+        urlLower.includes("share");
+
+    return (hasValidExtension || hasValidCdnPattern) && !isTrackingPixel &&
+        !isSocialIcon;
 }
 
 // Update the RawRecipe interface to include id property
@@ -476,13 +616,14 @@ serve(async (req) => {
                                 - "pinch"
                                 - "slices"
                                 - "pieces"
+                                - "drizzle"
                             - If the unit type is not listed above, use your best judgement to determine the correct unit type.
                             - The timing unit should always be in "minutes"
                             - When timing info is available, the timing min and max should always be in minutes
                             - Use the following image URLs in your response: ${
                                 JSON.stringify(images)
                             }
-                            - For the images list, pick a maximum of 5 images relevant to the recipe, and avoid duplicates, including duplicates at different sizes.
+                            - For the images list, pick a maximum of 10 images relevant to the recipe, and avoid duplicates, including duplicates at different size, opt for the best quality images.
                             - Tags should be relevant to the recipe and should be thoughtful and provide value to a user searching for a recipe, such as as the following examples but think of tags specific to the recipe:
                                 - "Healthy"
                                 - "Low Calorie"
