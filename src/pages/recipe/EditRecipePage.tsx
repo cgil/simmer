@@ -525,30 +525,11 @@ const EditRecipePage: FC = () => {
     // Function to handle click on the add image box
     const handleAddImageClick = async () => {
         if (isMobileDevice) {
-            try {
-                // Only check for camera permissions when the user clicks
-                if (
-                    navigator.mediaDevices &&
-                    navigator.mediaDevices.getUserMedia
-                ) {
-                    // Request camera access
-                    const stream = await navigator.mediaDevices.getUserMedia({
-                        video: true,
-                    });
-
-                    // If successful, release the stream and open camera input
-                    stream.getTracks().forEach((track) => track.stop());
-                    cameraInputRef.current?.click();
-                } else {
-                    // No camera available, fall back to file input
-                    fileInputRef.current?.click();
-                }
-            } catch {
-                // Camera access denied or not available, fall back to file input
-                fileInputRef.current?.click();
-            }
+            // On mobile, directly click the camera input which has the capture attribute
+            // This should trigger the device camera UI without needing separate permission checks
+            cameraInputRef.current?.click();
         } else {
-            // On desktop, just use file input
+            // On desktop, just use regular file input
             fileInputRef.current?.click();
         }
     };
@@ -994,7 +975,7 @@ const EditRecipePage: FC = () => {
                                         ref={cameraInputRef}
                                         type="file"
                                         accept="image/*"
-                                        capture="environment"
+                                        capture
                                         onChange={(e) =>
                                             handleCameraCapture(e.target.files)
                                         }
