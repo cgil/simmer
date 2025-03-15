@@ -617,9 +617,12 @@ serve(async (req) => {
                                 - "slices"
                                 - "pieces"
                                 - "drizzle"
+                                - "whole"
+                                - "bunches"
                             - If the unit type is not listed above, use your best judgement to determine the correct unit type.
                             - The timing unit should always be in "minutes"
                             - When timing info is available, the timing min and max should always be in minutes
+                            - Ensure steps always include the necessary and correct timing information, including resting times
                             - Use the following image URLs in your response: ${
                                 JSON.stringify(images)
                             }
