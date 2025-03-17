@@ -253,10 +253,17 @@ const EditRecipePage: FC = () => {
                 servings,
             };
 
+            // Check if this is an imported recipe
+            // Recipes from URL imports don't have a user_id yet or are being saved for the first time
+            const isImportedRecipe =
+                !recipe.user_id || location.state?.isImported;
+
             // Save the recipe, passing the current user ID for ownership verification
+            // For imported recipes, use forceNew=true
             const savedRecipe = await RecipeService.saveRecipe(
                 updatedRecipe,
-                user.id
+                user.id,
+                isImportedRecipe // Force imported recipes to be treated as new
             );
 
             // Navigate to the saved recipe page instead of the returnTo path

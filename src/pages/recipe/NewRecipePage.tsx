@@ -60,7 +60,13 @@ const NewRecipePage: FC = () => {
             setActiveStep(4); // Final step
 
             // Navigate to edit mode with the imported recipe
-            navigate('/recipe/edit', { state: { recipe: importedRecipe } });
+            // Mark this recipe as imported so we force it to be treated as new
+            navigate('/recipe/edit', {
+                state: {
+                    recipe: importedRecipe,
+                    isImported: true, // Flag this as an imported recipe
+                },
+            });
         } catch (err) {
             setError(
                 err instanceof Error ? err.message : 'Failed to extract recipe'

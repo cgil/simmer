@@ -4,6 +4,42 @@ import type { Database } from "../types/database";
 import { convertRecipeInstructionReferences } from "../utils/ingredientMentions";
 import { ensureUuid, isValidUuid } from "../utils/uuid";
 
+// Helper function for generating UUIDs in the browser
+function generateUUID(): string {
+    // Use browser's built-in crypto.randomUUID() if available
+    if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return window.crypto.randomUUID();
+    }
+
+    // Fallback implementation using crypto.getRandomValues
+    // This is compatible with all modern browsers
+    return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) => {
+        const n = Number(c);
+        return (n ^
+            window.crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> n / 4)
+            .toString(16);
+    });
+}
+
+/**
+ * Generate a deterministic UUID v5 with recipe-specific seed
+ * This ensures ingredients have consistent IDs within a recipe but unique IDs across recipes
+ * @param baseString - The base string to generate UUID from (e.g. ingredient name)
+ * @param recipeSeed - A unique seed for this recipe instance
+ * @returns A deterministic UUID that's unique for this recipe import
+ */
+function generateDeterministicUUID(
+    baseString: string,
+    recipeSeed: string,
+): string {
+    // Create a combined string that includes both the ingredient name and the recipe seed
+    const combinedString = `${baseString}::${recipeSeed}`;
+
+    // Use the existing ensureUuid function which should create a deterministic UUID
+    // But now it will create different UUIDs for the same ingredient in different recipe imports
+    return ensureUuid(combinedString);
+}
+
 type RecipeWithRelations = Database["public"]["Tables"]["recipes"]["Row"] & {
     // Only keep the correct property names that match what comes from the database
     recipe_ingredients:
@@ -37,39 +73,67 @@ export class RecipeService {
      *
      * @param recipe - The recipe to save
      * @param userId - The ID of the user who owns the recipe
+     * @param forceNew - Force treating this recipe as new (for URL imports)
      * @returns The saved recipe with updated ID if it was a new recipe
      */
-    static async saveRecipe(recipe: Recipe, userId: string): Promise<Recipe> {
+    static async saveRecipe(
+        recipe: Recipe,
+        userId: string,
+        forceNew: boolean = false,
+    ): Promise<Recipe> {
         // Check for valid recipe and user
         if (!recipe || !userId) {
             throw new Error("Recipe and userId are required");
         }
 
         // Check if this is a new recipe or if the ID is valid
-        let isNewRecipe = !recipe.id || recipe.id === "new";
+        // When forceNew is true (URL imports), always treat as new recipe
+        let isNewRecipe = forceNew || !recipe.id || recipe.id === "new";
         let recipeId = recipe.id || "";
 
-        // Ensure recipe ID is a valid UUID before using it with Supabase
-        if (!isNewRecipe && !isValidUuid(recipeId)) {
+        // For new recipes or imports, always generate a new UUID
+        // This ensures that importing the same recipe URL multiple times creates distinct recipes
+        if (isNewRecipe) {
+            // Always generate a completely new UUID for new/imported recipes
+            recipeId = generateUUID();
+            console.log(`Generated new UUID for recipe: ${recipeId}`);
+        } else if (!isValidUuid(recipeId)) {
+            // For existing recipes with non-UUID IDs, convert consistently
             console.warn(
                 `Converting non-UUID recipe ID '${recipeId}' to a proper UUID format`,
             );
             recipeId = ensureUuid(recipeId);
-            // Update the recipe object with the validated UUID to maintain consistency
-            recipe = {
-                ...recipe,
-                id: recipeId,
-            };
         }
 
-        // Ensure all ingredient IDs are proper UUIDs
+        // Update the recipe object with the validated/new UUID
+        recipe = {
+            ...recipe,
+            id: recipeId,
+        };
+
+        // Generate a recipe-specific seed that's unique to this specific recipe import
+        // Use a timestamp to ensure uniqueness even if the same recipe is imported multiple times
+        const recipeSeed = isNewRecipe
+            ? `${recipeId}::${Date.now()}`
+            : recipeId;
+
+        console.log(`Using recipe seed: ${recipeSeed} for ingredient IDs`);
+
+        // For new recipes or imports, generate truly unique IDs for all ingredients
+        // This prevents primary key violations when the same recipe is imported multiple times
         const validatedIngredients = recipe.ingredients.map((ingredient) => {
-            // Check if the ID is a valid UUID
-            if (!isValidUuid(ingredient.id)) {
+            if (isNewRecipe) {
+                // For new recipes, use deterministic UUIDs based on ingredient name + recipe seed
+                // This ensures consistent references within the recipe but unique IDs across recipes
+                return {
+                    ...ingredient,
+                    id: generateDeterministicUUID(ingredient.name, recipeSeed),
+                };
+            } else if (!isValidUuid(ingredient.id)) {
+                // For existing recipes, ensure valid UUIDs
                 console.warn(
                     `Invalid UUID format for ingredient: ${ingredient.name} with ID: ${ingredient.id}`,
                 );
-                // Use our deterministic UUID generator for consistent IDs
                 return {
                     ...ingredient,
                     id: ensureUuid(ingredient.id),
@@ -95,7 +159,7 @@ export class RecipeService {
             ingredients: validatedIngredients,
         };
 
-        // Always convert any ingredient references to UUID format
+        // Always update instruction references to match the new ingredient IDs
         if (recipe.instructions?.length > 0 && recipe.ingredients?.length > 0) {
             // If we had to change any IDs, update references to use the new IDs
             if (idMapping.size > 0) {
@@ -113,6 +177,24 @@ export class RecipeService {
                             },
                         ),
                     })),
+                }));
+            }
+
+            // For new recipes, we need to ensure all instruction sections have unique IDs too
+            if (isNewRecipe) {
+                recipe.instructions = recipe.instructions.map((
+                    section,
+                    index,
+                ) => ({
+                    ...section,
+                    // Generate a deterministic ID based on section title and recipe seed
+                    // This ensures unique IDs across recipes but consistent within a recipe
+                    id: generateDeterministicUUID(
+                        `section-${index}-${
+                            section.section_title || "Instructions"
+                        }`,
+                        recipeSeed,
+                    ),
                 }));
             }
 
