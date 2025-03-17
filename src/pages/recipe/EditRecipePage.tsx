@@ -2,7 +2,6 @@ import { FC, useState, useRef, DragEvent, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
     Box,
-    Container,
     Typography,
     Button,
     TextField,
@@ -12,6 +11,8 @@ import {
     Menu,
     MenuItem,
     Divider,
+    Alert,
+    Collapse,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
@@ -539,8 +540,8 @@ const EditRecipePage: FC = () => {
         <Box
             sx={{
                 display: 'flex',
-                alignItems: 'center',
                 justifyContent: 'space-between',
+                alignItems: 'center',
                 width: '100%',
             }}
         >
@@ -573,6 +574,7 @@ const EditRecipePage: FC = () => {
                     Back
                 </Typography>
             </Box>
+
             <Box
                 sx={{
                     display: 'flex',
@@ -580,11 +582,6 @@ const EditRecipePage: FC = () => {
                     alignItems: 'flex-end',
                 }}
             >
-                {saveError && (
-                    <Typography color="error" variant="body2" sx={{ mb: 1 }}>
-                        {saveError}
-                    </Typography>
-                )}
                 <Button
                     variant="contained"
                     startIcon={isSaving ? null : <SaveIcon />}
@@ -604,13 +601,13 @@ const EditRecipePage: FC = () => {
 
     return (
         <AppLayout headerContent={headerContent}>
-            <Container
-                maxWidth={false}
+            <Box
                 sx={{
-                    pb: { xs: 4, sm: 6, md: 8 },
+                    position: 'relative',
                     bgcolor: 'paper.light',
                     minHeight: '100vh',
-                    position: 'relative',
+                    px: { xs: 2, sm: 3, md: 4 },
+                    py: { xs: 3, sm: 4 },
                     '&::before': {
                         content: '""',
                         position: 'absolute',
@@ -641,6 +638,28 @@ const EditRecipePage: FC = () => {
                     },
                 }}
             >
+                {/* Add error banner at the top of the container */}
+                <Collapse in={!!saveError}>
+                    <Alert
+                        severity="error"
+                        variant="filled"
+                        sx={{
+                            mb: 3,
+                            mt: 2,
+                            mx: 2,
+                            borderRadius: 2,
+                            boxShadow: 3,
+                            '& .MuiAlert-message': {
+                                fontFamily: "'Inter', sans-serif",
+                                fontSize: '1rem',
+                            },
+                        }}
+                        onClose={() => setSaveError(null)}
+                    >
+                        <Typography fontWeight={500}>{saveError}</Typography>
+                    </Alert>
+                </Collapse>
+
                 <Box
                     sx={{
                         py: { xs: 2, sm: 3 },
@@ -652,375 +671,388 @@ const EditRecipePage: FC = () => {
                         },
                     }}
                 >
-                    {/* Title Section */}
-                    <Box sx={{ mb: { xs: 3, sm: 4 } }}>
-                        <Box
-                            sx={{
-                                position: 'relative',
-                                bgcolor: 'background.paper',
-                                p: { xs: 2, sm: 3 },
-                                borderRadius: 1,
-                                boxShadow: `
-                                    0 1px 2px rgba(0,0,0,0.03),
-                                    0 4px 20px rgba(0,0,0,0.06),
-                                    inset 0 0 0 1px rgba(255,255,255,0.9)
-                                `,
-                                '&::before': {
-                                    content: '""',
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    height: '100%',
-                                    background: 'rgba(255,255,255,0.5)',
-                                    backdropFilter: 'blur(4px)',
-                                    borderRadius: 1,
-                                    zIndex: 0,
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                },
-                                '& > *': {
-                                    position: 'relative',
-                                    zIndex: 1,
-                                },
-                                '& .MuiInputBase-input': {
-                                    color: 'text.primary',
-                                    fontFamily:
-                                        "'Inter', system-ui, sans-serif",
-                                },
-                            }}
-                        >
-                            <TextField
-                                fullWidth
-                                placeholder="Give your recipe a name..."
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                variant="standard"
-                                sx={{
-                                    mb: 2,
-                                    '& .MuiInputBase-input': {
-                                        fontFamily: "'Kalam', cursive",
-                                        fontSize: { xs: '2.5rem', sm: '3rem' },
-                                        fontWeight: 700,
-                                        lineHeight: 1.2,
-                                        pb: 1,
-                                        textShadow:
-                                            '1px 1px 1px rgba(0,0,0,0.05)',
-                                    },
-                                    '& .MuiInput-underline:before': {
-                                        borderBottomColor: 'transparent',
-                                    },
-                                }}
-                            />
-                            <TextField
-                                fullWidth
-                                placeholder="Add a description..."
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                multiline
-                                rows={2}
-                                variant="standard"
-                                sx={{
-                                    '& .MuiInputBase-input': {
-                                        fontFamily: "'Inter', sans-serif",
-                                        fontSize: '1.25rem',
-                                        lineHeight: 1.5,
-                                        color: 'text.secondary',
-                                    },
-                                    '& .MuiInput-underline:before': {
-                                        borderBottomColor: 'transparent',
-                                    },
-                                }}
-                            />
-                        </Box>
-                    </Box>
-
-                    {/* Images Section */}
-                    <Box sx={{ mb: { xs: 3, sm: 4 } }}>
-                        <Box
-                            sx={{
-                                position: 'relative',
-                                bgcolor: 'background.paper',
-                                p: { xs: 2, sm: 3 },
-                                borderRadius: 1,
-                                boxShadow: `
-                                    0 1px 2px rgba(0,0,0,0.03),
-                                    0 4px 20px rgba(0,0,0,0.06),
-                                    inset 0 0 0 1px rgba(255,255,255,0.9)
-                                `,
-                                '&::before': {
-                                    content: '""',
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    height: '100%',
-                                    background: 'rgba(255,255,255,0.5)',
-                                    backdropFilter: 'blur(4px)',
-                                    borderRadius: 1,
-                                    zIndex: 0,
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                },
-                                '& > *': {
-                                    position: 'relative',
-                                    zIndex: 1,
-                                },
-                            }}
-                        >
-                            <Typography
-                                variant="h6"
-                                gutterBottom
-                                sx={{
-                                    fontWeight: 600,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1,
-                                    color: 'text.primary',
-                                    mb: 2,
-                                    fontFamily: "'Kalam', cursive",
-                                }}
-                            >
-                                <ImageIcon />
-                                Recipe Images
-                            </Typography>
-
+                    <Grid container spacing={4}>
+                        {/* Title Section */}
+                        <Grid item xs={12}>
                             <Box
                                 sx={{
-                                    display: 'grid',
-                                    gridTemplateColumns: {
-                                        xs: '1fr',
-                                        sm: 'repeat(3, 1fr)',
-                                        md: 'repeat(4, 1fr)',
-                                    },
-                                    gap: 2,
                                     position: 'relative',
+                                    bgcolor: 'background.paper',
+                                    p: { xs: 2, sm: 3 },
+                                    borderRadius: 1,
+                                    boxShadow: `
+                                    0 1px 2px rgba(0,0,0,0.03),
+                                    0 4px 20px rgba(0,0,0,0.06),
+                                    inset 0 0 0 1px rgba(255,255,255,0.9)
+                                `,
+                                    '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: '100%',
+                                        background: 'rgba(255,255,255,0.5)',
+                                        backdropFilter: 'blur(4px)',
+                                        borderRadius: 1,
+                                        zIndex: 0,
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                    },
+                                    '& > *': {
+                                        position: 'relative',
+                                        zIndex: 1,
+                                    },
+                                    '& .MuiInputBase-input': {
+                                        color: 'text.primary',
+                                        fontFamily:
+                                            "'Inter', system-ui, sans-serif",
+                                    },
                                 }}
-                                onDragOver={handleDragOver}
-                                onDragLeave={handleDragLeave}
-                                onDrop={handleDrop}
                             >
-                                {isDragging && (
+                                <TextField
+                                    fullWidth
+                                    placeholder="Give your recipe a name..."
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    variant="standard"
+                                    sx={{
+                                        mb: 2,
+                                        '& .MuiInputBase-input': {
+                                            fontFamily: "'Kalam', cursive",
+                                            fontSize: {
+                                                xs: '2.5rem',
+                                                sm: '3rem',
+                                            },
+                                            fontWeight: 700,
+                                            lineHeight: 1.2,
+                                            pb: 1,
+                                            textShadow:
+                                                '1px 1px 1px rgba(0,0,0,0.05)',
+                                        },
+                                        '& .MuiInput-underline:before': {
+                                            borderBottomColor: 'transparent',
+                                        },
+                                    }}
+                                />
+                                <TextField
+                                    fullWidth
+                                    placeholder="Add a description..."
+                                    value={description}
+                                    onChange={(e) =>
+                                        setDescription(e.target.value)
+                                    }
+                                    multiline
+                                    rows={2}
+                                    variant="standard"
+                                    sx={{
+                                        '& .MuiInputBase-input': {
+                                            fontFamily: "'Inter', sans-serif",
+                                            fontSize: '1.25rem',
+                                            lineHeight: 1.5,
+                                            color: 'text.secondary',
+                                        },
+                                        '& .MuiInput-underline:before': {
+                                            borderBottomColor: 'transparent',
+                                        },
+                                    }}
+                                />
+                            </Box>
+                        </Grid>
+
+                        {/* Images Section */}
+                        <Grid item xs={12}>
+                            <Box
+                                sx={{
+                                    position: 'relative',
+                                    bgcolor: 'background.paper',
+                                    p: { xs: 2, sm: 3 },
+                                    borderRadius: 1,
+                                    boxShadow: `
+                                    0 1px 2px rgba(0,0,0,0.03),
+                                    0 4px 20px rgba(0,0,0,0.06),
+                                    inset 0 0 0 1px rgba(255,255,255,0.9)
+                                `,
+                                    '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: '100%',
+                                        background: 'rgba(255,255,255,0.5)',
+                                        backdropFilter: 'blur(4px)',
+                                        borderRadius: 1,
+                                        zIndex: 0,
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                    },
+                                    '& > *': {
+                                        position: 'relative',
+                                        zIndex: 1,
+                                    },
+                                }}
+                            >
+                                <Typography
+                                    variant="h6"
+                                    gutterBottom
+                                    sx={{
+                                        fontWeight: 600,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                        color: 'text.primary',
+                                        mb: 2,
+                                        fontFamily: "'Kalam', cursive",
+                                    }}
+                                >
+                                    <ImageIcon />
+                                    Recipe Images
+                                </Typography>
+
+                                <Box
+                                    sx={{
+                                        display: 'grid',
+                                        gridTemplateColumns: {
+                                            xs: '1fr',
+                                            sm: 'repeat(3, 1fr)',
+                                            md: 'repeat(4, 1fr)',
+                                        },
+                                        gap: 2,
+                                        position: 'relative',
+                                    }}
+                                    onDragOver={handleDragOver}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={handleDrop}
+                                >
+                                    {isDragging && (
+                                        <Box
+                                            sx={{
+                                                position: 'absolute',
+                                                inset: 0,
+                                                bgcolor: 'rgba(0, 0, 0, 0.05)',
+                                                border: '2px dashed',
+                                                borderColor: 'primary.main',
+                                                borderRadius: 1,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                zIndex: 2,
+                                            }}
+                                        >
+                                            <Typography
+                                                variant="h6"
+                                                sx={{
+                                                    color: 'primary.contrastText',
+                                                    fontFamily:
+                                                        "'Kalam', cursive",
+                                                }}
+                                            >
+                                                Drop images here
+                                            </Typography>
+                                        </Box>
+                                    )}
+                                    {images.map((imageUrl, index) => (
+                                        <Box
+                                            key={index}
+                                            sx={{
+                                                position: 'relative',
+                                                aspectRatio: '4/3',
+                                                borderRadius: 1,
+                                                overflow: 'hidden',
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                '&:hover .image-actions': {
+                                                    opacity: 1,
+                                                },
+                                            }}
+                                        >
+                                            <Box
+                                                component="img"
+                                                src={imageUrl}
+                                                alt={`Recipe image ${
+                                                    index + 1
+                                                }`}
+                                                sx={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    objectFit: 'cover',
+                                                }}
+                                            />
+                                            <Box
+                                                className="image-actions"
+                                                sx={{
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    right: 0,
+                                                    bottom: 0,
+                                                    bgcolor:
+                                                        'rgba(0, 0, 0, 0.3)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: 1,
+                                                    opacity: 0,
+                                                    transition:
+                                                        'opacity 0.2s ease-in-out',
+                                                }}
+                                            >
+                                                <IconButton
+                                                    onClick={() =>
+                                                        handleMoveImage(
+                                                            index,
+                                                            index - 1
+                                                        )
+                                                    }
+                                                    disabled={index === 0}
+                                                    size="small"
+                                                    sx={{
+                                                        color: 'white',
+                                                        bgcolor:
+                                                            'rgba(0, 0, 0, 0.5)',
+                                                        '&:hover': {
+                                                            bgcolor:
+                                                                'rgba(0, 0, 0, 0.7)',
+                                                        },
+                                                        '&.Mui-disabled': {
+                                                            opacity: 0.3,
+                                                        },
+                                                    }}
+                                                >
+                                                    <ArrowBackIcon fontSize="small" />
+                                                </IconButton>
+                                                <IconButton
+                                                    onClick={() => {
+                                                        const newImages = [
+                                                            ...images,
+                                                        ];
+                                                        newImages.splice(
+                                                            index,
+                                                            1
+                                                        );
+                                                        setImages(newImages);
+                                                    }}
+                                                    size="small"
+                                                    sx={{
+                                                        color: 'white',
+                                                        bgcolor:
+                                                            'rgba(0, 0, 0, 0.5)',
+                                                        '&:hover': {
+                                                            bgcolor:
+                                                                'rgba(0, 0, 0, 0.7)',
+                                                        },
+                                                    }}
+                                                >
+                                                    <DeleteOutlineIcon fontSize="small" />
+                                                </IconButton>
+                                                <IconButton
+                                                    onClick={() =>
+                                                        handleMoveImage(
+                                                            index,
+                                                            index + 1
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        index ===
+                                                        images.length - 1
+                                                    }
+                                                    size="small"
+                                                    sx={{
+                                                        color: 'white',
+                                                        bgcolor:
+                                                            'rgba(0, 0, 0, 0.5)',
+                                                        '&:hover': {
+                                                            bgcolor:
+                                                                'rgba(0, 0, 0, 0.7)',
+                                                        },
+                                                        '&.Mui-disabled': {
+                                                            opacity: 0.3,
+                                                        },
+                                                    }}
+                                                >
+                                                    <ArrowForwardIcon fontSize="small" />
+                                                </IconButton>
+                                            </Box>
+                                        </Box>
+                                    ))}
                                     <Box
                                         sx={{
-                                            position: 'absolute',
-                                            inset: 0,
-                                            bgcolor: 'rgba(0, 0, 0, 0.05)',
+                                            aspectRatio: '4/3',
                                             border: '2px dashed',
-                                            borderColor: 'primary.main',
+                                            borderColor: 'divider',
                                             borderRadius: 1,
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            zIndex: 2,
-                                        }}
-                                    >
-                                        <Typography
-                                            variant="h6"
-                                            sx={{
-                                                color: 'primary.contrastText',
-                                                fontFamily: "'Kalam', cursive",
-                                            }}
-                                        >
-                                            Drop images here
-                                        </Typography>
-                                    </Box>
-                                )}
-                                {images.map((imageUrl, index) => (
-                                    <Box
-                                        key={index}
-                                        sx={{
-                                            position: 'relative',
-                                            aspectRatio: '4/3',
-                                            borderRadius: 1,
-                                            overflow: 'hidden',
-                                            border: '1px solid',
-                                            borderColor: 'divider',
-                                            '&:hover .image-actions': {
-                                                opacity: 1,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease-in-out',
+                                            '&:hover': {
+                                                borderColor: 'primary.main',
+                                                bgcolor: 'rgba(0, 0, 0, 0.02)',
                                             },
+                                            position: 'relative',
                                         }}
+                                        onClick={handleAddImageClick}
                                     >
-                                        <Box
-                                            component="img"
-                                            src={imageUrl}
-                                            alt={`Recipe image ${index + 1}`}
-                                            sx={{
-                                                width: '100%',
-                                                height: '100%',
-                                                objectFit: 'cover',
-                                            }}
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            onChange={(e) =>
+                                                handleImageUpload(
+                                                    e.target.files
+                                                )
+                                            }
+                                            style={{ display: 'none' }}
+                                        />
+                                        <input
+                                            ref={galleryInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            onChange={(e) =>
+                                                handleImageUpload(
+                                                    e.target.files
+                                                )
+                                            }
+                                            style={{ display: 'none' }}
+                                            aria-label="Choose photos from gallery or camera"
                                         />
                                         <Box
-                                            className="image-actions"
                                             sx={{
-                                                position: 'absolute',
-                                                top: 0,
-                                                left: 0,
-                                                right: 0,
-                                                bottom: 0,
-                                                bgcolor: 'rgba(0, 0, 0, 0.3)',
                                                 display: 'flex',
+                                                flexDirection: 'column',
                                                 alignItems: 'center',
-                                                justifyContent: 'center',
                                                 gap: 1,
-                                                opacity: 0,
-                                                transition:
-                                                    'opacity 0.2s ease-in-out',
+                                                color: 'text.secondary',
                                             }}
                                         >
-                                            <IconButton
-                                                onClick={() =>
-                                                    handleMoveImage(
-                                                        index,
-                                                        index - 1
-                                                    )
-                                                }
-                                                disabled={index === 0}
-                                                size="small"
+                                            <AddPhotoAlternateIcon
+                                                sx={{ fontSize: 24 }}
+                                            />
+                                            <Typography
+                                                variant="body2"
                                                 sx={{
-                                                    color: 'white',
-                                                    bgcolor:
-                                                        'rgba(0, 0, 0, 0.5)',
-                                                    '&:hover': {
-                                                        bgcolor:
-                                                            'rgba(0, 0, 0, 0.7)',
-                                                    },
-                                                    '&.Mui-disabled': {
-                                                        opacity: 0.3,
-                                                    },
+                                                    fontFamily:
+                                                        "'Inter', sans-serif",
+                                                    textAlign: 'center',
                                                 }}
                                             >
-                                                <ArrowBackIcon fontSize="small" />
-                                            </IconButton>
-                                            <IconButton
-                                                onClick={() => {
-                                                    const newImages = [
-                                                        ...images,
-                                                    ];
-                                                    newImages.splice(index, 1);
-                                                    setImages(newImages);
-                                                }}
-                                                size="small"
-                                                sx={{
-                                                    color: 'white',
-                                                    bgcolor:
-                                                        'rgba(0, 0, 0, 0.5)',
-                                                    '&:hover': {
-                                                        bgcolor:
-                                                            'rgba(0, 0, 0, 0.7)',
-                                                    },
-                                                }}
-                                            >
-                                                <DeleteOutlineIcon fontSize="small" />
-                                            </IconButton>
-                                            <IconButton
-                                                onClick={() =>
-                                                    handleMoveImage(
-                                                        index,
-                                                        index + 1
-                                                    )
-                                                }
-                                                disabled={
-                                                    index === images.length - 1
-                                                }
-                                                size="small"
-                                                sx={{
-                                                    color: 'white',
-                                                    bgcolor:
-                                                        'rgba(0, 0, 0, 0.5)',
-                                                    '&:hover': {
-                                                        bgcolor:
-                                                            'rgba(0, 0, 0, 0.7)',
-                                                    },
-                                                    '&.Mui-disabled': {
-                                                        opacity: 0.3,
-                                                    },
-                                                }}
-                                            >
-                                                <ArrowForwardIcon fontSize="small" />
-                                            </IconButton>
+                                                Click to{' '}
+                                                {isMobileDevice
+                                                    ? 'add photos from gallery or camera'
+                                                    : 'add or drag images'}{' '}
+                                            </Typography>
                                         </Box>
-                                    </Box>
-                                ))}
-                                <Box
-                                    sx={{
-                                        aspectRatio: '4/3',
-                                        border: '2px dashed',
-                                        borderColor: 'divider',
-                                        borderRadius: 1,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s ease-in-out',
-                                        '&:hover': {
-                                            borderColor: 'primary.main',
-                                            bgcolor: 'rgba(0, 0, 0, 0.02)',
-                                        },
-                                        position: 'relative',
-                                    }}
-                                    onClick={handleAddImageClick}
-                                >
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        onChange={(e) =>
-                                            handleImageUpload(e.target.files)
-                                        }
-                                        style={{ display: 'none' }}
-                                    />
-                                    <input
-                                        ref={galleryInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        onChange={(e) =>
-                                            handleImageUpload(e.target.files)
-                                        }
-                                        style={{ display: 'none' }}
-                                        aria-label="Choose photos from gallery or camera"
-                                    />
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems: 'center',
-                                            gap: 1,
-                                            color: 'text.secondary',
-                                        }}
-                                    >
-                                        <AddPhotoAlternateIcon
-                                            sx={{ fontSize: 24 }}
-                                        />
-                                        <Typography
-                                            variant="body2"
-                                            sx={{
-                                                fontFamily:
-                                                    "'Inter', sans-serif",
-                                                textAlign: 'center',
-                                            }}
-                                        >
-                                            Click to{' '}
-                                            {isMobileDevice
-                                                ? 'add photos from gallery or camera'
-                                                : 'add or drag images'}{' '}
-                                        </Typography>
                                     </Box>
                                 </Box>
                             </Box>
-                        </Box>
-                    </Box>
+                        </Grid>
 
-                    {/* Time Estimate and Tags Section */}
-                    <Grid
-                        container
-                        spacing={{ xs: 4, md: 6 }}
-                        sx={{ mb: { xs: 4, md: 6 } }}
-                    >
-                        <Grid item xs={12} md={5}>
+                        {/* Time Estimate and Tags Section */}
+                        <Grid item xs={12} md={6}>
                             <Stack spacing={3}>
                                 <ServingSizeForm
                                     servings={servings}
@@ -1032,14 +1064,12 @@ const EditRecipePage: FC = () => {
                                 />
                             </Stack>
                         </Grid>
-                        <Grid item xs={12} md={7}>
+                        <Grid item xs={12} md={6}>
                             <TagInput tags={tags} onChange={setTags} />
                         </Grid>
-                    </Grid>
 
-                    <Grid container spacing={{ xs: 4, md: 6 }}>
                         {/* Ingredients Section */}
-                        <Grid item xs={12} md={5}>
+                        <Grid item xs={12} md={6}>
                             <Box
                                 sx={{
                                     position: 'relative',
@@ -1047,10 +1077,10 @@ const EditRecipePage: FC = () => {
                                     p: { xs: 2, sm: 3 },
                                     borderRadius: 1,
                                     boxShadow: `
-                                        0 1px 2px rgba(0,0,0,0.03),
-                                        0 4px 20px rgba(0,0,0,0.06),
-                                        inset 0 0 0 1px rgba(255,255,255,0.9)
-                                    `,
+                                    0 1px 2px rgba(0,0,0,0.03),
+                                    0 4px 20px rgba(0,0,0,0.06),
+                                    inset 0 0 0 1px rgba(255,255,255,0.9)
+                                `,
                                     '&::before': {
                                         content: '""',
                                         position: 'absolute',
@@ -1239,7 +1269,7 @@ const EditRecipePage: FC = () => {
                         </Grid>
 
                         {/* Instructions Section */}
-                        <Grid item xs={12} md={7}>
+                        <Grid item xs={12} md={6}>
                             <Box
                                 sx={{
                                     position: 'relative',
@@ -1247,10 +1277,10 @@ const EditRecipePage: FC = () => {
                                     p: { xs: 2, sm: 3 },
                                     borderRadius: 1,
                                     boxShadow: `
-                                        0 1px 2px rgba(0,0,0,0.03),
-                                        0 4px 20px rgba(0,0,0,0.06),
-                                        inset 0 0 0 1px rgba(255,255,255,0.9)
-                                    `,
+                                    0 1px 2px rgba(0,0,0,0.03),
+                                    0 4px 20px rgba(0,0,0,0.06),
+                                    inset 0 0 0 1px rgba(255,255,255,0.9)
+                                `,
                                     '&::before': {
                                         content: '""',
                                         position: 'absolute',
@@ -1577,10 +1607,10 @@ const EditRecipePage: FC = () => {
                                     p: { xs: 2, sm: 3 },
                                     borderRadius: 1,
                                     boxShadow: `
-                                        0 1px 2px rgba(0,0,0,0.03),
-                                        0 4px 20px rgba(0,0,0,0.06),
-                                        inset 0 0 0 1px rgba(255,255,255,0.9)
-                                    `,
+                                    0 1px 2px rgba(0,0,0,0.03),
+                                    0 4px 20px rgba(0,0,0,0.06),
+                                    inset 0 0 0 1px rgba(255,255,255,0.9)
+                                `,
                                     '&::before': {
                                         content: '""',
                                         position: 'absolute',
@@ -1693,7 +1723,7 @@ const EditRecipePage: FC = () => {
                         </Grid>
                     </Grid>
                 </Box>
-            </Container>
+            </Box>
             <Menu
                 anchorEl={anchorEl}
                 open={Boolean(anchorEl)}
