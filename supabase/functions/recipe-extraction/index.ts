@@ -638,7 +638,9 @@ serve(async (req) => {
                                 - "One Pot"
                                 - "Soup"
                                 - "Thanksgiving"
+                            - Tags should span at least 2 distinct categories such as meal type, dietary label, cuisine, difficulty, occasion, etc.
                             - Notes should be about the recipe or the preparation, have them be concise, friendly, helpful, and thoughtful. Only add them if they provide additional information and value to the recipe.
+                            - Notes should avoid restating instructions. Instead, highlight pro tips, substitutions, or storage advice.
                             - Section titles should be concise and descriptive. They should be a few words that captures the main idea of the section such as:
                                 - "Marinating the Chicken"
                                 - "Making the Sauce"
