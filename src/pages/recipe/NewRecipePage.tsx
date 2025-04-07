@@ -14,6 +14,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LinkIcon from '@mui/icons-material/Link';
+import CreateIcon from '@mui/icons-material/Create';
 import AppLayout from '../../components/layout/AppLayout';
 import { extractRecipe } from '../../lib/api';
 
@@ -74,6 +75,35 @@ const NewRecipePage: FC = () => {
             setIsLoading(false);
             setActiveStep(0);
         }
+    };
+
+    const handleCreateFromScratch = () => {
+        // Create an empty recipe object with the minimum required structure
+        const emptyRecipe = {
+            title: '',
+            description: '',
+            servings: 4,
+            prep_time: 0,
+            cook_time: 0,
+            total_time: 0,
+            ingredients: [],
+            instructions: [
+                {
+                    sectionTitle: '',
+                    steps: [''],
+                },
+            ],
+            notes: [],
+            images: [],
+        };
+
+        // Navigate to the recipe edit page with the empty recipe
+        navigate('/recipe/edit', {
+            state: {
+                recipe: emptyRecipe,
+                isNew: true, // Flag this as a new recipe (not imported)
+            },
+        });
     };
 
     const headerContent = (
@@ -501,6 +531,58 @@ const NewRecipePage: FC = () => {
                                     'Import Recipe'
                                 )}
                             </Button>
+
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    mt: 3,
+                                    pt: 2,
+                                    position: 'relative',
+                                    '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: '25%',
+                                        right: '25%',
+                                        height: '1px',
+                                        background:
+                                            'repeating-linear-gradient(to right, #ddd 0, #ddd 4px, transparent 4px, transparent 8px)',
+                                    },
+                                }}
+                            >
+                                <Button
+                                    onClick={handleCreateFromScratch}
+                                    disabled={isLoading}
+                                    startIcon={
+                                        <CreateIcon sx={{ fontSize: 18 }} />
+                                    }
+                                    sx={{
+                                        fontFamily: "'Kalam', cursive",
+                                        fontSize: '1rem',
+                                        color: 'text.secondary',
+                                        textTransform: 'none',
+                                        bgcolor: 'transparent',
+                                        border: 'none',
+                                        boxShadow: 'none',
+                                        '&:hover': {
+                                            bgcolor: 'transparent',
+                                            color: 'primary.main',
+                                            textDecoration: 'underline',
+                                            textUnderlineOffset: '2px',
+                                            textDecorationStyle: 'wavy',
+                                            textDecorationColor:
+                                                'primary.light',
+                                        },
+                                        '&.Mui-disabled': {
+                                            opacity: 0.5,
+                                        },
+                                    }}
+                                >
+                                    ...or start with a blank recipe instead
+                                </Button>
+                            </Box>
                         </Paper>
                     </Box>
                 </Container>
