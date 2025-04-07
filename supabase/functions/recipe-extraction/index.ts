@@ -619,6 +619,8 @@ serve(async (req) => {
                                 - "drizzle"
                                 - "whole"
                                 - "bunches"
+                                - "large" (as in large eggs)
+                                - "stalks" (as in celery stalks)
                             - If the unit type is not listed above, use your best judgement to determine the correct unit type.
                             - The timing unit should always be in "minutes"
                             - When timing info is available, the timing min and max should always be in minutes
@@ -632,6 +634,10 @@ serve(async (req) => {
                                 - "Low Calorie"
                                 - "Main Dish"
                                 - "Italian"
+                                - "Quick and Easy"
+                                - "One Pot"
+                                - "Soup"
+                                - "Thanksgiving"
                             - Notes should be about the recipe or the preparation, have them be concise, friendly, helpful, and thoughtful. Only add them if they provide additional information and value to the recipe.
                             - Section titles should be concise and descriptive. They should be a few words that captures the main idea of the section such as:
                                 - "Marinating the Chicken"
