@@ -165,7 +165,7 @@ const NewRecipePage: FC = () => {
             elevation={0}
             sx={{
                 p: 2.5,
-                height: '100%',
+                height: 220, // Match the height of the actual recipe cards
                 display: 'flex',
                 flexDirection: 'column',
                 border: '1px solid',
@@ -532,7 +532,7 @@ const NewRecipePage: FC = () => {
                             }}
                             sx={{
                                 p: 2.5,
-                                height: '100%',
+                                height: 220, // Fixed height for all cards
                                 display: 'flex',
                                 flexDirection: 'column',
                                 cursor: 'pointer',
@@ -548,6 +548,7 @@ const NewRecipePage: FC = () => {
                                     selectedIdeaId === idea.id
                                         ? 'rgba(44, 62, 80, 0.05)'
                                         : 'background.paper',
+                                overflow: 'hidden',
                                 '&:hover': {
                                     borderColor: 'primary.main',
                                     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
@@ -573,6 +574,13 @@ const NewRecipePage: FC = () => {
                                     mb: 1.5,
                                     position: 'relative',
                                     zIndex: 1,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                    lineHeight: 1.2,
+                                    height: 42, // ~2 lines of text
                                 }}
                             >
                                 {idea.title}
@@ -586,6 +594,12 @@ const NewRecipePage: FC = () => {
                                     flexGrow: 1,
                                     position: 'relative',
                                     zIndex: 1,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 4,
+                                    WebkitBoxOrient: 'vertical',
+                                    lineHeight: 1.5,
                                 }}
                             >
                                 {idea.description}
