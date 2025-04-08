@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { OpenAI } from "https://deno.land/x/openai@v4.55.1/mod.ts";
+import { OpenAI } from "https://esm.sh/openai@4.93.0";
 import { z } from "https://deno.land/x/zod@v3.24.1/mod.ts";
 import { zodResponseFormat } from "https://deno.land/x/openai@v4.55.1/helpers/zod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
@@ -93,6 +93,7 @@ serve(async (req) => {
         // Generate recipe ideas using OpenAI with Zod schema
         const completion = await openai.chat.completions.create({
             model: "o3-mini",
+            reasoning_effort: "low",
             response_format: zodResponseFormat(
                 RecipeIdeasSchema,
                 "recipe_ideas_generation",
