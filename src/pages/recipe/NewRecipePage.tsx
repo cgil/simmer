@@ -12,12 +12,13 @@ import {
     LinearProgress,
     Collapse,
     Fade,
+    Grid,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LinkIcon from '@mui/icons-material/Link';
 import CreateIcon from '@mui/icons-material/Create';
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import AppLayout from '../../components/layout/AppLayout';
 import { extractRecipe } from '../../lib/api';
 
@@ -27,6 +28,34 @@ const EXTRACTION_STEPS = [
     'Having our chef taste test',
     'Personalizing it for you',
     'Writing it in our cookbook',
+];
+
+// Mock recipe ideas for the demo
+const MOCK_RECIPE_IDEAS = [
+    {
+        id: '1',
+        title: 'Creamy Garlic Parmesan Pasta',
+        description:
+            "A luxurious pasta dish with a silky garlic parmesan sauce. Simple ingredients combine for a restaurant-quality meal that's perfect for weeknight dinners.",
+    },
+    {
+        id: '2',
+        title: 'Honey Sriracha Glazed Salmon',
+        description:
+            'Sweet and spicy glazed salmon fillets with a perfect caramelized exterior. Pairs beautifully with steamed rice and vegetables for a healthy, flavorful meal.',
+    },
+    {
+        id: '3',
+        title: 'Mediterranean Chickpea Salad',
+        description:
+            'A refreshing salad packed with chickpeas, cucumber, tomato, and feta in a lemon herb dressing. Great for meal prep and perfect for summer gatherings.',
+    },
+    {
+        id: '4',
+        title: 'Rustic Apple Cinnamon Galette',
+        description:
+            'A free-form apple tart with a flaky crust and warm cinnamon filling. Simpler than pie but just as delicious, topped with a scoop of vanilla ice cream.',
+    },
 ];
 
 const NewRecipePage: FC = () => {
@@ -42,8 +71,17 @@ const NewRecipePage: FC = () => {
     const [activeSection, setActiveSection] = useState<'import' | 'create'>(
         'import'
     );
-    // New state for AI recipe prompt
+    // State for AI recipe prompt
     const [recipePrompt, setRecipePrompt] = useState('');
+
+    // State for recipe ideas generation flow
+    const [isGeneratingIdeas, setIsGeneratingIdeas] = useState(false);
+    const [recipeIdeas, setRecipeIdeas] = useState<
+        Array<{ id: string; title: string; description: string }>
+    >([]);
+    const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null);
+    const [showIdeaPromptEdit, setShowIdeaPromptEdit] = useState(false);
+    const [editedPrompt, setEditedPrompt] = useState('');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -107,8 +145,10 @@ const NewRecipePage: FC = () => {
             images: [],
         };
 
-        // TODO: If recipePrompt has content, we would use AI to generate a recipe
-        // This part will be implemented later
+        // Reset any AI generation states
+        setIsGeneratingIdeas(false);
+        setRecipeIdeas([]);
+        setSelectedIdeaId(null);
 
         // Navigate to the recipe edit page with the empty recipe
         navigate('/recipe/edit', {
@@ -119,10 +159,187 @@ const NewRecipePage: FC = () => {
         });
     };
 
+    // Recipe Ideas Loading Card Component
+    const RecipeIdeaLoadingCard: FC = () => (
+        <Paper
+            elevation={0}
+            sx={{
+                p: 2.5,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                position: 'relative',
+                bgcolor: 'background.paper',
+                overflow: 'hidden',
+                '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'rgba(255,255,255,0.6)',
+                    backdropFilter: 'blur(2px)',
+                    borderRadius: 1,
+                    zIndex: 0,
+                },
+            }}
+        >
+            {/* Title placeholder */}
+            <Box
+                sx={{
+                    height: 28,
+                    width: '80%',
+                    mb: 1.5,
+                    borderRadius: 0.5,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    bgcolor: 'rgba(0,0,0,0.05)',
+                    '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background:
+                            'linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)',
+                        animation: 'shimmer 1.5s infinite',
+                    },
+                    '@keyframes shimmer': {
+                        '0%': {
+                            transform: 'translateX(-100%)',
+                        },
+                        '100%': {
+                            transform: 'translateX(100%)',
+                        },
+                    },
+                }}
+            />
+
+            {/* Description placeholder lines */}
+            {[...Array(4)].map((_, i) => (
+                <Box
+                    key={i}
+                    sx={{
+                        height: 14,
+                        width: `${Math.random() * 30 + 70}%`,
+                        mb: 1,
+                        borderRadius: 0.5,
+                        position: 'relative',
+                        overflow: 'hidden',
+                        bgcolor: 'rgba(0,0,0,0.05)',
+                        '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background:
+                                'linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)',
+                            animation: 'shimmer 1.5s infinite',
+                            animationDelay: `${i * 0.2}s`,
+                        },
+                    }}
+                />
+            ))}
+
+            {/* Button placeholder */}
+            <Box
+                sx={{
+                    height: 36,
+                    width: '100%',
+                    mt: 'auto',
+                    borderRadius: 0.5,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    bgcolor: 'rgba(0,0,0,0.05)',
+                    '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background:
+                            'linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)',
+                        animation: 'shimmer 1.5s infinite',
+                    },
+                }}
+            />
+        </Paper>
+    );
+
+    // New function to generate AI recipe ideas
+    const handleGenerateRecipeIdeas = async () => {
+        if (!recipePrompt.trim()) return;
+
+        setIsGeneratingIdeas(true);
+        setRecipeIdeas([]);
+        setSelectedIdeaId(null);
+
+        // Instead of showing loading screens, we'll show placeholder cards
+        // and populate them one by one
+
+        const cardLoadingDuration = Math.floor(Math.random() * 2000) + 2000; // 2-4 seconds
+
+        // Load each card progressively
+        for (let i = 0; i < MOCK_RECIPE_IDEAS.length; i++) {
+            await new Promise((resolve) =>
+                setTimeout(resolve, cardLoadingDuration)
+            );
+            setRecipeIdeas((prev) => [...prev, MOCK_RECIPE_IDEAS[i]]);
+        }
+    };
+
+    // Function to create a recipe from a selected idea
+    const handleCreateFromSelectedIdea = () => {
+        if (!selectedIdeaId) return;
+
+        const selectedIdea = recipeIdeas.find(
+            (idea) => idea.id === selectedIdeaId
+        );
+        if (!selectedIdea) return;
+
+        // Create a recipe based on the selected idea
+        const newRecipe = {
+            title: selectedIdea.title,
+            description: selectedIdea.description,
+            servings: 4,
+            prep_time: 0,
+            cook_time: 0,
+            total_time: 0,
+            ingredients: [],
+            instructions: [
+                {
+                    sectionTitle: '',
+                    steps: [''],
+                },
+            ],
+            notes: [],
+            images: [],
+        };
+
+        // Navigate to the recipe edit page with the new recipe
+        navigate('/recipe/edit', {
+            state: {
+                recipe: newRecipe,
+                isNew: true,
+            },
+        });
+    };
+
     const toggleSection = (section: 'import' | 'create') => {
         // Only change if we're selecting a different section
         if (activeSection !== section) {
             setActiveSection(section);
+
+            // Reset AI generation states when switching sections
+            setIsGeneratingIdeas(false);
+            setRecipeIdeas([]);
+            setSelectedIdeaId(null);
+            setShowIdeaPromptEdit(false);
 
             // Clear any errors when switching to import section
             if (section === 'import') {
@@ -130,6 +347,407 @@ const NewRecipePage: FC = () => {
             }
         }
     };
+
+    // Recipe ideas with progressive loading
+    const recipeIdeasContent = (
+        <Box>
+            {/* Show original prompt with edit option */}
+            <Box
+                sx={{
+                    mb: 3,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    p: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    bgcolor: 'background.paper',
+                    position: 'relative',
+                }}
+            >
+                {!showIdeaPromptEdit ? (
+                    <>
+                        <Typography
+                            sx={{
+                                fontFamily: "'Inter', sans-serif",
+                                fontSize: '1rem',
+                                mb: 0.5,
+                                fontWeight: 600,
+                            }}
+                        >
+                            Recipe description:
+                        </Typography>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                justifyContent: 'space-between',
+                            }}
+                        >
+                            <Typography
+                                sx={{
+                                    fontFamily: "'Inter', sans-serif",
+                                    color: 'text.secondary',
+                                    pr: 2,
+                                    flex: 1,
+                                    lineHeight: 1.5,
+                                }}
+                            >
+                                {recipePrompt}
+                            </Typography>
+                            <Box
+                                onClick={() => {
+                                    if (
+                                        recipeIdeas.length <
+                                        MOCK_RECIPE_IDEAS.length
+                                    )
+                                        return;
+                                    setShowIdeaPromptEdit(true);
+                                    setEditedPrompt(recipePrompt);
+                                }}
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: '2rem',
+                                    height: '2rem',
+                                    borderRadius: '50%',
+                                    cursor:
+                                        recipeIdeas.length <
+                                        MOCK_RECIPE_IDEAS.length
+                                            ? 'not-allowed'
+                                            : 'pointer',
+                                    color:
+                                        recipeIdeas.length <
+                                        MOCK_RECIPE_IDEAS.length
+                                            ? 'action.disabled'
+                                            : 'text.secondary',
+                                    transition: 'all 0.2s ease',
+                                    opacity:
+                                        recipeIdeas.length <
+                                        MOCK_RECIPE_IDEAS.length
+                                            ? 0.5
+                                            : 1,
+                                    '&:hover': {
+                                        color:
+                                            recipeIdeas.length <
+                                            MOCK_RECIPE_IDEAS.length
+                                                ? 'action.disabled'
+                                                : 'primary.main',
+                                        bgcolor:
+                                            recipeIdeas.length <
+                                            MOCK_RECIPE_IDEAS.length
+                                                ? 'transparent'
+                                                : 'rgba(0, 0, 0, 0.04)',
+                                    },
+                                }}
+                            >
+                                <CreateIcon fontSize="small" />
+                            </Box>
+                        </Box>
+                    </>
+                ) : (
+                    <>
+                        <Typography
+                            sx={{
+                                fontFamily: "'Inter', sans-serif",
+                                fontSize: '1rem',
+                                mb: 1,
+                                fontWeight: 600,
+                            }}
+                        >
+                            Recipe description:
+                        </Typography>
+                        <TextField
+                            fullWidth
+                            multiline
+                            rows={3}
+                            value={editedPrompt}
+                            onChange={(e) => setEditedPrompt(e.target.value)}
+                            variant="outlined"
+                            size="small"
+                            autoFocus
+                            InputProps={{
+                                sx: {
+                                    fontFamily: "'Inter', sans-serif",
+                                    fontSize: '1rem',
+                                    bgcolor: 'background.paper',
+                                },
+                            }}
+                            sx={{ mb: 2 }}
+                        />
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'flex-end',
+                                gap: 1,
+                            }}
+                        >
+                            <Button
+                                size="small"
+                                onClick={() => setShowIdeaPromptEdit(false)}
+                                sx={{
+                                    textTransform: 'none',
+                                    color: 'text.secondary',
+                                    fontFamily: "'Inter', sans-serif",
+                                }}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="contained"
+                                size="small"
+                                startIcon={<AutoAwesomeIcon />}
+                                disabled={!editedPrompt.trim()}
+                                onClick={() => {
+                                    setRecipePrompt(editedPrompt);
+                                    setShowIdeaPromptEdit(false);
+                                    handleGenerateRecipeIdeas();
+                                }}
+                                sx={{
+                                    textTransform: 'none',
+                                    bgcolor: 'primary.main',
+                                    fontFamily: "'Inter', sans-serif",
+                                }}
+                            >
+                                Generate New Ideas
+                            </Button>
+                        </Box>
+                    </>
+                )}
+            </Box>
+
+            {/* Recipe ideas grid with progressive loading */}
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+                {/* Render loaded recipe cards */}
+                {recipeIdeas.map((idea) => (
+                    <Grid item xs={12} sm={6} key={idea.id}>
+                        <Paper
+                            elevation={selectedIdeaId === idea.id ? 2 : 0}
+                            onClick={() => {
+                                // Toggle selection - if already selected, deselect it
+                                setSelectedIdeaId(
+                                    selectedIdeaId === idea.id ? null : idea.id
+                                );
+                            }}
+                            sx={{
+                                p: 2.5,
+                                height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                cursor: 'pointer',
+                                border: '1px solid',
+                                borderColor:
+                                    selectedIdeaId === idea.id
+                                        ? 'primary.main'
+                                        : 'divider',
+                                borderRadius: 1,
+                                transition: 'all 0.2s ease',
+                                position: 'relative',
+                                bgcolor:
+                                    selectedIdeaId === idea.id
+                                        ? 'rgba(44, 62, 80, 0.05)'
+                                        : 'background.paper',
+                                '&:hover': {
+                                    borderColor: 'primary.main',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                    transform: 'translateY(-1px)',
+                                },
+                                '&::before': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    inset: 0,
+                                    background: 'rgba(255,255,255,0.6)',
+                                    backdropFilter: 'blur(2px)',
+                                    borderRadius: 1,
+                                    zIndex: 0,
+                                },
+                            }}
+                        >
+                            <Typography
+                                sx={{
+                                    fontFamily: "'Kalam', cursive",
+                                    fontSize: '1.25rem',
+                                    fontWeight: 700,
+                                    color: 'primary.main',
+                                    mb: 1.5,
+                                    position: 'relative',
+                                    zIndex: 1,
+                                }}
+                            >
+                                {idea.title}
+                            </Typography>
+                            <Typography
+                                sx={{
+                                    fontFamily: "'Inter', sans-serif",
+                                    fontSize: '0.9rem',
+                                    color: 'text.secondary',
+                                    mb: 2,
+                                    flexGrow: 1,
+                                    position: 'relative',
+                                    zIndex: 1,
+                                }}
+                            >
+                                {idea.description}
+                            </Typography>
+
+                            {/* Selection indicator */}
+                            {selectedIdeaId === idea.id && (
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        top: '0.75rem',
+                                        right: '0.75rem',
+                                        width: '1.5rem',
+                                        height: '1.5rem',
+                                        borderRadius: '50%',
+                                        bgcolor: 'primary.main',
+                                        color: 'primary.contrastText',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        zIndex: 2,
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                    }}
+                                >
+                                    <Typography
+                                        sx={{
+                                            fontSize: '0.8rem',
+                                            fontWeight: 'bold',
+                                            color: 'inherit',
+                                        }}
+                                    >
+                                        ✓
+                                    </Typography>
+                                </Box>
+                            )}
+                        </Paper>
+                    </Grid>
+                ))}
+
+                {/* Show loading cards for remaining slots */}
+                {isGeneratingIdeas &&
+                    recipeIdeas.length < MOCK_RECIPE_IDEAS.length &&
+                    [
+                        ...Array(MOCK_RECIPE_IDEAS.length - recipeIdeas.length),
+                    ].map((_, index) => (
+                        <Grid item xs={12} sm={6} key={`loading-${index}`}>
+                            <RecipeIdeaLoadingCard />
+                        </Grid>
+                    ))}
+
+                {/* Single action button that adapts based on selection state */}
+                {recipeIdeas.length > 0 && (
+                    <Grid item xs={12}>
+                        <Box
+                            sx={{
+                                mt: 2,
+                                display: 'flex',
+                                justifyContent: 'center',
+                            }}
+                        >
+                            <Button
+                                fullWidth
+                                variant="contained"
+                                size="large"
+                                onClick={
+                                    selectedIdeaId
+                                        ? handleCreateFromSelectedIdea
+                                        : handleCreateFromScratch
+                                }
+                                startIcon={
+                                    selectedIdeaId ? (
+                                        <AutoAwesomeIcon />
+                                    ) : (
+                                        <CreateIcon />
+                                    )
+                                }
+                                sx={{
+                                    height: 48,
+                                    minWidth: 240,
+                                    bgcolor: selectedIdeaId
+                                        ? 'primary.main'
+                                        : 'secondary.main',
+                                    color: selectedIdeaId
+                                        ? 'primary.contrastText'
+                                        : 'text.primary',
+                                    fontWeight: 600,
+                                    fontSize: '1rem',
+                                    fontFamily: "'Kalam', cursive",
+                                    textTransform: 'none',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    borderBottom: '2px solid',
+                                    borderBottomColor: 'divider',
+                                    boxShadow: 'none',
+                                    transition: 'all 0.2s ease',
+                                    '&:hover': {
+                                        bgcolor: selectedIdeaId
+                                            ? 'primary.dark'
+                                            : 'secondary.light',
+                                        transform: 'translateY(-1px)',
+                                        borderColor: 'rgba(44, 62, 80, 0.15)',
+                                        boxShadow:
+                                            '0 1px 3px rgba(44, 62, 80, 0.1)',
+                                    },
+                                }}
+                            >
+                                {selectedIdeaId
+                                    ? 'Create AI Recipe'
+                                    : 'Create Blank Recipe'}
+                            </Button>
+                        </Box>
+                    </Grid>
+                )}
+            </Grid>
+
+            {/* Toggle to import mode */}
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    mt: 3,
+                    pt: 2,
+                    position: 'relative',
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: '25%',
+                        right: '25%',
+                        height: '1px',
+                        background:
+                            'repeating-linear-gradient(to right, #ddd 0, #ddd 4px, transparent 4px, transparent 8px)',
+                    },
+                }}
+            >
+                <Button
+                    onClick={() => toggleSection('import')}
+                    startIcon={<LinkIcon sx={{ fontSize: 18 }} />}
+                    sx={{
+                        fontFamily: "'Kalam', cursive",
+                        fontSize: '1rem',
+                        color: 'text.secondary',
+                        textTransform: 'none',
+                        bgcolor: 'transparent',
+                        border: 'none',
+                        boxShadow: 'none',
+                        '&:hover': {
+                            bgcolor: 'transparent',
+                            color: 'primary.main',
+                            textDecoration: 'underline',
+                            textUnderlineOffset: '2px',
+                            textDecorationStyle: 'wavy',
+                            textDecorationColor: 'primary.light',
+                        },
+                    }}
+                >
+                    ...or import from a URL
+                </Button>
+            </Box>
+        </Box>
+    );
 
     const headerContent = (
         <Box
@@ -470,110 +1088,128 @@ const NewRecipePage: FC = () => {
     // Create section content
     const createSectionContent = (
         <Box>
-            <TextField
-                fullWidth
-                multiline
-                rows={4}
-                placeholder="Describe your recipe idea for AI assistance (optional)."
-                value={recipePrompt}
-                onChange={(e) => setRecipePrompt(e.target.value)}
-                InputProps={{
-                    sx: {
-                        bgcolor: 'background.paper',
-                        fontFamily: "'Inter', sans-serif",
-                        fontSize: '1rem',
-                        borderRadius: 1,
-                        '& .MuiOutlinedInput-notchedOutline': {
+            {/* Show initial prompt input if not generating ideas */}
+            {!isGeneratingIdeas && (
+                <>
+                    <TextField
+                        fullWidth
+                        multiline
+                        rows={4}
+                        placeholder="A salmon, kale, and avocado bowl that serves four people..."
+                        value={recipePrompt}
+                        onChange={(e) => setRecipePrompt(e.target.value)}
+                        InputProps={{
+                            sx: {
+                                bgcolor: 'background.paper',
+                                fontFamily: "'Inter', sans-serif",
+                                fontSize: '1rem',
+                                borderRadius: 1,
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: 'divider',
+                                    borderWidth: 1,
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: 'primary.main',
+                                },
+                            },
+                        }}
+                        sx={{ mb: 3 }}
+                    />
+
+                    <Button
+                        fullWidth
+                        variant="contained"
+                        size="large"
+                        onClick={
+                            recipePrompt
+                                ? handleGenerateRecipeIdeas
+                                : handleCreateFromScratch
+                        }
+                        startIcon={
+                            recipePrompt ? <AutoAwesomeIcon /> : <CreateIcon />
+                        }
+                        sx={{
+                            height: 48,
+                            bgcolor: recipePrompt
+                                ? 'primary.main'
+                                : 'secondary.main',
+                            color: recipePrompt
+                                ? 'primary.contrastText'
+                                : 'text.primary',
+                            fontWeight: 600,
+                            fontSize: '1rem',
+                            fontFamily: "'Kalam', cursive",
+                            textTransform: 'none',
+                            border: '1px solid',
                             borderColor: 'divider',
-                            borderWidth: 1,
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'primary.main',
-                        },
-                    },
-                }}
-                sx={{ mb: 3 }}
-            />
+                            borderBottom: '2px solid',
+                            borderBottomColor: 'divider',
+                            boxShadow: 'none',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                                bgcolor: recipePrompt
+                                    ? 'primary.dark'
+                                    : 'secondary.light',
+                                transform: 'translateY(-1px)',
+                                borderColor: 'rgba(44, 62, 80, 0.15)',
+                                boxShadow: '0 1px 3px rgba(44, 62, 80, 0.1)',
+                            },
+                        }}
+                    >
+                        {recipePrompt
+                            ? 'Generate AI Recipe Ideas'
+                            : 'Create Blank Recipe'}
+                    </Button>
 
-            <Button
-                fullWidth
-                variant="contained"
-                size="large"
-                onClick={handleCreateFromScratch}
-                startIcon={recipePrompt ? <AutoFixHighIcon /> : <CreateIcon />}
-                sx={{
-                    height: 48,
-                    bgcolor: recipePrompt ? 'primary.main' : 'secondary.main',
-                    color: recipePrompt
-                        ? 'primary.contrastText'
-                        : 'text.primary',
-                    fontWeight: 600,
-                    fontSize: '1rem',
-                    fontFamily: "'Kalam', cursive",
-                    textTransform: 'none',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderBottom: '2px solid',
-                    borderBottomColor: 'divider',
-                    boxShadow: 'none',
-                    transition: 'all 0.2s ease',
-                    '&:hover': {
-                        bgcolor: recipePrompt
-                            ? 'primary.dark'
-                            : 'secondary.light',
-                        transform: 'translateY(-1px)',
-                        borderColor: 'rgba(44, 62, 80, 0.15)',
-                        boxShadow: '0 1px 3px rgba(44, 62, 80, 0.1)',
-                    },
-                }}
-            >
-                {recipePrompt ? 'Create AI Recipe' : 'Create Blank Recipe'}
-            </Button>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            mt: 3,
+                            pt: 2,
+                            position: 'relative',
+                            '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                top: 0,
+                                left: '25%',
+                                right: '25%',
+                                height: '1px',
+                                background:
+                                    'repeating-linear-gradient(to right, #ddd 0, #ddd 4px, transparent 4px, transparent 8px)',
+                            },
+                        }}
+                    >
+                        <Button
+                            onClick={() => toggleSection('import')}
+                            startIcon={<LinkIcon sx={{ fontSize: 18 }} />}
+                            sx={{
+                                fontFamily: "'Kalam', cursive",
+                                fontSize: '1rem',
+                                color: 'text.secondary',
+                                textTransform: 'none',
+                                bgcolor: 'transparent',
+                                border: 'none',
+                                boxShadow: 'none',
+                                '&:hover': {
+                                    bgcolor: 'transparent',
+                                    color: 'primary.main',
+                                    textDecoration: 'underline',
+                                    textUnderlineOffset: '2px',
+                                    textDecorationStyle: 'wavy',
+                                    textDecorationColor: 'primary.light',
+                                },
+                            }}
+                        >
+                            ...or import from a URL
+                        </Button>
+                    </Box>
+                </>
+            )}
 
-            <Box
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    mt: 3,
-                    pt: 2,
-                    position: 'relative',
-                    '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: '25%',
-                        right: '25%',
-                        height: '1px',
-                        background:
-                            'repeating-linear-gradient(to right, #ddd 0, #ddd 4px, transparent 4px, transparent 8px)',
-                    },
-                }}
-            >
-                <Button
-                    onClick={() => toggleSection('import')}
-                    startIcon={<LinkIcon sx={{ fontSize: 18 }} />}
-                    sx={{
-                        fontFamily: "'Kalam', cursive",
-                        fontSize: '1rem',
-                        color: 'text.secondary',
-                        textTransform: 'none',
-                        bgcolor: 'transparent',
-                        border: 'none',
-                        boxShadow: 'none',
-                        '&:hover': {
-                            bgcolor: 'transparent',
-                            color: 'primary.main',
-                            textDecoration: 'underline',
-                            textUnderlineOffset: '2px',
-                            textDecorationStyle: 'wavy',
-                            textDecorationColor: 'primary.light',
-                        },
-                    }}
-                >
-                    ...or import from a URL
-                </Button>
-            </Box>
+            {/* Show recipe ideas (including loading states) */}
+            {isGeneratingIdeas && recipeIdeasContent}
         </Box>
     );
 
