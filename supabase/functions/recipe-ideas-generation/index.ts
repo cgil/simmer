@@ -101,7 +101,7 @@ serve(async (req) => {
                 {
                     role: "system",
                     content:
-                        `You are a creative culinary expert specializing in recipe development for home cooking. Generate 4 unique and diverse recipe ideas based on the user's prompt.
+                        `You are a creative culinary expert specializing in recipe development for home cooks. Generate 4 unique and diverse recipe ideas based on the user's prompt.
 
           Follow these rules strictly:
           - Generate exactly 4 recipe ideas
