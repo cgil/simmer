@@ -1054,7 +1054,7 @@ const NewRecipePage: FC = () => {
                         },
                     }}
                 >
-                    ...or start with a blank recipe
+                    ...or start with a blank or AI recipe
                 </Button>
             </Box>
         </Box>
