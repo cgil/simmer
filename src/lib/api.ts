@@ -32,3 +32,24 @@ export const generateRecipeIdeas = async (
 
     return data;
 };
+
+export const createRecipeFromIdea = async (
+    recipeIdea: RecipeIdea,
+    originalPrompt: string,
+): Promise<Recipe> => {
+    const { data, error } = await supabase.functions.invoke(
+        "recipe-creation",
+        {
+            body: {
+                recipeIdea,
+                originalPrompt,
+            },
+        },
+    );
+
+    if (error) {
+        throw new Error(`Recipe creation failed: ${error.message}`);
+    }
+
+    return data;
+};

@@ -20,7 +20,11 @@ import LinkIcon from '@mui/icons-material/Link';
 import CreateIcon from '@mui/icons-material/Create';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import AppLayout from '../../components/layout/AppLayout';
-import { extractRecipe, generateRecipeIdeas } from '../../lib/api';
+import {
+    extractRecipe,
+    generateRecipeIdeas,
+    createRecipeFromIdea,
+} from '../../lib/api';
 import { RecipeIdea } from '../../types';
 
 const EXTRACTION_STEPS = [
@@ -29,6 +33,15 @@ const EXTRACTION_STEPS = [
     'Having our chef taste test',
     'Personalizing it for you',
     'Writing it in our cookbook',
+];
+
+// Adding AI recipe specific steps
+const AI_RECIPE_STEPS = [
+    'Gathering ingredients and inspiration',
+    'Crafting the perfect recipe structure',
+    "Adding chef's special touches",
+    'Testing for deliciousness',
+    'Finalizing your personal recipe',
 ];
 
 const NewRecipePage: FC = () => {
@@ -266,7 +279,7 @@ const NewRecipePage: FC = () => {
     };
 
     // Function to create a recipe from a selected idea
-    const handleCreateFromSelectedIdea = () => {
+    const handleCreateFromSelectedIdea = async () => {
         if (!selectedIdeaId) return;
 
         const selectedIdea = recipeIdeas.find(
@@ -274,32 +287,45 @@ const NewRecipePage: FC = () => {
         );
         if (!selectedIdea) return;
 
-        // Create a recipe based on the selected idea
-        const newRecipe = {
-            title: selectedIdea.title,
-            description: selectedIdea.description,
-            servings: 4,
-            prep_time: 0,
-            cook_time: 0,
-            total_time: 0,
-            ingredients: [],
-            instructions: [
-                {
-                    sectionTitle: '',
-                    steps: [''],
-                },
-            ],
-            notes: [],
-            images: [],
-        };
+        // Show loading state
+        setIsLoading(true);
+        setActiveStep(0);
 
-        // Navigate to the recipe edit page with the new recipe
-        navigate('/recipe/edit', {
-            state: {
-                recipe: newRecipe,
-                isNew: true,
-            },
-        });
+        try {
+            // Simulate progress through steps for a better UX
+            const stepDuration = Math.floor(Math.random() * 4000) + 3000; // Random interval between 3 and 8 seconds per step for first 4 steps
+            for (let i = 0; i < AI_RECIPE_STEPS.length - 1; i++) {
+                await new Promise((resolve) =>
+                    setTimeout(resolve, stepDuration)
+                );
+                setActiveStep(i + 1);
+            }
+
+            // Call API to create the full recipe from the idea
+            const fullRecipe = await createRecipeFromIdea(
+                selectedIdea,
+                recipePrompt
+            );
+
+            // Set the final step
+            setActiveStep(AI_RECIPE_STEPS.length - 1);
+
+            // Navigate to the recipe edit page with the new recipe
+            setTimeout(() => {
+                navigate('/recipe/edit', {
+                    state: {
+                        recipe: fullRecipe,
+                        isNew: true,
+                    },
+                });
+            }, 800); // Short delay for final step to be visible
+        } catch (err) {
+            setError(
+                err instanceof Error ? err.message : 'Failed to create recipe'
+            );
+            setIsLoading(false);
+            setActiveStep(0);
+        }
     };
 
     const toggleSection = (section: 'import' | 'create') => {
@@ -537,6 +563,7 @@ const NewRecipePage: FC = () => {
                                         WebkitBoxOrient: 'vertical',
                                         lineHeight: 1.2,
                                         height: 48, // ~2 lines of text with padding
+                                        pr: 2,
                                     }}
                                 >
                                     {idea.title}
@@ -1083,8 +1110,187 @@ const NewRecipePage: FC = () => {
     // Create section content
     const createSectionContent = (
         <Box>
-            {/* Show initial prompt input if not generating ideas */}
-            {!isGeneratingIdeas && (
+            {/* Show loading state when creating AI recipe */}
+            {isLoading && (
+                <Box sx={{ mb: 3 }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: {
+                                xs: 'column',
+                                sm: 'row',
+                            },
+                            gap: { xs: 2, sm: 3 },
+                            mb: 3,
+                            position: 'relative',
+                            '&::after': {
+                                content: '""',
+                                position: 'absolute',
+                                top: { xs: 0, sm: '50%' },
+                                left: { xs: '50%', sm: 0 },
+                                right: { xs: '50%', sm: 0 },
+                                height: {
+                                    xs: '100%',
+                                    sm: '2px',
+                                },
+                                width: {
+                                    xs: '2px',
+                                    sm: '100%',
+                                },
+                                background:
+                                    'repeating-linear-gradient(to right, #ddd 0, #ddd 4px, transparent 4px, transparent 8px)',
+                                transform: {
+                                    xs: 'none',
+                                    sm: 'translateY(-50%)',
+                                },
+                                zIndex: 0,
+                            },
+                        }}
+                    >
+                        {(activeSection === 'create'
+                            ? AI_RECIPE_STEPS
+                            : EXTRACTION_STEPS
+                        ).map((label, index) => (
+                            <Paper
+                                key={label}
+                                elevation={0}
+                                sx={{
+                                    flex: 1,
+                                    p: 2,
+                                    position: 'relative',
+                                    zIndex: 1,
+                                    bgcolor:
+                                        index === activeStep
+                                            ? 'primary.lighter'
+                                            : index < activeStep
+                                            ? 'success.lighter'
+                                            : 'background.paper',
+                                    border: '1px solid',
+                                    borderColor:
+                                        index === activeStep
+                                            ? 'primary.light'
+                                            : index < activeStep
+                                            ? 'success.light'
+                                            : 'divider',
+                                    borderRadius: 2,
+                                    transform:
+                                        index === activeStep
+                                            ? 'rotate(-2deg)'
+                                            : 'none',
+                                    transition: 'all 0.3s ease',
+                                    boxShadow:
+                                        index === activeStep
+                                            ? '0 4px 12px rgba(0,0,0,0.1)'
+                                            : '0 1px 3px rgba(0,0,0,0.05)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    minHeight: {
+                                        xs: 'auto',
+                                        sm: 140,
+                                    },
+                                    '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        inset: 0,
+                                        background: 'rgba(255,255,255,0.7)',
+                                        backdropFilter: 'blur(4px)',
+                                        borderRadius: 2,
+                                        zIndex: 0,
+                                    },
+                                    '&::after': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        inset: 0,
+                                        opacity: 0.1,
+                                        backgroundImage: `
+                                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.2) 0.5px, transparent 0.5px)
+                                        `,
+                                        backgroundSize: '12px 12px',
+                                        pointerEvents: 'none',
+                                        zIndex: 0,
+                                    },
+                                }}
+                            >
+                                <Box
+                                    sx={{
+                                        width: 40,
+                                        height: 40,
+                                        borderRadius: '50%',
+                                        bgcolor:
+                                            index === activeStep
+                                                ? 'primary.main'
+                                                : index < activeStep
+                                                ? 'success.main'
+                                                : 'grey.300',
+                                        color: '#fff',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontFamily: "'Kalam', cursive",
+                                        fontSize: '1.25rem',
+                                        fontWeight: 700,
+                                        position: 'relative',
+                                        zIndex: 1,
+                                    }}
+                                >
+                                    {index < activeStep ? '✓' : index + 1}
+                                </Box>
+                                <Typography
+                                    sx={{
+                                        fontFamily: "'Kalam', cursive",
+                                        fontSize: '1rem',
+                                        fontWeight:
+                                            index === activeStep ? 700 : 500,
+                                        color:
+                                            index === activeStep
+                                                ? 'primary.main'
+                                                : index < activeStep
+                                                ? 'success.dark'
+                                                : 'text.secondary',
+                                        textAlign: 'center',
+                                        position: 'relative',
+                                        zIndex: 1,
+                                        maxWidth: 160,
+                                        mx: 'auto',
+                                    }}
+                                >
+                                    {label}
+                                </Typography>
+                            </Paper>
+                        ))}
+                    </Box>
+                    <LinearProgress
+                        variant="determinate"
+                        value={(activeStep / 4) * 100}
+                        sx={{
+                            height: 6,
+                            borderRadius: 3,
+                            bgcolor: 'background.default',
+                            '& .MuiLinearProgress-bar': {
+                                borderRadius: 3,
+                                backgroundImage:
+                                    'linear-gradient(45deg, rgba(255,255,255,0.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.15) 75%, transparent 75%, transparent)',
+                                backgroundSize: '1rem 1rem',
+                                animation:
+                                    'progress-stripes 1s linear infinite',
+                            },
+                            '@keyframes progress-stripes': {
+                                '0%': {
+                                    backgroundPosition: '1rem 0',
+                                },
+                                '100%': {
+                                    backgroundPosition: '0 0',
+                                },
+                            },
+                        }}
+                    />
+                </Box>
+            )}
+
+            {/* Show initial prompt input if not generating ideas and not loading */}
+            {!isGeneratingIdeas && !isLoading && (
                 <>
                     <TextField
                         fullWidth
@@ -1209,8 +1415,8 @@ const NewRecipePage: FC = () => {
                 </>
             )}
 
-            {/* Show recipe ideas (including loading states) */}
-            {isGeneratingIdeas && recipeIdeasContent}
+            {/* Show recipe ideas (including loading states) but not when loading is true for recipe creation */}
+            {isGeneratingIdeas && !isLoading && recipeIdeasContent}
         </Box>
     );
 

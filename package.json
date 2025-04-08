@@ -14,11 +14,12 @@
         "db:reset": "supabase db reset",
         "db:migration:new": "supabase migration new",
         "functions:serve": "supabase functions serve --env-file .env.local --no-verify-jwt",
-        "functions:deploy:dev": "supabase functions deploy recipe-extraction recipe-ideas-generation --project-ref aedgycrrgaxtkennfvma --no-verify-jwt",
-        "functions:deploy:prod": "supabase functions deploy recipe-extraction recipe-ideas-generation --project-ref aedgycrrgaxtkennfvma",
+        "functions:deploy:dev": "supabase functions deploy recipe-extraction recipe-ideas-generation recipe-creation --project-ref aedgycrrgaxtkennfvma --no-verify-jwt",
+        "functions:deploy:prod": "supabase functions deploy recipe-extraction recipe-ideas-generation recipe-creation --project-ref aedgycrrgaxtkennfvma",
         "dev:all": "concurrently \"npm run dev\" \"npm run functions:serve\"",
         "test:function": "curl -i --request POST 'http://localhost:54321/functions/v1/recipe-extraction' --header 'Content-Type: application/json' --data '{\"url\": \"https://www.allrecipes.com/recipe/158968/spinach-and-feta-turkey-burgers/\"}'",
         "test:ideas": "curl -i --request POST 'http://localhost:54321/functions/v1/recipe-ideas-generation' --header 'Content-Type: application/json' --data '{\"prompt\": \"A quick weeknight dinner with chicken and vegetables\"}'",
+        "test:creation": "curl -i --request POST 'http://localhost:54321/functions/v1/recipe-creation' --header 'Content-Type: application/json' --data '{\"recipeIdea\": {\"id\": \"chicken-stir-fry\", \"title\": \"Quick Chicken Stir-Fry\", \"description\": \"A flavorful and easy weeknight dinner with tender chicken, colorful vegetables, and a savory sauce.\"}, \"originalPrompt\": \"A healthy stir-fry recipe for weeknight dinners\"}'",
         "deploy": "npm run build && vercel --prod"
     },
     "dependencies": {
