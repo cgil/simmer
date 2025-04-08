@@ -576,7 +576,7 @@ const NewRecipePage: FC = () => {
                                 </Box>
 
                                 {/* Selection indicator */}
-                                {selectedIdeaId === idea.id && (
+                                {selectedIdeaId === idea.id ? (
                                     <Box
                                         sx={{
                                             position: 'absolute',
@@ -605,6 +605,26 @@ const NewRecipePage: FC = () => {
                                             ✓
                                         </Typography>
                                     </Box>
+                                ) : (
+                                    <Box
+                                        sx={{
+                                            position: 'absolute',
+                                            top: '0.75rem',
+                                            right: '0.75rem',
+                                            width: '1.5rem',
+                                            height: '1.5rem',
+                                            borderRadius: '50%',
+                                            border: '1px solid',
+                                            borderColor: 'grey.400',
+                                            bgcolor: 'rgba(255,255,255,0.8)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            zIndex: 2,
+                                            opacity: 0.7,
+                                            transition: 'all 0.2s ease',
+                                        }}
+                                    />
                                 )}
                             </Paper>
                         </Grid>
