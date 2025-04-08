@@ -541,24 +541,39 @@ const NewRecipePage: FC = () => {
                                 >
                                     {idea.title}
                                 </Typography>
-                                <Typography
+                                <Box
                                     sx={{
-                                        fontFamily: "'Inter', sans-serif",
-                                        fontSize: '0.9rem',
-                                        color: 'text.secondary',
-                                        flexGrow: 1,
                                         position: 'relative',
-                                        zIndex: 1,
+                                        height: 120,
                                         overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        display: '-webkit-box',
-                                        WebkitLineClamp: 4,
-                                        WebkitBoxOrient: 'vertical',
-                                        lineHeight: 1.5,
+                                        mt: 1,
+                                        '&::after': {
+                                            content: '""',
+                                            position: 'absolute',
+                                            bottom: 0,
+                                            left: 0,
+                                            width: '100%',
+                                            height: '2rem',
+                                            background:
+                                                'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.9))',
+                                            pointerEvents: 'none',
+                                            zIndex: 2,
+                                        },
                                     }}
                                 >
-                                    {idea.description}
-                                </Typography>
+                                    <Typography
+                                        sx={{
+                                            fontFamily: "'Inter', sans-serif",
+                                            fontSize: '0.9rem',
+                                            color: 'text.secondary',
+                                            position: 'relative',
+                                            zIndex: 1,
+                                            lineHeight: 1.5,
+                                        }}
+                                    >
+                                        {idea.description}
+                                    </Typography>
+                                </Box>
 
                                 {/* Selection indicator */}
                                 {selectedIdeaId === idea.id && (
