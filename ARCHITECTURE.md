@@ -418,16 +418,42 @@ const extractRecipe = async (url: string): Promise<Recipe> => {
 };
 ```
 
-### 5.2. Authentication & Security
+### 5.2. OpenAI Recipe Ideas Generation
 
-The recipe extraction endpoint is protected by JWT verification in production:
+```typescript
+interface RecipeIdea {
+    id: string;
+    title: string;
+    description: string;
+}
+
+// Recipe ideas generation API client
+const generateRecipeIdeas = async (prompt: string): Promise<RecipeIdea[]> => {
+    const { data, error } = await supabase.functions.invoke(
+        'recipe-ideas-generation',
+        {
+            body: { prompt },
+        }
+    );
+
+    if (error) {
+        throw new Error(`Recipe ideas generation failed: ${error.message}`);
+    }
+
+    return data;
+};
+```
+
+### 5.3. Authentication & Security
+
+The recipe extraction and ideas generation endpoints are protected by JWT verification in production:
 
 -   All requests must include a valid JWT token
 -   The Supabase client automatically handles token inclusion
 -   Development environment can optionally disable JWT verification
 -   Production environment enforces JWT verification
 
-### 5.3. Supabase Integration
+### 5.4. Supabase Integration
 
 ```typescript
 // Database types

@@ -13,7 +13,12 @@ const RecipeIdeaSchema = z.object({
 });
 
 // Define schema for the array of recipe ideas
-const RecipeIdeasSchema = z.array(RecipeIdeaSchema).length(4);
+const RecipeIdeasArraySchema = z.array(RecipeIdeaSchema);
+
+// Wrap the array in an object schema as required by OpenAI response_format
+const RecipeIdeasSchema = z.object({
+    ideas: RecipeIdeasArraySchema,
+});
 
 // Define TypeScript interface matching the schema
 interface RecipeIdea {
@@ -102,8 +107,9 @@ serve(async (req) => {
           - Generate exactly 4 recipe ideas
           - Make each idea distinctly different from the others such as (different cuisines, cooking methods, ingredients, formats, etc)
           - Each idea should have a unique, catchy title and a brief, appealing description (2-3 sentences)
-          - Ensure the description highlights the dish, key flavors, textures, and cooking methods
-          - Make the ideas practical and realistic for home cooking
+          - The description should be informative and helpful to the user,  helping them understand the recipe and what it's about
+          - The description should highlight the dish, key flavors, textures, and any critical information about the recipe the user should know
+          - You must always make the ideas practical and realistic for home cooking
           - Avoid overly complex or inaccessible ingredients unless the user mentions them or the recipe explicitly requires them
           - If the user mentions dietary preferences (vegetarian, gluten-free, etc.), respect those in ALL ideas
           - If the user mentions specific ingredients, incorporate them where appropriate
@@ -116,16 +122,11 @@ serve(async (req) => {
             - Use the number of servings the user mentions if they mention a specific number
             - If the user does not mention a specific number of servings, use a default of 4 servings per recipe unless the recipe calls for a different serving size
           - Unless specified otherwise, tend to make healthier choices in recipes, but try to make them realistic and delicious
-          - If the user makes any suspicious, malicious, inappropriate requests, or requests that are not related to cooking, return recipe ideas for:
+          - If the user makes any suspicious, malicious requests, or requests that are not related to cooking or recipes, return recipe ideas for:
             - A cold hotdog, plain instant ramen with no flavor packets, wonder bread with mayo, and burnt toast with water.
             - Return nothing else but the above ideas for that request.
 
-          Return the ideas as an array with this structure for each idea:
-          {
-            "id": "kebab-case-title",
-            "title": "Recipe Title",
-            "description": "Brief, appealing description of the recipe."
-          }
+          Return the ideas as an object with a single "ideas" property that contains an array of 4 recipe ideas.
 
           Aim for diversity in your suggestions to give the user meaningful choices.`,
                 },
@@ -144,14 +145,17 @@ serve(async (req) => {
         // Parse the response
         const parsedResult = JSON.parse(result);
 
+        // Extract the ideas array from the object
+        const ideasArray = parsedResult.ideas;
+
         // Ensure IDs are properly formatted
-        const recipeIdeas = parsedResult.map((idea: RecipeIdea) => ({
+        const recipeIdeas = ideasArray.map((idea: RecipeIdea) => ({
             ...idea,
             id: generateId(idea.title),
         }));
 
         // Validate the response
-        const validatedIdeas = RecipeIdeasSchema.parse(recipeIdeas);
+        const validatedIdeas = RecipeIdeasArraySchema.parse(recipeIdeas);
 
         // Store in cache (optional)
         try {

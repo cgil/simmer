@@ -13,6 +13,12 @@ export interface Recipe {
     is_public?: boolean;
 }
 
+export interface RecipeIdea {
+    id: string;
+    title: string;
+    description: string;
+}
+
 export interface Ingredient {
     id: string;
     name: string;

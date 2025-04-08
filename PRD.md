@@ -80,6 +80,7 @@ The app follows a "Paper Notebook Recipe Journal" aesthetic with these key eleme
 
 -   URL paste functionality
 -   AI extraction of recipe data
+-   Recipe ideas generation from text prompts
 -   Preview and edit capabilities
 -   Structured data storage
 -   Whimsical loading experience with:

@@ -20,7 +20,8 @@ import LinkIcon from '@mui/icons-material/Link';
 import CreateIcon from '@mui/icons-material/Create';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import AppLayout from '../../components/layout/AppLayout';
-import { extractRecipe } from '../../lib/api';
+import { extractRecipe, generateRecipeIdeas } from '../../lib/api';
+import { RecipeIdea } from '../../types';
 
 const EXTRACTION_STEPS = [
     'Visiting the recipe website',
@@ -28,34 +29,6 @@ const EXTRACTION_STEPS = [
     'Having our chef taste test',
     'Personalizing it for you',
     'Writing it in our cookbook',
-];
-
-// Mock recipe ideas for the demo
-const MOCK_RECIPE_IDEAS = [
-    {
-        id: '1',
-        title: 'Creamy Garlic Parmesan Pasta',
-        description:
-            "A luxurious pasta dish with a silky garlic parmesan sauce. Simple ingredients combine for a restaurant-quality meal that's perfect for weeknight dinners.",
-    },
-    {
-        id: '2',
-        title: 'Honey Sriracha Glazed Salmon',
-        description:
-            'Sweet and spicy glazed salmon fillets with a perfect caramelized exterior. Pairs beautifully with steamed rice and vegetables for a healthy, flavorful meal.',
-    },
-    {
-        id: '3',
-        title: 'Mediterranean Chickpea Salad',
-        description:
-            'A refreshing salad packed with chickpeas, cucumber, tomato, and feta in a lemon herb dressing. Great for meal prep and perfect for summer gatherings.',
-    },
-    {
-        id: '4',
-        title: 'Rustic Apple Cinnamon Galette',
-        description:
-            'A free-form apple tart with a flaky crust and warm cinnamon filling. Simpler than pie but just as delicious, topped with a scoop of vanilla ice cream.',
-    },
 ];
 
 const NewRecipePage: FC = () => {
@@ -76,12 +49,11 @@ const NewRecipePage: FC = () => {
 
     // State for recipe ideas generation flow
     const [isGeneratingIdeas, setIsGeneratingIdeas] = useState(false);
-    const [recipeIdeas, setRecipeIdeas] = useState<
-        Array<{ id: string; title: string; description: string }>
-    >([]);
+    const [recipeIdeas, setRecipeIdeas] = useState<RecipeIdea[]>([]);
     const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null);
     const [showIdeaPromptEdit, setShowIdeaPromptEdit] = useState(false);
     const [editedPrompt, setEditedPrompt] = useState('');
+    const [generationError, setGenerationError] = useState<string | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -278,18 +250,18 @@ const NewRecipePage: FC = () => {
         setIsGeneratingIdeas(true);
         setRecipeIdeas([]);
         setSelectedIdeaId(null);
+        setGenerationError(null);
 
-        // Instead of showing loading screens, we'll show placeholder cards
-        // and populate them one by one
-
-        const cardLoadingDuration = Math.floor(Math.random() * 2000) + 2000; // 2-4 seconds
-
-        // Load each card progressively
-        for (let i = 0; i < MOCK_RECIPE_IDEAS.length; i++) {
-            await new Promise((resolve) =>
-                setTimeout(resolve, cardLoadingDuration)
+        try {
+            const ideas = await generateRecipeIdeas(recipePrompt);
+            setRecipeIdeas(ideas);
+        } catch (err) {
+            setGenerationError(
+                err instanceof Error
+                    ? err.message
+                    : 'Failed to generate recipe ideas'
             );
-            setRecipeIdeas((prev) => [...prev, MOCK_RECIPE_IDEAS[i]]);
+            setIsGeneratingIdeas(false);
         }
     };
 
@@ -397,11 +369,6 @@ const NewRecipePage: FC = () => {
                             </Typography>
                             <Box
                                 onClick={() => {
-                                    if (
-                                        recipeIdeas.length <
-                                        MOCK_RECIPE_IDEAS.length
-                                    )
-                                        return;
                                     setShowIdeaPromptEdit(true);
                                     setEditedPrompt(recipePrompt);
                                 }}
@@ -412,33 +379,12 @@ const NewRecipePage: FC = () => {
                                     width: '2rem',
                                     height: '2rem',
                                     borderRadius: '50%',
-                                    cursor:
-                                        recipeIdeas.length <
-                                        MOCK_RECIPE_IDEAS.length
-                                            ? 'not-allowed'
-                                            : 'pointer',
-                                    color:
-                                        recipeIdeas.length <
-                                        MOCK_RECIPE_IDEAS.length
-                                            ? 'action.disabled'
-                                            : 'text.secondary',
+                                    cursor: 'pointer',
+                                    color: 'text.secondary',
                                     transition: 'all 0.2s ease',
-                                    opacity:
-                                        recipeIdeas.length <
-                                        MOCK_RECIPE_IDEAS.length
-                                            ? 0.5
-                                            : 1,
                                     '&:hover': {
-                                        color:
-                                            recipeIdeas.length <
-                                            MOCK_RECIPE_IDEAS.length
-                                                ? 'action.disabled'
-                                                : 'primary.main',
-                                        bgcolor:
-                                            recipeIdeas.length <
-                                            MOCK_RECIPE_IDEAS.length
-                                                ? 'transparent'
-                                                : 'rgba(0, 0, 0, 0.04)',
+                                        color: 'primary.main',
+                                        bgcolor: 'rgba(0, 0, 0, 0.04)',
                                     },
                                 }}
                             >
@@ -517,203 +463,203 @@ const NewRecipePage: FC = () => {
                 )}
             </Box>
 
-            {/* Recipe ideas grid with progressive loading */}
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-                {/* Render loaded recipe cards */}
-                {recipeIdeas.map((idea) => (
-                    <Grid item xs={12} sm={6} key={idea.id}>
-                        <Paper
-                            elevation={selectedIdeaId === idea.id ? 2 : 0}
-                            onClick={() => {
-                                // Toggle selection - if already selected, deselect it
-                                setSelectedIdeaId(
-                                    selectedIdeaId === idea.id ? null : idea.id
-                                );
-                            }}
-                            sx={{
-                                p: 2.5,
-                                height: 220, // Fixed height for all cards
-                                display: 'flex',
-                                flexDirection: 'column',
-                                cursor: 'pointer',
-                                border: '1px solid',
-                                borderColor:
-                                    selectedIdeaId === idea.id
-                                        ? 'primary.main'
-                                        : 'divider',
-                                borderRadius: 1,
-                                transition: 'all 0.2s ease',
-                                position: 'relative',
-                                bgcolor:
-                                    selectedIdeaId === idea.id
-                                        ? 'rgba(44, 62, 80, 0.05)'
-                                        : 'background.paper',
-                                overflow: 'hidden',
-                                '&:hover': {
-                                    borderColor: 'primary.main',
-                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                                    transform: 'translateY(-1px)',
-                                },
-                                '&::before': {
-                                    content: '""',
-                                    position: 'absolute',
-                                    inset: 0,
-                                    background: 'rgba(255,255,255,0.6)',
-                                    backdropFilter: 'blur(2px)',
-                                    borderRadius: 1,
-                                    zIndex: 0,
-                                },
-                            }}
-                        >
-                            <Typography
-                                sx={{
-                                    fontFamily: "'Kalam', cursive",
-                                    fontSize: '1.25rem',
-                                    fontWeight: 700,
-                                    color: 'primary.main',
-                                    mb: 1.5,
-                                    position: 'relative',
-                                    zIndex: 1,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: 'vertical',
-                                    lineHeight: 1.2,
-                                    height: 42, // ~2 lines of text
-                                }}
-                            >
-                                {idea.title}
-                            </Typography>
-                            <Typography
-                                sx={{
-                                    fontFamily: "'Inter', sans-serif",
-                                    fontSize: '0.9rem',
-                                    color: 'text.secondary',
-                                    mb: 2,
-                                    flexGrow: 1,
-                                    position: 'relative',
-                                    zIndex: 1,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 4,
-                                    WebkitBoxOrient: 'vertical',
-                                    lineHeight: 1.5,
-                                }}
-                            >
-                                {idea.description}
-                            </Typography>
-
-                            {/* Selection indicator */}
-                            {selectedIdeaId === idea.id && (
-                                <Box
-                                    sx={{
-                                        position: 'absolute',
-                                        top: '0.75rem',
-                                        right: '0.75rem',
-                                        width: '1.5rem',
-                                        height: '1.5rem',
-                                        borderRadius: '50%',
-                                        bgcolor: 'primary.main',
-                                        color: 'primary.contrastText',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        zIndex: 2,
-                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                                    }}
-                                >
-                                    <Typography
-                                        sx={{
-                                            fontSize: '0.8rem',
-                                            fontWeight: 'bold',
-                                            color: 'inherit',
-                                        }}
-                                    >
-                                        ✓
-                                    </Typography>
-                                </Box>
-                            )}
-                        </Paper>
-                    </Grid>
-                ))}
-
-                {/* Show loading cards for remaining slots */}
-                {isGeneratingIdeas &&
-                    recipeIdeas.length < MOCK_RECIPE_IDEAS.length &&
-                    [
-                        ...Array(MOCK_RECIPE_IDEAS.length - recipeIdeas.length),
-                    ].map((_, index) => (
+            {/* Recipe ideas grid with loading states */}
+            {isGeneratingIdeas && recipeIdeas.length === 0 ? (
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                    {[...Array(4)].map((_, index) => (
                         <Grid item xs={12} sm={6} key={`loading-${index}`}>
                             <RecipeIdeaLoadingCard />
                         </Grid>
                     ))}
-
-                {/* Single action button that adapts based on selection state */}
-                {recipeIdeas.length > 0 && (
-                    <Grid item xs={12}>
-                        <Box
-                            sx={{
-                                mt: 2,
-                                display: 'flex',
-                                justifyContent: 'center',
-                            }}
-                        >
-                            <Button
-                                fullWidth
-                                variant="contained"
-                                size="large"
-                                onClick={
-                                    selectedIdeaId
-                                        ? handleCreateFromSelectedIdea
-                                        : handleCreateFromScratch
-                                }
-                                startIcon={
-                                    selectedIdeaId ? (
-                                        <AutoAwesomeIcon />
-                                    ) : (
-                                        <CreateIcon />
-                                    )
-                                }
+                </Grid>
+            ) : (
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                    {/* Render recipe cards */}
+                    {recipeIdeas.map((idea) => (
+                        <Grid item xs={12} sm={6} key={idea.id}>
+                            <Paper
+                                elevation={selectedIdeaId === idea.id ? 2 : 0}
+                                onClick={() => {
+                                    // Toggle selection - if already selected, deselect it
+                                    setSelectedIdeaId(
+                                        selectedIdeaId === idea.id
+                                            ? null
+                                            : idea.id
+                                    );
+                                }}
                                 sx={{
-                                    height: 48,
-                                    minWidth: 240,
-                                    bgcolor: selectedIdeaId
-                                        ? 'primary.main'
-                                        : 'secondary.main',
-                                    color: selectedIdeaId
-                                        ? 'primary.contrastText'
-                                        : 'text.primary',
-                                    fontWeight: 600,
-                                    fontSize: '1rem',
-                                    fontFamily: "'Kalam', cursive",
-                                    textTransform: 'none',
+                                    p: 2.5,
+                                    height: 220, // Fixed height for all cards
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    cursor: 'pointer',
                                     border: '1px solid',
-                                    borderColor: 'divider',
-                                    borderBottom: '2px solid',
-                                    borderBottomColor: 'divider',
-                                    boxShadow: 'none',
+                                    borderColor:
+                                        selectedIdeaId === idea.id
+                                            ? 'primary.main'
+                                            : 'divider',
+                                    borderRadius: 1,
                                     transition: 'all 0.2s ease',
+                                    position: 'relative',
+                                    bgcolor:
+                                        selectedIdeaId === idea.id
+                                            ? 'rgba(44, 62, 80, 0.05)'
+                                            : 'background.paper',
+                                    overflow: 'hidden',
                                     '&:hover': {
-                                        bgcolor: selectedIdeaId
-                                            ? 'primary.dark'
-                                            : 'secondary.light',
+                                        borderColor: 'primary.main',
+                                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                                         transform: 'translateY(-1px)',
-                                        borderColor: 'rgba(44, 62, 80, 0.15)',
-                                        boxShadow:
-                                            '0 1px 3px rgba(44, 62, 80, 0.1)',
+                                    },
+                                    '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        inset: 0,
+                                        background: 'rgba(255,255,255,0.6)',
+                                        backdropFilter: 'blur(2px)',
+                                        borderRadius: 1,
+                                        zIndex: 0,
                                     },
                                 }}
                             >
-                                {selectedIdeaId
-                                    ? 'Create AI Recipe'
-                                    : 'Create Blank Recipe'}
-                            </Button>
-                        </Box>
-                    </Grid>
-                )}
-            </Grid>
+                                <Typography
+                                    sx={{
+                                        fontFamily: "'Kalam', cursive",
+                                        fontSize: '1.25rem',
+                                        fontWeight: 700,
+                                        color: 'primary.main',
+                                        position: 'relative',
+                                        zIndex: 1,
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: 'vertical',
+                                        lineHeight: 1.2,
+                                        height: 48, // ~2 lines of text with padding
+                                    }}
+                                >
+                                    {idea.title}
+                                </Typography>
+                                <Typography
+                                    sx={{
+                                        fontFamily: "'Inter', sans-serif",
+                                        fontSize: '0.9rem',
+                                        color: 'text.secondary',
+                                        flexGrow: 1,
+                                        position: 'relative',
+                                        zIndex: 1,
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 4,
+                                        WebkitBoxOrient: 'vertical',
+                                        lineHeight: 1.5,
+                                    }}
+                                >
+                                    {idea.description}
+                                </Typography>
+
+                                {/* Selection indicator */}
+                                {selectedIdeaId === idea.id && (
+                                    <Box
+                                        sx={{
+                                            position: 'absolute',
+                                            top: '0.75rem',
+                                            right: '0.75rem',
+                                            width: '1.5rem',
+                                            height: '1.5rem',
+                                            borderRadius: '50%',
+                                            bgcolor: 'primary.main',
+                                            color: 'primary.contrastText',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            zIndex: 2,
+                                            boxShadow:
+                                                '0 2px 4px rgba(0,0,0,0.1)',
+                                        }}
+                                    >
+                                        <Typography
+                                            sx={{
+                                                fontSize: '0.8rem',
+                                                fontWeight: 'bold',
+                                                color: 'inherit',
+                                            }}
+                                        >
+                                            ✓
+                                        </Typography>
+                                    </Box>
+                                )}
+                            </Paper>
+                        </Grid>
+                    ))}
+                </Grid>
+            )}
+
+            {/* Single action button that adapts based on selection state */}
+            {recipeIdeas.length > 0 && (
+                <Grid item xs={12}>
+                    <Box
+                        sx={{
+                            mt: 2,
+                            display: 'flex',
+                            justifyContent: 'center',
+                        }}
+                    >
+                        <Button
+                            fullWidth
+                            variant="contained"
+                            size="large"
+                            onClick={
+                                selectedIdeaId
+                                    ? handleCreateFromSelectedIdea
+                                    : handleCreateFromScratch
+                            }
+                            startIcon={
+                                selectedIdeaId ? (
+                                    <AutoAwesomeIcon />
+                                ) : (
+                                    <CreateIcon />
+                                )
+                            }
+                            sx={{
+                                height: 48,
+                                minWidth: 240,
+                                bgcolor: selectedIdeaId
+                                    ? 'primary.main'
+                                    : 'secondary.main',
+                                color: selectedIdeaId
+                                    ? 'primary.contrastText'
+                                    : 'text.primary',
+                                fontWeight: 600,
+                                fontSize: '1rem',
+                                fontFamily: "'Kalam', cursive",
+                                textTransform: 'none',
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                borderBottom: '2px solid',
+                                borderBottomColor: 'divider',
+                                boxShadow: 'none',
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                    bgcolor: selectedIdeaId
+                                        ? 'primary.dark'
+                                        : 'secondary.light',
+                                    transform: 'translateY(-1px)',
+                                    borderColor: 'rgba(44, 62, 80, 0.15)',
+                                    boxShadow:
+                                        '0 1px 3px rgba(44, 62, 80, 0.1)',
+                                },
+                            }}
+                        >
+                            {selectedIdeaId
+                                ? 'Create AI Recipe'
+                                : 'Create Blank Recipe'}
+                        </Button>
+                    </Box>
+                </Grid>
+            )}
 
             {/* Toggle to import mode */}
             <Box
@@ -1112,6 +1058,8 @@ const NewRecipePage: FC = () => {
                         placeholder="A salmon, kale, and avocado bowl that serves four people..."
                         value={recipePrompt}
                         onChange={(e) => setRecipePrompt(e.target.value)}
+                        error={!!generationError}
+                        helperText={generationError}
                         InputProps={{
                             sx: {
                                 bgcolor: 'background.paper',
@@ -1119,11 +1067,15 @@ const NewRecipePage: FC = () => {
                                 fontSize: '1rem',
                                 borderRadius: 1,
                                 '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'divider',
+                                    borderColor: generationError
+                                        ? 'error.main'
+                                        : 'divider',
                                     borderWidth: 1,
                                 },
                                 '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'primary.main',
+                                    borderColor: generationError
+                                        ? 'error.main'
+                                        : 'primary.main',
                                 },
                             },
                         }}

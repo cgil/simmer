@@ -6,6 +6,7 @@ Simmer is a modern web application that brings the warmth and personality of a p
 
 -   📝 Paper notebook-style interface with a warm, personal feel
 -   🔍 AI-powered recipe extraction from URLs
+-   🧠 AI-powered recipe ideas generation from text prompts
 -   📱 Mobile-friendly cooking mode with interactive timers
 -   🖼️ Beautiful image gallery management
 -   ⚡ Real-time ingredient scaling
