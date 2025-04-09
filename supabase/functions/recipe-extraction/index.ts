@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { OpenAI } from "https://deno.land/x/openai@v4.55.1/mod.ts";
+import { OpenAI } from "https://esm.sh/openai@4.93.0";
 import { zodResponseFormat } from "https://deno.land/x/openai@v4.55.1/helpers/zod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -378,6 +378,7 @@ serve(async (req) => {
             // Extract recipe using OpenAI with Zod schema
             const completion = await openai.chat.completions.create({
                 model: "o3-mini",
+                reasoning_effort: "high",
                 response_format: zodResponseFormat(
                     RecipeSchema,
                     "recipe_extraction",
@@ -453,6 +454,7 @@ serve(async (req) => {
                             - When timing info is available, the timing min and max should always be in minutes
                             - You must Ensure steps always include the necessary and correct timing information, including resting times. Ex. "Bake in the preheated oven until edges are golden, 8 to 10 minutes."
                             - Capture all necessary steps and instructions.
+                            - The url provided may include unrelated content, focus on the recipe content. Often there's a recipe instructions and ingredients section as the core content, and some notes and tips which may be useful spread throughout the page.
                             - Use the following image URLs in your response: ${
                                 JSON.stringify(images)
                             }
@@ -472,6 +474,8 @@ serve(async (req) => {
                             - Section titles should be concise and descriptive. They should be a few words that captures the main idea of the section such as:
                                 - "Marinating the Chicken"
                                 - "Making the Sauce"
+                                - "Assembling the Quesadillas"
+                                - "Serving the Sushi"
                             `,
                     },
                     {
