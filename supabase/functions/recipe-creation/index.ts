@@ -164,7 +164,9 @@ serve(async (req) => {
                 - "Marinating the Chicken"
                 - "Making the Sauce"
 
-            Be creative, thorough, and create a recipe that someone would be excited to cook and eat.`,
+            The recipe must be accurate, real, based on recommendations from culinary experts and other recipes.
+            Think about how prep, ingredients, heat, cooking times, and other factors will affect the recipe and final product. Ensure the final set of instructions will actually yield the desired result.
+            `,
                 },
                 {
                     role: "user",
