@@ -452,6 +452,7 @@ serve(async (req) => {
                             - The timing unit should always be in "minutes"
                             - When timing info is available, the timing min and max should always be in minutes
                             - You must Ensure steps always include the necessary and correct timing information, including resting times. Ex. "Bake in the preheated oven until edges are golden, 8 to 10 minutes."
+                            - Capture all necessary steps and instructions.
                             - Use the following image URLs in your response: ${
                                 JSON.stringify(images)
                             }
