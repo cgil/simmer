@@ -157,7 +157,6 @@ serve(async (req) => {
                 - "Low Calorie"
                 - "Main Dish"
                 - "Italian"
-                - "Quick and Easy"
                 - "One Pot"
                 - "Soup"
                 - "Thanksgiving"
