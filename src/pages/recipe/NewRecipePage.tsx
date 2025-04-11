@@ -996,7 +996,7 @@ const NewRecipePage: FC = () => {
                         sx={{
                             height: 6,
                             borderRadius: 3,
-                            bgcolor: 'background.default',
+                            bgcolor: 'background.paper',
                             '& .MuiLinearProgress-bar': {
                                 borderRadius: 3,
                                 backgroundImage:
@@ -1267,7 +1267,7 @@ const NewRecipePage: FC = () => {
                         sx={{
                             height: 6,
                             borderRadius: 3,
-                            bgcolor: 'background.default',
+                            bgcolor: 'background.paper',
                             '& .MuiLinearProgress-bar': {
                                 borderRadius: 3,
                                 backgroundImage:
@@ -1436,7 +1436,7 @@ const NewRecipePage: FC = () => {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        boxShadow: 'inset 0 0 50px rgba(62, 28, 0, 0.08)',
+                        boxShadow: 'inset 0 0 30px rgba(62, 28, 0, 0.05)',
                         pointerEvents: 'none',
                     },
                     '&::after': {
@@ -1446,11 +1446,11 @@ const NewRecipePage: FC = () => {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        opacity: 1,
+                        opacity: 0.8,
                         pointerEvents: 'none',
                         backgroundImage: `
-                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.07) 0.5px, transparent 0.5px),
-                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.04) 1px, transparent 1px)
+                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.05) 0.5px, transparent 0.5px),
+                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.03) 1px, transparent 1px)
                         `,
                         backgroundSize: '6px 6px, 14px 14px',
                         backgroundPosition: '0 0',

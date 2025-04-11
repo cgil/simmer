@@ -86,7 +86,7 @@ const StepNavigation: FC<StepNavigationProps> = ({
                 sx={{
                     height: 4,
                     borderRadius: 2,
-                    bgcolor: 'background.default',
+                    bgcolor: 'background.paper',
                     '& .MuiLinearProgress-bar': {
                         bgcolor: 'primary.main',
                         borderRadius: 2,

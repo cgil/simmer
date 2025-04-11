@@ -378,7 +378,7 @@ const RecipePage: FC = () => {
             <Box
                 sx={{
                     position: 'relative',
-                    bgcolor: '#FFFFFF',
+                    bgcolor: 'paper.light',
                     minHeight: '100vh',
                     px: { xs: 2, sm: 3, md: 4 },
                     py: { xs: 3, sm: 4 },
@@ -389,7 +389,7 @@ const RecipePage: FC = () => {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        boxShadow: 'inset 0 0 100px rgba(62, 28, 0, 0.03)',
+                        boxShadow: 'inset 0 0 30px rgba(62, 28, 0, 0.05)',
                         pointerEvents: 'none',
                     },
                     '&::after': {
@@ -399,16 +399,16 @@ const RecipePage: FC = () => {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        opacity: 0.3,
+                        opacity: 0.8,
                         pointerEvents: 'none',
                         backgroundImage: `
-                            linear-gradient(rgba(62, 28, 0, 0.03) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(62, 28, 0, 0.03) 1px, transparent 1px),
+                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.05) 0.5px, transparent 0.5px),
                             radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.03) 1px, transparent 1px)
                         `,
-                        backgroundSize: '24px 24px, 24px 24px, 12px 12px',
-                        backgroundPosition: '-1px -1px, -1px -1px, -1px -1px',
+                        backgroundSize: '6px 6px, 14px 14px',
+                        backgroundPosition: '0 0',
                         mixBlendMode: 'multiply',
+                        filter: 'opacity(1)',
                     },
                 }}
             >

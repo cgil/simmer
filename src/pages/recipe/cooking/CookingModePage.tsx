@@ -17,6 +17,7 @@ import StepContent from './components/StepContent';
 import { RecipeService } from '../../../services/RecipeService';
 import { Recipe } from '../../../types/recipe';
 import { useAuth } from '../../../context/AuthContext';
+import { alpha } from '@mui/material/styles';
 
 interface ActiveTimer {
     sectionIndex: number;
@@ -267,7 +268,7 @@ const CookingModePage: FC = () => {
             sx={{
                 height: '100vh',
                 width: '100vw',
-                bgcolor: 'background.default',
+                bgcolor: 'background.paper',
                 position: 'fixed',
                 top: 0,
                 left: 0,
@@ -286,8 +287,42 @@ const CookingModePage: FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    bgcolor: 'background.paper',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    bgcolor: 'paper.light',
+                    boxShadow: 'none',
+                    position: 'relative',
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: alpha(theme.palette.paper.light, 0.9),
+                        boxShadow: 'inset 0 0 30px rgba(62, 28, 0, 0.05)',
+                        pointerEvents: 'none',
+                    },
+                    '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        opacity: 0.8,
+                        pointerEvents: 'none',
+                        backgroundImage: `
+                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.05) 0.5px, transparent 0.5px),
+                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.03) 1px, transparent 1px)
+                        `,
+                        backgroundSize: '6px 6px, 14px 14px',
+                        backgroundPosition: '0 0',
+                        mixBlendMode: 'multiply',
+                        filter: 'opacity(1)',
+                    },
+                    '& > *': {
+                        position: 'relative',
+                        zIndex: 1,
+                    },
                 }}
             >
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -346,7 +381,7 @@ const CookingModePage: FC = () => {
                         py: 2,
                         borderBottom: '1px solid',
                         borderColor: 'divider',
-                        bgcolor: 'background.paper',
+                        bgcolor: 'paper.light',
                         position: 'relative',
                         '&::before': {
                             content: '""',
@@ -355,9 +390,30 @@ const CookingModePage: FC = () => {
                             left: 0,
                             right: 0,
                             bottom: 0,
-                            background: 'rgba(255,255,255,0.5)',
-                            backdropFilter: 'blur(4px)',
-                            zIndex: 0,
+                            boxShadow: 'inset 0 0 30px rgba(62, 28, 0, 0.05)',
+                            pointerEvents: 'none',
+                        },
+                        '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            opacity: 0.8,
+                            pointerEvents: 'none',
+                            backgroundImage: `
+                                radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.05) 0.5px, transparent 0.5px),
+                                radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.03) 1px, transparent 1px)
+                            `,
+                            backgroundSize: '6px 6px, 14px 14px',
+                            backgroundPosition: '0 0',
+                            mixBlendMode: 'multiply',
+                            filter: 'opacity(1)',
+                        },
+                        '& > *': {
+                            position: 'relative',
+                            zIndex: 1,
                         },
                     }}
                 >
@@ -508,7 +564,7 @@ const CookingModePage: FC = () => {
                 sx={{
                     flex: 1,
                     overflow: 'auto',
-                    bgcolor: 'background.default',
+                    bgcolor: 'paper.light',
                     position: 'relative',
                     '&::before': {
                         content: '""',
@@ -517,7 +573,7 @@ const CookingModePage: FC = () => {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        boxShadow: 'inset 0 0 100px rgba(62, 28, 0, 0.03)',
+                        boxShadow: 'inset 0 0 30px rgba(62, 28, 0, 0.05)',
                         pointerEvents: 'none',
                     },
                     '&::after': {
@@ -527,16 +583,16 @@ const CookingModePage: FC = () => {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        opacity: 0.3,
+                        opacity: 0.8,
                         pointerEvents: 'none',
                         backgroundImage: `
-                            linear-gradient(rgba(62, 28, 0, 0.03) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(62, 28, 0, 0.03) 1px, transparent 1px),
+                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.05) 0.5px, transparent 0.5px),
                             radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.03) 1px, transparent 1px)
                         `,
-                        backgroundSize: '24px 24px, 24px 24px, 12px 12px',
-                        backgroundPosition: '-1px -1px, -1px -1px, -1px -1px',
+                        backgroundSize: '6px 6px, 14px 14px',
+                        backgroundPosition: '0 0',
                         mixBlendMode: 'multiply',
+                        filter: 'opacity(1)',
                     },
                 }}
             >

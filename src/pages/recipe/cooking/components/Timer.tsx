@@ -196,7 +196,7 @@ const Timer: FC<TimerProps> = ({
                     ? 'success.lighter'
                     : activeTimer?.isRunning
                     ? 'primary.lighter'
-                    : 'background.default',
+                    : 'background.paper',
                 transition: 'all 0.3s ease',
                 border: '1px solid',
                 borderColor: activeTimer?.hasFinished
@@ -274,7 +274,7 @@ const Timer: FC<TimerProps> = ({
                                 border: '1px solid',
                                 borderColor: 'divider',
                                 '&:hover': {
-                                    bgcolor: 'background.default',
+                                    bgcolor: 'background.paper',
                                     color: 'primary.main',
                                 },
                             }}

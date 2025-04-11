@@ -4,7 +4,6 @@ import {
     Box,
     Container,
     Toolbar,
-    Typography,
     useTheme,
     useMediaQuery,
     Button,
@@ -12,8 +11,9 @@ import {
     Menu,
     MenuItem,
     Avatar,
+    alpha,
 } from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
@@ -27,6 +27,10 @@ interface AppLayoutProps {
     showCookingButton?: boolean;
     onCookingClick?: () => void;
     actionButton?: ReactNode;
+    hasDrawer?: boolean;
+    drawerWidth?: number;
+    collapsedDrawerWidth?: number;
+    isDrawerOpen?: boolean;
 }
 
 const AppLayout: FC<AppLayoutProps> = ({
@@ -36,6 +40,10 @@ const AppLayout: FC<AppLayoutProps> = ({
     showCookingButton = false,
     onCookingClick,
     actionButton,
+    hasDrawer = false,
+    drawerWidth = 240,
+    collapsedDrawerWidth = 72,
+    isDrawerOpen = true,
 }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -64,6 +72,13 @@ const AppLayout: FC<AppLayoutProps> = ({
         navigate('/login');
     };
 
+    // Calculate margin for the header when drawer is present
+    const headerMargin = hasDrawer
+        ? isDrawerOpen
+            ? `${drawerWidth}px`
+            : `${collapsedDrawerWidth}px`
+        : 0;
+
     return (
         <Box
             sx={{
@@ -81,15 +96,23 @@ const AppLayout: FC<AppLayoutProps> = ({
                 elevation={0}
                 sx={{
                     bgcolor: 'paper.light',
-                    borderBottom: '1px solid',
-                    borderColor: 'divider',
-                    width: '100%',
+                    borderBottom: 'none',
+                    width: hasDrawer ? `calc(100% - ${headerMargin})` : '100%',
+                    marginLeft: headerMargin,
                     borderRadius: 0,
+                    borderLeft: 'none',
                     top: 0,
-                    left: 0,
                     right: 0,
-                    zIndex: theme.zIndex.appBar,
+                    zIndex: theme.zIndex.drawer + 1,
                     backdropFilter: 'blur(8px)',
+                    boxShadow: 'none',
+                    transition: theme.transitions.create(
+                        ['width', 'margin-left'],
+                        {
+                            easing: theme.transitions.easing.easeInOut,
+                            duration: theme.transitions.duration.standard,
+                        }
+                    ),
                     '&::before': {
                         content: '""',
                         position: 'absolute',
@@ -97,6 +120,7 @@ const AppLayout: FC<AppLayoutProps> = ({
                         left: 0,
                         right: 0,
                         bottom: 0,
+                        backgroundColor: alpha(theme.palette.paper.light, 0.9),
                         boxShadow: 'inset 0 0 30px rgba(62, 28, 0, 0.05)',
                         pointerEvents: 'none',
                     },
@@ -118,6 +142,9 @@ const AppLayout: FC<AppLayoutProps> = ({
                         mixBlendMode: 'multiply',
                         filter: 'opacity(1)',
                     },
+                    ...(hasDrawer && {
+                        boxShadow: 'none',
+                    }),
                 }}
             >
                 <Container maxWidth={false} disableGutters>
@@ -139,29 +166,7 @@ const AppLayout: FC<AppLayoutProps> = ({
                                 flex: 1,
                             }}
                         >
-                            {headerContent || (
-                                <Link
-                                    to="/"
-                                    style={{
-                                        textDecoration: 'none',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                    }}
-                                >
-                                    <Typography
-                                        variant={isMobile ? 'h6' : 'h5'}
-                                        component="h1"
-                                        sx={{
-                                            fontWeight: 700,
-                                            color: 'primary.main',
-                                            letterSpacing: '-0.5px',
-                                            fontFamily: "'Kalam', cursive",
-                                        }}
-                                    >
-                                        Simmer
-                                    </Typography>
-                                </Link>
-                            )}
+                            {headerContent}
                         </Box>
 
                         <Box
