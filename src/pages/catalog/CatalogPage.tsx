@@ -38,7 +38,8 @@ interface CollectionItem {
     id: string;
     name: string;
     count: number;
-    icon: ReactNode;
+    icon?: ReactNode;
+    emoji?: string;
 }
 
 // Define collections in one central place
@@ -48,26 +49,42 @@ const APP_COLLECTIONS: CollectionItem[] = [
         name: 'All Recipes',
         count: 42,
         icon: <BookmarksRoundedIcon />,
+        emoji: '📚',
     },
-    { id: 'desserts', name: 'Desserts', count: 12, icon: <CakeRoundedIcon /> },
+    {
+        id: 'desserts',
+        name: 'Desserts',
+        count: 12,
+        icon: <CakeRoundedIcon />,
+        emoji: '🍰',
+    },
     {
         id: 'asian',
         name: 'Asian Cuisine',
         count: 8,
         icon: <RamenDiningRoundedIcon />,
+        emoji: '🍜',
     },
     {
         id: 'italian',
         name: 'Italian',
         count: 10,
         icon: <LocalPizzaRoundedIcon />,
+        emoji: '🍕',
     },
-    { id: 'drinks', name: 'Drinks', count: 5, icon: <LocalBarRoundedIcon /> },
+    {
+        id: 'drinks',
+        name: 'Drinks',
+        count: 5,
+        icon: <LocalBarRoundedIcon />,
+        emoji: '🍹',
+    },
     {
         id: 'empty',
         name: 'Empty Collection',
         count: 0,
         icon: <CollectionsBookmarkRoundedIcon />,
+        emoji: '📂',
     },
     // Add additional collections as needed
     {
@@ -75,78 +92,91 @@ const APP_COLLECTIONS: CollectionItem[] = [
         name: 'Asian Cuisine',
         count: 8,
         icon: <RamenDiningRoundedIcon />,
+        emoji: '🥡',
     },
     {
         id: 'italian-1',
         name: 'Italian',
         count: 10,
         icon: <LocalPizzaRoundedIcon />,
+        emoji: '🍝',
     },
     {
         id: 'drinks-1',
         name: 'Drinks',
         count: 5,
         icon: <LocalBarRoundedIcon />,
+        emoji: '🥤',
     },
     {
         id: 'empty-1',
         name: 'Empty Collection',
         count: 0,
         icon: <CollectionsBookmarkRoundedIcon />,
+        emoji: '📁',
     },
     {
         id: 'asian-2',
         name: 'Asian Cuisine',
         count: 8,
         icon: <RamenDiningRoundedIcon />,
+        emoji: '🥢',
     },
     {
         id: 'italian-2',
         name: 'Italian',
         count: 10,
         icon: <LocalPizzaRoundedIcon />,
+        emoji: '🧀',
     },
     {
         id: 'drinks-4',
         name: 'Drinks',
         count: 5,
         icon: <LocalBarRoundedIcon />,
+        emoji: '🍷',
     },
     {
         id: 'empty-2',
         name: 'Empty Collection',
         count: 0,
         icon: <CollectionsBookmarkRoundedIcon />,
+        emoji: '🗃️',
     },
     {
         id: 'desserts-2',
         name: 'Desserts',
         count: 12,
         icon: <CakeRoundedIcon />,
+        emoji: '🧁',
     },
     {
         id: 'asian-3',
         name: 'Asian Cuisine',
         count: 8,
         icon: <RamenDiningRoundedIcon />,
+        emoji: '🍱',
     },
     {
         id: 'italian-3',
         name: 'Italian',
         count: 10,
         icon: <LocalPizzaRoundedIcon />,
+        emoji: '🍅',
     },
     {
         id: 'drinks-3',
         name: 'Drinks',
         count: 5,
         icon: <LocalBarRoundedIcon />,
+        emoji: '🍸',
     },
     {
         id: 'empty-3',
         name: 'Empty Collection',
         count: 0,
         icon: <CollectionsBookmarkRoundedIcon />,
+        emoji: '📋',
     },
 ];
 
@@ -380,9 +410,11 @@ const CatalogPage: FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             color: 'primary.main',
+                            fontSize: '1.5rem',
                         }}
                     >
-                        {getSelectedCollection().icon}
+                        {getSelectedCollection().emoji ||
+                            getSelectedCollection().icon}
                     </Box>
                     <Typography
                         variant="h6"

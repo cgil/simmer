@@ -17,11 +17,10 @@ import {
     Fade,
     TextField,
     Paper,
-    Menu,
-    MenuItem,
     Slide,
     Portal,
     Grow,
+    Popover,
 } from '@mui/material';
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 import MenuOpenRoundedIcon from '@mui/icons-material/MenuOpenRounded';
@@ -30,23 +29,9 @@ import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
-// Import a few sample icons for the icon selection menu
-import BookmarksRoundedIcon from '@mui/icons-material/BookmarksRounded';
-import CakeRoundedIcon from '@mui/icons-material/CakeRounded';
-import RamenDiningRoundedIcon from '@mui/icons-material/RamenDiningRounded';
-import LocalPizzaRoundedIcon from '@mui/icons-material/LocalPizzaRounded';
-import LocalBarRoundedIcon from '@mui/icons-material/LocalBarRounded';
-import CollectionsBookmarkRoundedIcon from '@mui/icons-material/CollectionsBookmarkRounded';
-
-// Sample available icons for the icon selector
-const AVAILABLE_ICONS = [
-    { icon: <BookmarksRoundedIcon />, name: 'Bookmarks' },
-    { icon: <CakeRoundedIcon />, name: 'Cake' },
-    { icon: <RamenDiningRoundedIcon />, name: 'Ramen' },
-    { icon: <LocalPizzaRoundedIcon />, name: 'Pizza' },
-    { icon: <LocalBarRoundedIcon />, name: 'Drink' },
-    { icon: <CollectionsBookmarkRoundedIcon />, name: 'Collection' },
-];
+// Import emoji mart components
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
 
 // Move the interface up so we can use it in props
 interface CollectionItem {
@@ -54,6 +39,7 @@ interface CollectionItem {
     name: string;
     count: number;
     icon?: ReactNode;
+    emoji?: string; // Support for emoji icons
 }
 
 interface CollectionsDrawerProps {
@@ -66,7 +52,7 @@ interface CollectionsDrawerProps {
 }
 
 // Define a constant for the consistent height
-const COLLECTION_ITEM_HEIGHT = '56px'; // Standard height for ListItemButton
+const COLLECTION_ITEM_HEIGHT = '50px'; // Standard height for ListItemButton
 
 const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
     selectedCollection = 'all',
@@ -86,7 +72,8 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
     );
     const [editingName, setEditingName] = useState('');
     const [selectedIcon, setSelectedIcon] = useState<ReactNode | null>(null);
-    const [iconMenuAnchorEl, setIconMenuAnchorEl] =
+    const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
+    const [emojiPickerAnchorEl, setEmojiPickerAnchorEl] =
         useState<HTMLElement | null>(null);
     const [deletingCollection, setDeletingCollection] = useState<string | null>(
         null
@@ -155,7 +142,15 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
         if (collection) {
             setEditingCollection(collectionId);
             setEditingName(collection.name);
-            setSelectedIcon(collection.icon || null);
+
+            // Prefer emoji over icon if available
+            if (collection.emoji) {
+                setSelectedEmoji(collection.emoji);
+                setSelectedIcon(null);
+            } else {
+                setSelectedIcon(collection.icon || null);
+                setSelectedEmoji(null);
+            }
         }
     };
 
@@ -165,32 +160,37 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
             'Saving collection',
             collectionId,
             editingName,
-            selectedIcon
+            selectedEmoji || selectedIcon
         );
         // Reset editing state
         setEditingCollection(null);
         setEditingName('');
         setSelectedIcon(null);
+        setSelectedEmoji(null);
     };
 
     const handleCancelEdit = () => {
-        // Just set the state directly - the transitions will handle animations
         setEditingCollection(null);
         setEditingName('');
         setSelectedIcon(null);
+        setSelectedEmoji(null);
     };
 
-    const handleOpenIconMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
-        setIconMenuAnchorEl(event.currentTarget);
+    const handleOpenEmojiPicker = (
+        event: React.MouseEvent<HTMLButtonElement>
+    ) => {
+        setEmojiPickerAnchorEl(event.currentTarget);
     };
 
-    const handleCloseIconMenu = () => {
-        setIconMenuAnchorEl(null);
+    const handleCloseEmojiPicker = () => {
+        setEmojiPickerAnchorEl(null);
     };
 
-    const handleSelectIcon = (icon: ReactNode) => {
-        setSelectedIcon(icon);
-        handleCloseIconMenu();
+    // New handler for emoji selection
+    const handleSelectEmoji = (emoji: { native: string }) => {
+        setSelectedEmoji(emoji.native);
+        setSelectedIcon(null);
+        handleCloseEmojiPicker();
     };
 
     const handleConfirmDelete = (collectionId: string) => {
@@ -209,6 +209,27 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
 
     const handleCancelDelete = () => {
         setDeletingCollection(null);
+    };
+
+    // Determine what to display as the icon
+    const getCollectionIcon = (collection: CollectionItem) => {
+        if (collection.id === editingCollection) {
+            // For the collection being edited
+            if (selectedEmoji)
+                return (
+                    <span style={{ fontSize: '1.4rem' }}>{selectedEmoji}</span>
+                );
+            return selectedIcon || collection.icon;
+        } else {
+            // For regular collections
+            if (collection.emoji)
+                return (
+                    <span style={{ fontSize: '1.4rem' }}>
+                        {collection.emoji}
+                    </span>
+                );
+            return collection.icon;
+        }
     };
 
     return (
@@ -507,10 +528,10 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                                     >
                                         <IconButton
                                             size="small"
-                                            onClick={handleOpenIconMenu}
+                                            onClick={handleOpenEmojiPicker}
                                             sx={{ mr: 1 }}
                                         >
-                                            {selectedIcon || collection.icon}
+                                            {getCollectionIcon(collection)}
                                         </IconButton>
                                         <TextField
                                             value={editingName}
@@ -591,7 +612,7 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                                                 fontSize: '1.2rem',
                                             }}
                                         >
-                                            {collection.icon}
+                                            {getCollectionIcon(collection)}
                                         </ListItemIcon>
                                         {isOpen && (
                                             <ListItemText
@@ -998,11 +1019,11 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                 </Box>
             </Box>
 
-            {/* Add back the Icon selection menu */}
-            <Menu
-                anchorEl={iconMenuAnchorEl}
-                open={Boolean(iconMenuAnchorEl)}
-                onClose={handleCloseIconMenu}
+            {/* Emoji picker popover */}
+            <Popover
+                anchorEl={emojiPickerAnchorEl}
+                open={Boolean(emojiPickerAnchorEl)}
+                onClose={handleCloseEmojiPicker}
                 anchorOrigin={{
                     vertical: 'center',
                     horizontal: 'right',
@@ -1012,30 +1033,40 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                     horizontal: 'left',
                 }}
                 sx={{
-                    '& .MuiList-root': {
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(3, 1fr)',
-                        gap: 0.5,
-                        p: 1,
-                        width: 150,
+                    '.MuiPopover-paper': {
+                        overflow: 'hidden',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                        borderRadius: 3,
+                        border: '1px solid',
+                        borderColor: alpha(theme.palette.divider, 0.2),
                     },
                 }}
             >
-                {AVAILABLE_ICONS.map((item, index) => (
-                    <MenuItem
-                        key={index}
-                        onClick={() => handleSelectIcon(item.icon)}
-                        sx={{
-                            justifyContent: 'center',
-                            p: 1,
-                            minHeight: 'auto',
-                            borderRadius: 1,
-                        }}
-                    >
-                        {item.icon}
-                    </MenuItem>
-                ))}
-            </Menu>
+                <Picker
+                    data={data}
+                    onEmojiSelect={handleSelectEmoji}
+                    previewPosition="none"
+                    skinTonePosition="none"
+                    theme={theme.palette.mode === 'dark' ? 'dark' : 'light'}
+                    set="native"
+                    navPosition="top"
+                    categories={[
+                        'foods',
+                        'places',
+                        'activities',
+                        'nature',
+                        'flags',
+                        'objects',
+                        'symbols',
+                    ]}
+                    perLine={7}
+                    maxFrequentRows={0}
+                    emojiSize={24}
+                    emojiButtonSize={36}
+                    searchPosition="sticky"
+                    autoFocus={false}
+                />
+            </Popover>
         </Drawer>
     );
 };
