@@ -1,4 +1,4 @@
-import { FC, useState, ReactNode, useRef, useEffect } from 'react';
+import { FC, useState, ReactNode, useRef, useEffect, useMemo } from 'react';
 import {
     Drawer,
     Box,
@@ -79,6 +79,21 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
         null
     );
     const collectionItemRef = useRef<HTMLDivElement>(null);
+
+    // Sort collections: All Recipes first, then alphabetically by name
+    const sortedCollections = useMemo(() => {
+        // First separate "All Recipes" from other collections
+        const allRecipes = collections.find((c) => c.id === 'all');
+        const otherCollections = collections.filter((c) => c.id !== 'all');
+
+        // Sort other collections alphabetically by name
+        const sortedOthers = [...otherCollections].sort((a, b) =>
+            a.name.localeCompare(b.name)
+        );
+
+        // Return with All Recipes first, followed by sorted collections
+        return allRecipes ? [allRecipes, ...sortedOthers] : sortedOthers;
+    }, [collections]);
 
     // Create a map to store collection element positions
     const [buttonPositions, setButtonPositions] = useState<
@@ -320,7 +335,7 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                 }}
             >
                 <List sx={{ px: 1, pt: 1 }}>
-                    {collections.map((collection) => (
+                    {sortedCollections.map((collection) => (
                         <ListItem
                             key={collection.id}
                             disablePadding
