@@ -130,10 +130,25 @@ const CatalogPage: FC = () => {
 
     // Effect to sync URL param with selected collection
     useEffect(() => {
+        // Case 1: URL has a collection ID that's different from current selection
         if (collectionId && collectionId !== selectedCollection) {
             setSelectedCollection(collectionId);
+
+            // Only reload recipes if initial load is complete
+            if (initialLoadCompleted.current) {
+                loadRecipesByCollection(collectionId);
+            }
         }
-    }, [collectionId]);
+        // Case 2: URL has no collection ID (root URL/All Recipes) but we're not on All Recipes view
+        else if (
+            !collectionId &&
+            selectedCollection !== ALL_RECIPES_ID &&
+            initialLoadCompleted.current
+        ) {
+            setSelectedCollection(ALL_RECIPES_ID);
+            loadRecipesByCollection(ALL_RECIPES_ID);
+        }
+    }, [collectionId, selectedCollection]);
 
     // Load initial collections when user is available
     useEffect(() => {
