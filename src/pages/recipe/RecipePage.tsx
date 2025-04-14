@@ -323,33 +323,33 @@ const RecipePage: FC = () => {
                 width: '100%',
             }}
         >
-            <Box
-                onClick={handleBackClick}
-                sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    cursor: 'pointer',
-                    color: 'text.primary',
-                    '&:hover': {
-                        color: 'primary.main',
-                    },
-                }}
-            >
-                <ArrowBackIcon sx={{ fontSize: 24 }} />
-                <Typography
-                    variant="body1"
+            {user ? (
+                <Box
+                    onClick={handleBackClick}
                     sx={{
-                        fontWeight: 500,
-                        fontSize: { xs: '1rem', sm: '1.125rem' },
-                        fontFamily: 'Inter, system-ui, sans-serif',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        cursor: 'pointer',
+                        color: 'text.primary',
+                        '&:hover': {
+                            color: 'primary.main',
+                        },
                     }}
                 >
-                    Back
-                </Typography>
-            </Box>
-
-            {!user && (
+                    <ArrowBackIcon sx={{ fontSize: 24 }} />
+                    <Typography
+                        variant="body1"
+                        sx={{
+                            fontWeight: 500,
+                            fontSize: { xs: '1rem', sm: '1.125rem' },
+                            fontFamily: 'Inter, system-ui, sans-serif',
+                        }}
+                    >
+                        Back
+                    </Typography>
+                </Box>
+            ) : (
                 <Box
                     sx={{
                         display: 'flex',
