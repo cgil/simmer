@@ -1,8 +1,10 @@
 import { supabase } from "../lib/supabase";
 import type { Recipe } from "../types/recipe";
 import type { Database } from "../types/database";
+import type { Collection, CollectionItem } from "../types/collection";
 import { convertRecipeInstructionReferences } from "../utils/ingredientMentions";
 import { ensureUuid, isValidUuid } from "../utils/uuid";
+import { ALL_RECIPES_ID } from "../types/collection";
 
 // Helper function for generating UUIDs in the browser
 function generateUUID(): string {
@@ -716,18 +718,41 @@ export class RecipeService {
         recipeId: string,
         userId: string,
     ): Promise<boolean> {
-        const { error } = await supabase
-            .from("recipes")
-            .delete()
-            .eq("id", recipeId)
-            .eq("user_id", userId);
+        try {
+            // First, explicitly clean up collection relationships
+            // This is redundant with the CASCADE DELETE in the DB schema, but ensures
+            // we handle any edge cases or database inconsistencies
+            const { error: collectionError } = await supabase
+                .from("recipe_collections")
+                .delete()
+                .eq("recipe_id", recipeId);
 
-        if (error) {
-            console.error("Error deleting recipe:", error);
+            if (collectionError) {
+                console.warn(
+                    "Warning: Could not explicitly clean up recipe collections:",
+                    collectionError,
+                );
+                // Continue with deletion even if collection cleanup fails explicitly
+                // The CASCADE DELETE should still handle it
+            }
+
+            // Then delete the recipe itself
+            const { error } = await supabase
+                .from("recipes")
+                .delete()
+                .eq("id", recipeId)
+                .eq("user_id", userId);
+
+            if (error) {
+                console.error("Error deleting recipe:", error);
+                throw error;
+            }
+
+            return true;
+        } catch (error) {
+            console.error("Error in deleteRecipe:", error);
             throw error;
         }
-
-        return true;
     }
 
     /**
@@ -983,6 +1008,379 @@ export class RecipeService {
             return true;
         } catch (error) {
             console.error("Error in updateRecipePublicStatus:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get all collections for a user
+     * @param userId - The ID of the user
+     * @returns A list of collections with recipe counts
+     */
+    static async getCollections(userId: string): Promise<Collection[]> {
+        try {
+            // First get all collections
+            const { data: collections, error } = await supabase
+                .from("collections")
+                .select("*")
+                .eq("user_id", userId)
+                .order("name");
+
+            if (error) {
+                console.error("Error fetching collections:", error);
+                throw error;
+            }
+
+            if (!collections || collections.length === 0) {
+                return [];
+            }
+
+            // Then get recipe counts for each collection using count aggregation
+            const collectionIds = collections.map((c) => c.id);
+
+            // Use raw SQL for counting to avoid type issues
+            const { data: counts, error: countError } = await supabase
+                .rpc("get_collection_counts", {
+                    collection_ids: collectionIds,
+                });
+
+            if (countError) {
+                console.error("Error fetching collection counts:", countError);
+                throw countError;
+            }
+
+            // Map counts to collections
+            const countsMap = new Map<string, number>();
+            if (counts) {
+                counts.forEach(
+                    (item: { collection_id: string; count: number }) => {
+                        countsMap.set(item.collection_id, item.count);
+                    },
+                );
+            }
+
+            // Return collections with counts
+            return collections.map((collection) => ({
+                ...collection,
+                recipe_count: countsMap.get(collection.id) || 0,
+            }));
+        } catch (error) {
+            console.error("Error in getCollections:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get collection items for UI display, including the "All Recipes" special case
+     * @param userId - The ID of the user
+     * @returns A list of collection items for the UI
+     */
+    static async getCollectionItems(userId: string): Promise<CollectionItem[]> {
+        try {
+            // Get all collections with counts
+            const collections = await this.getCollections(userId);
+
+            // Get total recipe count for "All Recipes"
+            const { count: totalCount, error: countError } = await supabase
+                .from("recipes")
+                .select("id", { count: "exact", head: true })
+                .eq("user_id", userId);
+
+            if (countError) {
+                console.error("Error fetching total recipe count:", countError);
+                throw countError;
+            }
+
+            // Create collection items array with "All Recipes" at the beginning
+            const allRecipesItem: CollectionItem = {
+                id: ALL_RECIPES_ID,
+                name: "All Recipes",
+                count: totalCount || 0,
+                emoji: "📚",
+            };
+
+            // Map collections to collection items
+            const collectionItems = collections.map((collection) => ({
+                id: collection.id,
+                name: collection.name,
+                count: collection.recipe_count || 0,
+                emoji: collection.emoji || undefined,
+            }));
+
+            // Return with "All Recipes" first, then alphabetically sorted collections
+            return [allRecipesItem, ...collectionItems];
+        } catch (error) {
+            console.error("Error in getCollectionItems:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Create a new collection
+     * @param userId - The ID of the user creating the collection
+     * @param name - The name of the collection
+     * @param emoji - Optional emoji for the collection
+     * @returns The created collection
+     */
+    static async createCollection(
+        userId: string,
+        name: string,
+        emoji?: string,
+    ): Promise<Collection> {
+        if (!name.trim()) {
+            throw new Error("Collection name is required");
+        }
+
+        const { data, error } = await supabase
+            .from("collections")
+            .insert({
+                user_id: userId,
+                name: name.trim(),
+                emoji: emoji || null,
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error("Error creating collection:", error);
+            throw error;
+        }
+
+        return {
+            ...data,
+            recipe_count: 0,
+        };
+    }
+
+    /**
+     * Update a collection's name or emoji
+     * @param collectionId - The ID of the collection to update
+     * @param updates - Object containing the fields to update
+     * @returns The updated collection
+     */
+    static async updateCollection(
+        collectionId: string,
+        updates: { name?: string; emoji?: string },
+    ): Promise<Collection> {
+        // Check for valid updates
+        if (updates.name && !updates.name.trim()) {
+            throw new Error("Collection name cannot be empty");
+        }
+
+        const updateData: { name?: string; emoji?: string | null } = {};
+
+        if (updates.name) {
+            updateData.name = updates.name.trim();
+        }
+
+        // Allow explicitly setting emoji to null to remove it
+        if (updates.emoji !== undefined) {
+            updateData.emoji = updates.emoji || null;
+        }
+
+        const { data, error } = await supabase
+            .from("collections")
+            .update(updateData)
+            .eq("id", collectionId)
+            .select()
+            .single();
+
+        if (error) {
+            console.error("Error updating collection:", error);
+            throw error;
+        }
+
+        // Get the recipe count
+        const { count, error: countError } = await supabase
+            .from("recipe_collections")
+            .select("*", { count: "exact" })
+            .eq("collection_id", collectionId);
+
+        if (countError) {
+            console.error("Error getting collection recipe count:", countError);
+            throw countError;
+        }
+
+        return {
+            ...data,
+            recipe_count: count || 0,
+        };
+    }
+
+    /**
+     * Delete a collection and all its recipe associations
+     * @param collectionId - The ID of the collection to delete
+     * @returns True if successful
+     */
+    static async deleteCollection(collectionId: string): Promise<boolean> {
+        const { error } = await supabase
+            .from("collections")
+            .delete()
+            .eq("id", collectionId);
+
+        if (error) {
+            console.error("Error deleting collection:", error);
+            throw error;
+        }
+
+        return true;
+    }
+
+    /**
+     * Add a recipe to a collection
+     * @param recipeId - The ID of the recipe to add
+     * @param collectionId - The ID of the collection to add the recipe to
+     * @returns True if successful
+     */
+    static async addRecipeToCollection(
+        recipeId: string,
+        collectionId: string,
+    ): Promise<boolean> {
+        const { error } = await supabase
+            .from("recipe_collections")
+            .insert({
+                recipe_id: recipeId,
+                collection_id: collectionId,
+            });
+
+        if (error) {
+            // If error is duplicate, just return true
+            if (error.code === "23505") { // Unique violation
+                console.log("Recipe already in collection");
+                return true;
+            }
+            console.error("Error adding recipe to collection:", error);
+            throw error;
+        }
+
+        return true;
+    }
+
+    /**
+     * Remove a recipe from a collection
+     * @param recipeId - The ID of the recipe to remove
+     * @param collectionId - The ID of the collection to remove the recipe from
+     * @returns True if successful
+     */
+    static async removeRecipeFromCollection(
+        recipeId: string,
+        collectionId: string,
+    ): Promise<boolean> {
+        const { error } = await supabase
+            .from("recipe_collections")
+            .delete()
+            .eq("recipe_id", recipeId)
+            .eq("collection_id", collectionId);
+
+        if (error) {
+            console.error("Error removing recipe from collection:", error);
+            throw error;
+        }
+
+        return true;
+    }
+
+    /**
+     * Get recipes by collection
+     * @param userId - The ID of the user
+     * @param collectionId - The ID of the collection to get recipes from
+     * @returns A list of recipes in the collection
+     */
+    static async getRecipesByCollection(
+        userId: string,
+        collectionId: string,
+    ): Promise<Recipe[]> {
+        try {
+            const { data: recipeIds, error: recipeIdsError } = await supabase
+                .from("recipe_collections")
+                .select("recipe_id")
+                .eq("collection_id", collectionId);
+
+            if (recipeIdsError) {
+                console.error("Error fetching recipe IDs:", recipeIdsError);
+                throw recipeIdsError;
+            }
+
+            if (!recipeIds || recipeIds.length === 0) {
+                return [];
+            }
+
+            const ids = recipeIds.map((r) => r.recipe_id);
+
+            const { data: recipes, error } = await supabase
+                .from("recipes")
+                .select(`
+                    *,
+                    recipe_images (id, url, position),
+                    recipe_ingredients (id, name, quantity, unit, notes, position),
+                    recipe_instruction_sections (
+                        id, section_title, position,
+                        recipe_instruction_steps (id, text, timing_min, timing_max, timing_units, position)
+                    )
+                `)
+                .eq("user_id", userId)
+                .in("id", ids)
+                .order("title");
+
+            if (error) {
+                console.error("Error fetching recipes by collection:", error);
+                throw error;
+            }
+
+            return recipes
+                ? recipes.map((recipe) =>
+                    this.mapDbRecipeToRecipe(recipe as RecipeWithRelations)
+                )
+                : [];
+        } catch (error) {
+            console.error("Error in getRecipesByCollection:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get collections for a recipe
+     * @param recipeId - The ID of the recipe
+     * @returns A list of collections the recipe belongs to
+     */
+    static async getCollectionsForRecipe(
+        recipeId: string,
+    ): Promise<Collection[]> {
+        try {
+            const { data, error } = await supabase
+                .from("recipe_collections")
+                .select(`
+                    collection_id,
+                    collections:collection_id (*)
+                `)
+                .eq("recipe_id", recipeId);
+
+            if (error) {
+                console.error("Error fetching collections for recipe:", error);
+                throw error;
+            }
+
+            if (!data || data.length === 0) {
+                return [];
+            }
+
+            // Transform the data to return correctly typed Collection array
+            const collections: Collection[] = [];
+
+            for (const item of data) {
+                if (item.collections) {
+                    const collection = item
+                        .collections as unknown as Collection;
+                    collections.push({
+                        ...collection,
+                        recipe_count: 0, // We don't need the count here
+                    });
+                }
+            }
+
+            return collections;
+        } catch (error) {
+            console.error("Error in getCollectionsForRecipe:", error);
             throw error;
         }
     }

@@ -42,6 +42,25 @@ export type Database = {
                 };
                 // Add Insert and Update types if needed
             };
+            collections: {
+                Row: {
+                    id: string;
+                    user_id: string;
+                    name: string;
+                    emoji: string | null;
+                    // Add other fields as needed
+                };
+                // Add Insert and Update types if needed
+            };
+            recipe_collections: {
+                Row: {
+                    id: string;
+                    recipe_id: string;
+                    collection_id: string;
+                    // Add other fields as needed
+                };
+                // Add Insert and Update types if needed
+            };
         };
         Enums: Record<string, unknown>;
     };
@@ -59,3 +78,5 @@ export type RecipeIngredient = Tables<"recipe_ingredients">;
 export type RecipeInstructionSection = Tables<"recipe_instruction_sections">;
 export type RecipeInstructionStep = Tables<"recipe_instruction_steps">;
 export type RecipeImage = Tables<"recipe_images">;
+export type DBCollection = Tables<"collections">;
+export type RecipeCollection = Tables<"recipe_collections">;

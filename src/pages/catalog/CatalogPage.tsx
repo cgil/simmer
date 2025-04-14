@@ -1,4 +1,4 @@
-import { FC, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
+import { FC, useState, useEffect, useRef, useCallback } from 'react';
 import {
     Grid,
     Typography,
@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import AppLayout from '../../components/layout/AppLayout';
 import { Card, CardMedia, CardContent } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { formatTimeDisplay } from '../../utils/time';
@@ -18,167 +18,18 @@ import { useAuth } from '../../context/AuthContext';
 import { RecipeService } from '../../services/RecipeService';
 import { Recipe } from '../../types/recipe';
 import EmptyRecipeBook from '../../components/icons/EmptyRecipeBook';
-import RecipeImagePlaceholder from '../../components/recipe/RecipeImagePlaceholder';
 import SearchBar from '../../components/search-bar/SearchBar';
 import { useDebounce } from '../../hooks';
 import MatchCornerFold, {
     MatchType,
 } from '../../components/recipe/MatchCornerFold';
 import CollectionsDrawer from '../../components/collections/CollectionsDrawer';
-// Import icons for collection headers
-import BookmarksRoundedIcon from '@mui/icons-material/BookmarksRounded';
-import CakeRoundedIcon from '@mui/icons-material/CakeRounded';
-import RamenDiningRoundedIcon from '@mui/icons-material/RamenDiningRounded';
-import LocalPizzaRoundedIcon from '@mui/icons-material/LocalPizzaRounded';
-import LocalBarRoundedIcon from '@mui/icons-material/LocalBarRounded';
-import CollectionsBookmarkRoundedIcon from '@mui/icons-material/CollectionsBookmarkRounded';
-
-// Define the collection item interface
-interface CollectionItem {
-    id: string;
-    name: string;
-    count: number;
-    icon?: ReactNode;
-    emoji?: string;
-}
-
-// Define collections in one central place
-const APP_COLLECTIONS: CollectionItem[] = [
-    {
-        id: 'all',
-        name: 'All Recipes',
-        count: 42,
-        icon: <BookmarksRoundedIcon />,
-        emoji: '📚',
-    },
-    {
-        id: 'desserts',
-        name: 'Desserts',
-        count: 12,
-        icon: <CakeRoundedIcon />,
-        emoji: '🍰',
-    },
-    {
-        id: 'asian',
-        name: 'Asian Cuisine',
-        count: 8,
-        icon: <RamenDiningRoundedIcon />,
-        emoji: '🍜',
-    },
-    {
-        id: 'italian',
-        name: 'Italian',
-        count: 10,
-        icon: <LocalPizzaRoundedIcon />,
-        emoji: '🍕',
-    },
-    {
-        id: 'drinks',
-        name: 'Drinks',
-        count: 5,
-        icon: <LocalBarRoundedIcon />,
-        emoji: '🍹',
-    },
-    {
-        id: 'empty',
-        name: 'Empty Collection',
-        count: 0,
-        icon: <CollectionsBookmarkRoundedIcon />,
-        emoji: '📂',
-    },
-    // Add additional collections as needed
-    {
-        id: 'asian-1',
-        name: 'Asian Cuisine',
-        count: 8,
-        icon: <RamenDiningRoundedIcon />,
-        emoji: '🥡',
-    },
-    {
-        id: 'italian-1',
-        name: 'Italian',
-        count: 10,
-        icon: <LocalPizzaRoundedIcon />,
-        emoji: '🍝',
-    },
-    {
-        id: 'drinks-1',
-        name: 'Drinks',
-        count: 5,
-        icon: <LocalBarRoundedIcon />,
-        emoji: '🥤',
-    },
-    {
-        id: 'empty-1',
-        name: 'Empty Collection',
-        count: 0,
-        icon: <CollectionsBookmarkRoundedIcon />,
-        emoji: '📁',
-    },
-    {
-        id: 'asian-2',
-        name: 'Asian Cuisine',
-        count: 8,
-        icon: <RamenDiningRoundedIcon />,
-        emoji: '🥢',
-    },
-    {
-        id: 'italian-2',
-        name: 'Italian',
-        count: 10,
-        icon: <LocalPizzaRoundedIcon />,
-        emoji: '🧀',
-    },
-    {
-        id: 'drinks-4',
-        name: 'Drinks',
-        count: 5,
-        icon: <LocalBarRoundedIcon />,
-        emoji: '🍷',
-    },
-    {
-        id: 'empty-2',
-        name: 'Empty Collection',
-        count: 0,
-        icon: <CollectionsBookmarkRoundedIcon />,
-        emoji: '🗃️',
-    },
-    {
-        id: 'desserts-2',
-        name: 'Desserts',
-        count: 12,
-        icon: <CakeRoundedIcon />,
-        emoji: '🧁',
-    },
-    {
-        id: 'asian-3',
-        name: 'Asian Cuisine',
-        count: 8,
-        icon: <RamenDiningRoundedIcon />,
-        emoji: '🍱',
-    },
-    {
-        id: 'italian-3',
-        name: 'Italian',
-        count: 10,
-        icon: <LocalPizzaRoundedIcon />,
-        emoji: '🍅',
-    },
-    {
-        id: 'drinks-3',
-        name: 'Drinks',
-        count: 5,
-        icon: <LocalBarRoundedIcon />,
-        emoji: '🍸',
-    },
-    {
-        id: 'empty-3',
-        name: 'Empty Collection',
-        count: 0,
-        icon: <CollectionsBookmarkRoundedIcon />,
-        emoji: '📋',
-    },
-];
+// Import from collection.ts including the new constant
+import {
+    CollectionItem,
+    ALL_RECIPES_ID,
+    COLLECTION_ROUTE_PATH,
+} from '../../types/collection';
 
 /**
  * Determines the highest priority match type for a recipe
@@ -219,6 +70,8 @@ const determineMatchType = (recipe: Recipe, searchQuery: string): MatchType => {
 
 const CatalogPage: FC = () => {
     const theme = useTheme();
+    const navigate = useNavigate();
+    const { collectionId } = useParams<{ collectionId?: string }>();
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -228,12 +81,20 @@ const CatalogPage: FC = () => {
     const [hasMore, setHasMore] = useState(true);
     const [page, setPage] = useState(0);
     const [error, setError] = useState<string | null>(null);
-    const navigate = useNavigate();
     const { user } = useAuth();
     const RECIPES_PER_PAGE = 10;
     const initialLoadCompleted = useRef(false);
-    const [selectedCollection, setSelectedCollection] = useState('all');
+    const [selectedCollection, setSelectedCollection] = useState<string>(
+        collectionId || ALL_RECIPES_ID
+    );
     const [drawerOpen, setDrawerOpen] = useState(true);
+    // New state for collections
+    const [collections, setCollections] = useState<CollectionItem[]>([]);
+    const [collectionsLoading, setCollectionsLoading] = useState(true);
+    // Add state to track items being removed with animation
+    const [collectionsBeingRemoved, setCollectionsBeingRemoved] = useState<
+        string[]
+    >([]);
 
     const drawerWidth = 240;
     const collapsedDrawerWidth = 72;
@@ -267,13 +128,27 @@ const CatalogPage: FC = () => {
         setDebouncedSearchQuery(debouncedSearch);
     }, [debouncedSearch]);
 
+    // Effect to sync URL param with selected collection
+    useEffect(() => {
+        if (collectionId && collectionId !== selectedCollection) {
+            setSelectedCollection(collectionId);
+        }
+    }, [collectionId]);
+
+    // Load initial collections when user is available
+    useEffect(() => {
+        if (user) {
+            loadCollections();
+        }
+    }, [user]);
+
     // Handle initial load of recipes
     useEffect(() => {
         if (user && !initialLoadCompleted.current) {
             loadInitialRecipes();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user]);
+    }, [user, selectedCollection]);
 
     // Handle search updates
     useEffect(() => {
@@ -287,7 +162,105 @@ const CatalogPage: FC = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user, debouncedSearchQuery]);
 
-    // Initial load of recipes
+    // Function to load collections
+    const loadCollections = async () => {
+        if (!user) return;
+
+        setCollectionsLoading(true);
+        try {
+            const fetchedCollections = await RecipeService.getCollectionItems(
+                user.id
+            );
+            setCollections(fetchedCollections);
+
+            // If this is the first time loading collections, load the selected collection from URL or default to "All Recipes"
+            if (!initialLoadCompleted.current) {
+                const collectionToLoad = collectionId || selectedCollection;
+
+                // Validate that the collection exists or default to ALL_RECIPES_ID
+                const collectionExists = collectionId
+                    ? fetchedCollections.some((c) => c.id === collectionId)
+                    : true;
+
+                const finalCollectionId = collectionExists
+                    ? collectionToLoad
+                    : ALL_RECIPES_ID;
+
+                if (finalCollectionId !== collectionId && collectionId) {
+                    // If the collection in URL doesn't exist, navigate to all recipes
+                    navigate('/', { replace: true });
+                } else {
+                    await loadRecipesByCollection(finalCollectionId);
+                    initialLoadCompleted.current = true;
+                }
+            }
+        } catch (err) {
+            console.error('Error loading collections:', err);
+            setCollections([]);
+        } finally {
+            setCollectionsLoading(false);
+        }
+    };
+
+    // Add a new function to load recipes based on the selected collection
+    const loadRecipesByCollection = async (collectionId: string) => {
+        if (!user) return;
+
+        setInitialLoading(true);
+        setError(null);
+
+        try {
+            let fetchedRecipes: Recipe[] = [];
+
+            if (collectionId === ALL_RECIPES_ID) {
+                // Load all recipes if "All Recipes" is selected
+                fetchedRecipes = await RecipeService.searchRecipes(
+                    user.id,
+                    searchQuery || '' // Use current search query if exists
+                );
+            } else {
+                // Load recipes for the specific collection
+                fetchedRecipes = await RecipeService.getRecipesByCollection(
+                    user.id,
+                    collectionId
+                );
+
+                // If there's a search query, filter the recipes client-side
+                if (searchQuery) {
+                    const normalizedSearch = searchQuery.toLowerCase().trim();
+                    fetchedRecipes = fetchedRecipes.filter(
+                        (recipe) =>
+                            recipe.title
+                                .toLowerCase()
+                                .includes(normalizedSearch) ||
+                            (recipe.tags &&
+                                recipe.tags.some((tag) =>
+                                    tag.toLowerCase().includes(normalizedSearch)
+                                )) ||
+                            (recipe.ingredients &&
+                                recipe.ingredients.some((ing) =>
+                                    ing.name
+                                        .toLowerCase()
+                                        .includes(normalizedSearch)
+                                ))
+                    );
+                }
+            }
+
+            setRecipes(fetchedRecipes);
+
+            // Update pagination
+            setHasMore(fetchedRecipes.length > RECIPES_PER_PAGE);
+            setPage(1);
+        } catch (err) {
+            console.error('Error loading recipes by collection:', err);
+            setError('Failed to load recipes. Please try again.');
+        } finally {
+            setInitialLoading(false);
+        }
+    };
+
+    // Modify loadInitialRecipes to use the selected collection
     const loadInitialRecipes = async () => {
         if (!user) return;
 
@@ -295,26 +268,17 @@ const CatalogPage: FC = () => {
         setError(null);
 
         try {
-            const fetchedRecipes = await RecipeService.searchRecipes(
-                user.id,
-                '' // Empty search to get all recipes initially
-            );
-
-            setRecipes(fetchedRecipes);
-
-            // Update pagination
-            setHasMore(fetchedRecipes.length > RECIPES_PER_PAGE);
-            setPage(1);
+            await loadRecipesByCollection(selectedCollection);
             initialLoadCompleted.current = true;
         } catch (err) {
-            console.error('Error loading recipes:', err);
+            console.error('Error loading initial recipes:', err);
             setError('Failed to load recipes. Please try again.');
         } finally {
             setInitialLoading(false);
         }
     };
 
-    // Perform search without resetting the UI
+    // Modify performSearch to account for collection filtering
     const performSearch = async () => {
         if (!user) return;
 
@@ -322,16 +286,8 @@ const CatalogPage: FC = () => {
         setError(null);
 
         try {
-            const fetchedRecipes = await RecipeService.searchRecipes(
-                user.id,
-                debouncedSearchQuery
-            );
-
-            setRecipes(fetchedRecipes);
-
-            // Update pagination
-            setHasMore(fetchedRecipes.length > RECIPES_PER_PAGE);
-            setPage(1);
+            // Using the same loadRecipesByCollection function for consistency
+            await loadRecipesByCollection(selectedCollection);
         } catch (err) {
             console.error('Error searching recipes:', err);
             setError('Failed to search recipes. Please try again.');
@@ -377,10 +333,27 @@ const CatalogPage: FC = () => {
     // Calculate the visible recipes based on pagination
     const visibleRecipes = recipes.slice(0, page * RECIPES_PER_PAGE);
 
-    // Handle collection selection
-    const handleCollectionSelect = (collectionId: string) => {
+    // Update handleCollectionSelect to update URL and filter recipes
+    const handleCollectionSelect = async (collectionId: string) => {
         setSelectedCollection(collectionId);
-        // In the future, this would filter recipes based on the selected collection
+
+        // Update URL based on selected collection
+        if (collectionId === ALL_RECIPES_ID) {
+            navigate('/', { replace: false }); // Go to home for "All Recipes"
+        } else {
+            navigate(`${COLLECTION_ROUTE_PATH}/${collectionId}`, {
+                replace: false,
+            });
+        }
+
+        // Reset search when changing collections
+        if (searchQuery) {
+            setSearchQuery('');
+            setDebouncedSearchQuery('');
+        }
+
+        // Load recipes for the selected collection
+        await loadRecipesByCollection(collectionId);
     };
 
     // Handle drawer state change
@@ -388,12 +361,139 @@ const CatalogPage: FC = () => {
         setDrawerOpen(isOpen);
     };
 
+    // Create a new collection
+    const handleCreateCollection = async () => {
+        if (!user) return;
+
+        try {
+            // Generate a temporary ID for optimistic update
+            const tempId = `temp-${Date.now()}`;
+
+            // Create optimistic collection item
+            const newCollection: CollectionItem = {
+                id: tempId,
+                name: 'New Collection',
+                emoji: '📁',
+                count: 0,
+            };
+
+            // Optimistically update the UI
+            setCollections((prev) => [...prev, newCollection]);
+
+            // Create a new empty collection with default name and emoji in the backend
+            const createdCollection = await RecipeService.createCollection(
+                user.id,
+                'New Collection',
+                '📁'
+            );
+
+            // Update collections with the actual data from backend
+            setCollections((prev) =>
+                prev.map((c) =>
+                    c.id === tempId ? { ...createdCollection, count: 0 } : c
+                )
+            );
+        } catch (err) {
+            console.error('Error creating collection:', err);
+            // Revert optimistic update on error
+            setCollections((prev) =>
+                prev.filter((c) => !c.id.startsWith('temp-'))
+            );
+        }
+    };
+
+    // Add handleUpdateCollection function
+    const handleUpdateCollection = async (
+        collectionId: string,
+        name: string,
+        emoji?: string
+    ) => {
+        if (!user) return;
+
+        try {
+            // Optimistically update the UI first
+            setCollections((prev) =>
+                prev.map((c) =>
+                    c.id === collectionId
+                        ? { ...c, name, emoji: emoji || c.emoji }
+                        : c
+                )
+            );
+
+            // Update in the backend
+            await RecipeService.updateCollection(collectionId, { name, emoji });
+
+            // No need to reload all collections since we've already updated our local state
+        } catch (err) {
+            console.error('Error updating collection:', err);
+            // Reload collections on error to ensure UI is in sync with backend
+            await loadCollections();
+        }
+    };
+
+    // Modified handleDeleteCollection function with animation support
+    const handleDeleteCollection = async (collectionId: string) => {
+        if (!user) return;
+
+        try {
+            // Mark the collection as being removed first to trigger exit animation
+            setCollectionsBeingRemoved((prev) => [...prev, collectionId]);
+
+            // If the deleted collection was selected, switch to "All Recipes" view
+            if (selectedCollection === collectionId) {
+                setSelectedCollection(ALL_RECIPES_ID);
+                navigate('/', { replace: false });
+            }
+
+            // Delete in the backend
+            await RecipeService.deleteCollection(collectionId);
+
+            // Wait for animation to complete before updating state
+            setTimeout(() => {
+                setCollections((prev) =>
+                    prev.filter((c) => c.id !== collectionId)
+                );
+                setCollectionsBeingRemoved((prev) =>
+                    prev.filter((id) => id !== collectionId)
+                );
+            }, 300); // Match Collapse exit animation duration
+        } catch (err) {
+            console.error('Error deleting collection:', err);
+            // Remove from being deleted state
+            setCollectionsBeingRemoved((prev) =>
+                prev.filter((id) => id !== collectionId)
+            );
+            // Reload collections on error to ensure UI is in sync with backend
+            await loadCollections();
+        }
+    };
+
     // Helper function to find the currently selected collection
     const getSelectedCollection = () => {
         return (
-            APP_COLLECTIONS.find((c) => c.id === selectedCollection) ||
-            APP_COLLECTIONS[0]
+            collections.find((c) => c.id === selectedCollection) || {
+                // Fallback to a default collection if not found
+                id: ALL_RECIPES_ID,
+                name: 'All Recipes',
+                count: 0,
+                emoji: '📚',
+            }
         );
+    };
+
+    // Handle recipe click with collection context
+    const handleRecipeClick = (recipe: Recipe) => {
+        // Navigate to recipe detail with collection context in state
+        navigate(`/recipe/${recipe.id}`, {
+            state: {
+                recipe,
+                fromCollection: selectedCollection,
+                returnTo:
+                    selectedCollection === ALL_RECIPES_ID
+                        ? '/'
+                        : `${COLLECTION_ROUTE_PATH}/${selectedCollection}`,
+            },
+        });
     };
 
     return (
@@ -437,6 +537,7 @@ const CatalogPage: FC = () => {
                     height: '100%',
                     width: '100%',
                     position: 'relative',
+                    flex: 1,
                 }}
             >
                 <CollectionsDrawer
@@ -445,7 +546,12 @@ const CatalogPage: FC = () => {
                     width={drawerWidth}
                     collapsedWidth={collapsedDrawerWidth}
                     onDrawerStateChange={handleDrawerStateChange}
-                    collections={APP_COLLECTIONS}
+                    collections={collections}
+                    isLoading={collectionsLoading}
+                    onCreateCollection={handleCreateCollection}
+                    onUpdateCollection={handleUpdateCollection}
+                    onDeleteCollection={handleDeleteCollection}
+                    collectionsBeingRemoved={collectionsBeingRemoved}
                 />
 
                 {/* Content container - adjusted with left margin to account for drawer width */}
@@ -503,7 +609,13 @@ const CatalogPage: FC = () => {
                     <SearchBar
                         value={searchQuery}
                         onChange={handleSearchChange}
-                        placeholder="Search recipes by name, tags, or ingredients..."
+                        placeholder={
+                            selectedCollection === ALL_RECIPES_ID
+                                ? 'Search recipes by name, tags, or ingredients...'
+                                : `Search in "${
+                                      getSelectedCollection().name
+                                  }"...`
+                        }
                         resultsCount={recipes.length}
                         isSearching={searchLoading}
                     />
@@ -596,13 +708,8 @@ const CatalogPage: FC = () => {
                                             >
                                                 <Card
                                                     onClick={() =>
-                                                        navigate(
-                                                            `/recipe/${recipe.id}`,
-                                                            {
-                                                                state: {
-                                                                    recipe,
-                                                                },
-                                                            }
+                                                        handleRecipeClick(
+                                                            recipe
                                                         )
                                                     }
                                                     sx={{
@@ -681,8 +788,77 @@ const CatalogPage: FC = () => {
                                                             }}
                                                         />
                                                     ) : (
-                                                        <RecipeImagePlaceholder
-                                                            height={180}
+                                                        <Box
+                                                            sx={{
+                                                                height: 180,
+                                                                display: 'flex',
+                                                                alignItems:
+                                                                    'center',
+                                                                justifyContent:
+                                                                    'center',
+                                                                background: `linear-gradient(135deg, ${theme.palette.secondary.light} 0%, ${theme.palette.secondary.main} 100%)`,
+                                                                position:
+                                                                    'relative',
+                                                                overflow:
+                                                                    'hidden',
+                                                                padding: 2,
+                                                                '&::before': {
+                                                                    content:
+                                                                        '""',
+                                                                    position:
+                                                                        'absolute',
+                                                                    top: 0,
+                                                                    left: 0,
+                                                                    right: 0,
+                                                                    bottom: 0,
+                                                                    backgroundImage: `repeating-linear-gradient(
+                                                                        -45deg,
+                                                                        rgba(255, 255, 255, 0.3),
+                                                                        rgba(255, 255, 255, 0.3) 5px,
+                                                                        transparent 5px,
+                                                                        transparent 10px
+                                                                    )`,
+                                                                    opacity: 0.5,
+                                                                },
+                                                                '&::after': {
+                                                                    content: `"${
+                                                                        recipe
+                                                                            .title
+                                                                            .length >
+                                                                        20
+                                                                            ? recipe.title.substring(
+                                                                                  0,
+                                                                                  20
+                                                                              ) +
+                                                                              '...'
+                                                                            : recipe.title
+                                                                    }"`,
+                                                                    position:
+                                                                        'absolute',
+                                                                    fontFamily:
+                                                                        "'Kalam', cursive",
+                                                                    fontSize:
+                                                                        '1.75rem',
+                                                                    color: theme
+                                                                        .palette
+                                                                        .primary
+                                                                        .main,
+                                                                    opacity: 0.15,
+                                                                    transform:
+                                                                        'rotate(-5deg)',
+                                                                    textTransform:
+                                                                        'uppercase',
+                                                                    letterSpacing:
+                                                                        '1px',
+                                                                    textAlign:
+                                                                        'center',
+                                                                    width: '100%',
+                                                                    maxWidth:
+                                                                        '90%',
+                                                                    left: '5%',
+                                                                    right: '5%',
+                                                                },
+                                                            }}
                                                         />
                                                     )}
                                                     <CardContent

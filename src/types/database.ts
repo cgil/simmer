@@ -109,6 +109,38 @@ export interface Database {
                     ]
                 >;
             };
+            collections: {
+                Row: {
+                    id: string;
+                    user_id: string;
+                    name: string;
+                    emoji: string | null;
+                    created_at: string;
+                    updated_at: string;
+                };
+                Insert: Omit<
+                    Database["public"]["Tables"]["collections"]["Row"],
+                    "id" | "created_at" | "updated_at"
+                >;
+                Update: Partial<
+                    Database["public"]["Tables"]["collections"]["Insert"]
+                >;
+            };
+            recipe_collections: {
+                Row: {
+                    id: string;
+                    recipe_id: string;
+                    collection_id: string;
+                    created_at: string;
+                };
+                Insert: Omit<
+                    Database["public"]["Tables"]["recipe_collections"]["Row"],
+                    "id" | "created_at"
+                >;
+                Update: Partial<
+                    Database["public"]["Tables"]["recipe_collections"]["Insert"]
+                >;
+            };
         };
     };
 }

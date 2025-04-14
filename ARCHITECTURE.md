@@ -299,7 +299,75 @@ create table recipe_notes (
 );
 ```
 
-### 4.2. Time Handling System
+### 4.2. Collections Schema
+
+```sql
+-- Collections table
+create table collections (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references auth.users(id) on delete cascade not null,
+  name text not null,
+  emoji text,
+  created_at timestamp with time zone default now(),
+  updated_at timestamp with time zone default now()
+);
+
+-- Recipe-collections junction table
+create table recipe_collections (
+  id uuid primary key default uuid_generate_v4(),
+  recipe_id uuid references recipes(id) on delete cascade not null,
+  collection_id uuid references collections(id) on delete cascade not null,
+  created_at timestamp with time zone default now(),
+  unique(recipe_id, collection_id) -- Prevent duplicates
+);
+```
+
+### 4.3. Collection Management
+
+```typescript
+// Collection item representation
+interface CollectionItem {
+    id: string;
+    name: string;
+    count: number;
+    emoji?: string;
+}
+
+// Collection drawer component
+const CollectionsDrawer: FC<{
+    selectedCollection: string;
+    onCollectionSelect: (id: string) => void;
+    collections: CollectionItem[];
+    onCreateCollection: () => void;
+    onUpdateCollection: (id: string, name: string, emoji?: string) => void;
+    onDeleteCollection: (id: string) => void;
+}>;
+
+// Collection API methods
+const RecipeService = {
+    // Get all collections for a user with recipe counts
+    getCollectionItems: (userId: string) => Promise<CollectionItem[]>,
+
+    // Create a new collection
+    createCollection: (userId: string, name: string, emoji?: string) =>
+        Promise<Collection>,
+
+    // Update collection properties
+    updateCollection: (
+        id: string,
+        updates: { name?: string; emoji?: string }
+    ) => Promise<Collection>,
+
+    // Delete a collection
+    deleteCollection: (id: string) => Promise<boolean>,
+
+    // Get recipes in a specific collection
+    getRecipesByCollection: (userId: string, collectionId: string) =>
+        Promise<Recipe[]>,
+};
+```
+
+### 4.4. Time Handling System
 
 ```typescript
 interface TimeEstimate {
@@ -316,7 +384,7 @@ const timeManagement = {
 };
 ```
 
-### 4.3. Ingredient Display Utilities
+### 4.5. Ingredient Display Utilities
 
 ```typescript
 // Utility for consistently formatting ingredient display text
@@ -330,7 +398,7 @@ export const formatIngredientDisplayText = (
 };
 ```
 
-### 4.4. Extraction Progress System
+### 4.6. Extraction Progress System
 
 ```typescript
 // Extraction steps configuration

@@ -46,6 +46,14 @@ const App: FC = () => {
                             }
                         />
                         <Route
+                            path="/collection/:collectionId"
+                            element={
+                                <ProtectedRoute>
+                                    <CatalogPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
                             path="/recipe/new"
                             element={
                                 <ProtectedRoute>

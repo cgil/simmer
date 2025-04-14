@@ -9,6 +9,8 @@ Simmer is a modern web application that brings the warmth and personality of a p
 -   🧠 AI-powered recipe ideas generation from text prompts
 -   📱 Mobile-friendly cooking mode with interactive timers
 -   🖼️ Beautiful image gallery management
+-   📂 Collections to organize recipes with custom emoji icons
+-   🔍 All Recipes view and collection-specific browsing
 -   ⚡ Real-time ingredient scaling
 -   📋 Section-based cooking instructions
 -   ⏲️ Multi-timer tracking across recipe steps
@@ -246,6 +248,16 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 -   Vercel for hosting and deployment
 
 ### Recent Updates
+
+#### Recipe Collections
+
+-   Added support for organizing recipes into user-defined collections
+-   Implemented persistent drawer UI for collection navigation
+-   Custom emoji picker for personalizing collection icons
+-   Smooth animations for adding, removing, and updating collections
+-   Database schema with proper relationships and row-level security
+-   Collection-specific recipe browsing with search support
+-   Special "All Recipes" view to see recipes across all collections
 
 #### User Profile Avatar Integration
 

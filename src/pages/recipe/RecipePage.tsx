@@ -104,7 +104,8 @@ const RecipePage: FC = () => {
             navigate('/recipe/edit', {
                 state: {
                     recipe: recipe,
-                    returnTo: `/recipe/${recipe.id}`,
+                    returnTo:
+                        location.state?.returnTo || `/recipe/${recipe.id}`,
                 },
             });
         }
@@ -128,14 +129,23 @@ const RecipePage: FC = () => {
         try {
             await RecipeService.deleteRecipe(recipe.id, user.id);
             setDeleteDialogOpen(false);
-            // Navigate back to catalog after successful deletion
-            navigate('/');
+
+            // Navigate back to collection or home after successful deletion
+            const returnPath = location.state?.returnTo || '/';
+            navigate(returnPath);
         } catch (err) {
             console.error('Error deleting recipe:', err);
             setError('Failed to delete recipe. Please try again.');
             setIsDeleting(false);
             setDeleteDialogOpen(false);
         }
+    };
+
+    // Function to handle back navigation with collection context
+    const handleBackClick = () => {
+        // Navigate back to the collection or home page
+        const returnTo = location.state?.returnTo || '/';
+        navigate(returnTo);
     };
 
     if (loading) {
@@ -169,7 +179,7 @@ const RecipePage: FC = () => {
                         {error || 'Recipe not found'}
                     </Typography>
                     <Button
-                        onClick={() => navigate('/')}
+                        onClick={handleBackClick}
                         sx={{
                             mt: 2,
                             borderRadius: 1,
@@ -303,6 +313,7 @@ const RecipePage: FC = () => {
             </>
         ) : null;
 
+    // Create the header content with back button
     const headerContent = (
         <Box
             sx={{
@@ -312,41 +323,38 @@ const RecipePage: FC = () => {
                 width: '100%',
             }}
         >
-            {user ? (
-                // Show back button for authenticated users
-                <Box
-                    onClick={() => navigate('/')}
+            <Box
+                onClick={handleBackClick}
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    cursor: 'pointer',
+                    color: 'text.primary',
+                    '&:hover': {
+                        color: 'primary.main',
+                    },
+                }}
+            >
+                <ArrowBackIcon sx={{ fontSize: 24 }} />
+                <Typography
+                    variant="body1"
                     sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
-                        cursor: 'pointer',
-                        color: 'text.primary',
-                        '&:hover': {
-                            color: 'primary.main',
-                        },
+                        fontWeight: 500,
+                        fontSize: { xs: '1rem', sm: '1.125rem' },
+                        fontFamily: 'Inter, system-ui, sans-serif',
                     }}
                 >
-                    <ArrowBackIcon sx={{ fontSize: 24 }} />
-                    <Typography
-                        variant="body1"
-                        sx={{
-                            fontWeight: 500,
-                            fontSize: { xs: '1rem', sm: '1.125rem' },
-                            fontFamily: "'Inter', sans-serif",
-                        }}
-                    >
-                        Back
-                    </Typography>
-                </Box>
-            ) : (
-                // Show Simmer logo for non-authenticated users
+                    Back
+                </Typography>
+            </Box>
+
+            {!user && (
                 <Box
-                    onClick={() => navigate('/login')}
                     sx={{
                         display: 'flex',
                         alignItems: 'center',
-                        cursor: 'pointer',
+                        gap: 1.5,
                     }}
                 >
                     <Typography

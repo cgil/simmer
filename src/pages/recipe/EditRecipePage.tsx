@@ -13,6 +13,9 @@ import {
     Divider,
     Alert,
     Collapse,
+    Select,
+    FormControl,
+    SelectChangeEvent,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
@@ -22,6 +25,7 @@ import FontAwesomeIcon from '../../components/icons/FontAwesomeIcon';
 import CarrotPlusIcon from '../../components/icons/CarrotPlusIcon';
 import AppLayout from '../../components/layout/AppLayout';
 import { Recipe, TimeEstimate } from '../../types/recipe';
+import { CollectionItem, ALL_RECIPES_ID } from '../../types/collection';
 import TimeEstimateForm from './components/TimeEstimateForm';
 import ServingSizeForm from './components/ServingSizeForm';
 import TagInput from './components/TagInput';
@@ -80,6 +84,9 @@ const EditRecipePage: FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [isMobileDevice, setIsMobileDevice] = useState<boolean>(false);
+    const [collections, setCollections] = useState<CollectionItem[]>([]);
+    const [selectedCollection, setSelectedCollection] =
+        useState<string>(ALL_RECIPES_ID);
 
     // Check if the device is mobile
     useEffect(() => {
@@ -145,6 +152,40 @@ const EditRecipePage: FC = () => {
             }
         }
     }, [recipe]);
+
+    // Load collections when component mounts
+    useEffect(() => {
+        const loadCollections = async () => {
+            if (!user) return;
+
+            try {
+                const fetchedCollections =
+                    await RecipeService.getCollectionItems(user.id);
+                setCollections(fetchedCollections);
+
+                // Check if recipe is already in any collection
+                if (recipe.id && recipe.id !== 'new') {
+                    const recipeCollections =
+                        await RecipeService.getCollectionsForRecipe(recipe.id);
+                    if (recipeCollections.length > 0) {
+                        setSelectedCollection(recipeCollections[0].id);
+                    } else {
+                        // If recipe doesn't belong to any collection, set to "All Recipes"
+                        setSelectedCollection(ALL_RECIPES_ID);
+                    }
+                } else {
+                    // For new recipes, default to "All Recipes"
+                    setSelectedCollection(ALL_RECIPES_ID);
+                }
+            } catch (err) {
+                console.error('Error loading collections:', err);
+                // If there's an error, default to "All Recipes"
+                setSelectedCollection(ALL_RECIPES_ID);
+            }
+        };
+
+        loadCollections();
+    }, [user, recipe.id]);
 
     if (!recipe) {
         navigate('/');
@@ -266,6 +307,60 @@ const EditRecipePage: FC = () => {
                 user.id,
                 isImportedRecipe // Force imported recipes to be treated as new
             );
+
+            // Handle collection assignment based on user selection
+            if (savedRecipe.id) {
+                try {
+                    // Get current collections for this recipe
+                    const currentCollections =
+                        recipe.id && recipe.id !== 'new'
+                            ? await RecipeService.getCollectionsForRecipe(
+                                  recipe.id
+                              )
+                            : [];
+
+                    if (selectedCollection === ALL_RECIPES_ID) {
+                        // User selected "All Recipes" - remove recipe from all collections
+                        for (const collection of currentCollections) {
+                            await RecipeService.removeRecipeFromCollection(
+                                savedRecipe.id,
+                                collection.id
+                            );
+                        }
+                    } else {
+                        // User selected a specific collection
+
+                        // First remove from any other collections
+                        for (const collection of currentCollections) {
+                            if (collection.id !== selectedCollection) {
+                                await RecipeService.removeRecipeFromCollection(
+                                    savedRecipe.id,
+                                    collection.id
+                                );
+                            }
+                        }
+
+                        // Then ensure it's in the selected collection
+                        // (Add only if not already in the selected collection)
+                        if (
+                            !currentCollections.some(
+                                (c) => c.id === selectedCollection
+                            )
+                        ) {
+                            await RecipeService.addRecipeToCollection(
+                                savedRecipe.id,
+                                selectedCollection
+                            );
+                        }
+                    }
+                } catch (collectionError) {
+                    console.error(
+                        'Error managing recipe collections:',
+                        collectionError
+                    );
+                    // Continue with navigation even if collection management fails
+                }
+            }
 
             // Navigate to the saved recipe page instead of the returnTo path
             // This ensures users can immediately view their recipe after saving, even on first save
@@ -536,6 +631,11 @@ const EditRecipePage: FC = () => {
         }
     };
 
+    // Handle collection selection
+    const handleCollectionChange = (event: SelectChangeEvent) => {
+        setSelectedCollection(event.target.value as string);
+    };
+
     const headerContent = (
         <Box
             sx={{
@@ -575,27 +675,19 @@ const EditRecipePage: FC = () => {
                 </Typography>
             </Box>
 
-            <Box
+            <Button
+                variant="contained"
+                startIcon={isSaving ? null : <SaveIcon />}
+                onClick={handleSave}
+                disabled={isSaving}
                 sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-end',
+                    height: 42,
+                    px: 3,
+                    minWidth: 140,
                 }}
             >
-                <Button
-                    variant="contained"
-                    startIcon={isSaving ? null : <SaveIcon />}
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    sx={{
-                        height: 42,
-                        px: 3,
-                        minWidth: 140,
-                    }}
-                >
-                    {isSaving ? 'Saving...' : 'Save Recipe'}
-                </Button>
-            </Box>
+                {isSaving ? 'Saving...' : 'Save Recipe'}
+            </Button>
         </Box>
     );
 
@@ -638,6 +730,70 @@ const EditRecipePage: FC = () => {
                     },
                 }}
             >
+                {/* Collections dropdown positioned at the top right */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        mb: 0,
+                        position: 'relative',
+                        zIndex: 2,
+                    }}
+                >
+                    <FormControl
+                        sx={{
+                            minWidth: 220,
+                            '& .MuiOutlinedInput-root': {
+                                bgcolor: 'background.paper',
+                                '&:hover': {
+                                    bgcolor: 'background.paper',
+                                },
+                            },
+                        }}
+                        size="small"
+                    >
+                        <Select
+                            value={selectedCollection}
+                            onChange={handleCollectionChange}
+                            displayEmpty
+                            inputProps={{ 'aria-label': 'Select collection' }}
+                            sx={{
+                                height: 42,
+                                fontFamily: "'Inter', sans-serif",
+                                '& .MuiSelect-select': {
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                },
+                            }}
+                        >
+                            {collections
+                                .sort((a, b) => a.name.localeCompare(b.name))
+                                .map((collection) => (
+                                    <MenuItem
+                                        key={collection.id}
+                                        value={collection.id}
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1,
+                                            fontFamily: "'Inter', sans-serif",
+                                        }}
+                                    >
+                                        {collection.emoji && (
+                                            <span
+                                                style={{ fontSize: '1.2rem' }}
+                                            >
+                                                {collection.emoji}
+                                            </span>
+                                        )}
+                                        {collection.name}
+                                    </MenuItem>
+                                ))}
+                        </Select>
+                    </FormControl>
+                </Box>
+
                 {/* Add error banner at the top of the container */}
                 <Collapse in={!!saveError}>
                     <Alert

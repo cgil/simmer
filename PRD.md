@@ -122,7 +122,17 @@ The app follows a "Paper Notebook Recipe Journal" aesthetic with these key eleme
 -   Tag filtering
 -   Preview cards
 
-### 3.5. Cooking Mode
+### 3.5. Collections
+
+-   Organization of recipes into user-defined collections
+-   "All Recipes" view showing recipes across all collections
+-   Ability to add, rename, and delete collections
+-   Custom emoji icons for visual identification
+-   Recipes can belong to multiple collections or no collections
+-   Animated transitions for smooth user experience when managing collections
+-   Collection-specific recipe browsing
+
+### 3.6. Cooking Mode
 
 -   Step-by-step instruction view
 -   Interactive timer system with:
