@@ -249,6 +249,14 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ### Recent Updates
 
+#### Dynamic OpenGraph Previews for Recipe Sharing
+
+-   Added Vercel Edge Middleware to generate dynamic OpenGraph tags for recipe links
+-   Enabled rich previews when sharing recipe URLs in iMessage, social apps, and messaging platforms
+-   Optimized approach that only runs for crawler user agents to minimize function costs
+-   Included fallback image for recipes without photos
+-   Added caching for improved performance
+
 #### Recipe Collections
 
 -   Added support for organizing recipes into user-defined collections
