@@ -46,6 +46,12 @@ export default async function middleware(request: Request) {
     const recipeMatch = pathname.match(recipeIdRegex);
     const isCrawler = CRAWLER_USER_AGENTS_REGEX.test(userAgent);
 
+    // If it's a crawler but not a valid recipe page (like /recipe/new),
+    // just pass through to let index.html's default OG tags handle it
+    if (isCrawler && !recipeMatch) {
+        return Response.redirect(request.url);
+    }
+
     // Only proceed if it's a valid recipe detail/cook page, a crawler, and supabase is initialized
     if (recipeMatch && isCrawler && supabase) {
         const recipeId = recipeMatch[1]; // UUID from the regex match
@@ -167,5 +173,5 @@ export default async function middleware(request: Request) {
 
 // Configuration - Apply to both recipe detail and cooking mode paths
 export const config = {
-    matcher: ["/recipe/:id", "/recipe/:id/cook"],
+    matcher: ["/recipe/:path*"],
 };
