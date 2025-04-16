@@ -23,6 +23,8 @@ import {
     Popover,
     Skeleton,
     Collapse,
+    useMediaQuery,
+    Backdrop,
 } from '@mui/material';
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 import MenuOpenRoundedIcon from '@mui/icons-material/MenuOpenRounded';
@@ -60,6 +62,7 @@ interface CollectionsDrawerProps {
     ) => void; // New prop for collection updates
     onDeleteCollection?: (collectionId: string) => void; // New prop for collection deletion
     collectionsBeingRemoved?: string[]; // New prop to track collections being removed with animation
+    isOpen?: boolean; // External control of open state
 }
 
 // Define a constant for the consistent height
@@ -80,9 +83,10 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
     onUpdateCollection,
     onDeleteCollection,
     collectionsBeingRemoved = [], // Default to empty array
+    isOpen = true, // Default to open
 }) => {
     const theme = useTheme();
-    const [isOpen, setIsOpen] = useState(true);
+    const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const [hoveredCollection, setHoveredCollection] = useState<string | null>(
         null
     );
@@ -153,12 +157,9 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
     }, [collections, isOpen, hoveredCollection, editingCollection]);
 
     const handleToggleDrawer = () => {
-        const newOpenState = !isOpen;
-        setIsOpen(newOpenState);
-
         // Notify parent component about drawer state change
         if (onDrawerStateChange) {
-            onDrawerStateChange(newOpenState);
+            onDrawerStateChange(!isOpen);
         }
     };
 
@@ -275,147 +276,164 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
     };
 
     return (
-        <Drawer
-            variant="permanent"
-            sx={{
-                width: isOpen ? width : collapsedWidth,
-                flexShrink: 0,
-                position: 'fixed',
-                '& .MuiDrawer-paper': {
+        <>
+            {/* Add backdrop for small screens when drawer is open */}
+            {isSmallScreen && isOpen && (
+                <Backdrop
+                    open={true}
+                    sx={{
+                        zIndex: theme.zIndex.drawer + 1,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    }}
+                    onClick={handleToggleDrawer}
+                />
+            )}
+            <Drawer
+                variant={isSmallScreen ? 'temporary' : 'permanent'}
+                open={isSmallScreen ? isOpen : undefined}
+                onClose={isSmallScreen ? handleToggleDrawer : undefined}
+                ModalProps={{
+                    keepMounted: true, // Better performance on mobile
+                }}
+                sx={{
                     width: isOpen ? width : collapsedWidth,
-                    boxSizing: 'border-box',
-                    bgcolor: 'paper.main',
-                    transition: theme.transitions.create(['width'], {
-                        easing: theme.transitions.easing.easeInOut,
-                        duration: theme.transitions.duration.standard,
-                    }),
-                    borderRadius: 0,
-                    overflowX: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: '100vh',
-                    borderRight: '1px solid',
-                    borderColor: alpha(theme.palette.primary.main, 0.08),
-                    backgroundSize: '20px 20px',
-                    top: 0,
-                    left: 0,
+                    flexShrink: 0,
                     position: 'fixed',
-                    zIndex: theme.zIndex.drawer,
-                },
-            }}
-        >
-            {/* Fixed header with expand/collapse button */}
-            <Box
-                sx={{
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 1,
-                    bgcolor: alpha(theme.palette.paper.main, 0.9),
-                    backdropFilter: 'blur(8px)',
-                    p: 2,
-                    pr: isOpen ? 1 : 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: isOpen ? 'space-between' : 'center',
-                    height: { xs: 57, sm: 65 }, // Match header height
+                    display: isSmallScreen && !isOpen ? 'none' : 'block',
+                    '& .MuiDrawer-paper': {
+                        width: isOpen ? width : collapsedWidth,
+                        boxSizing: 'border-box',
+                        bgcolor: 'paper.main',
+                        transition: theme.transitions.create(['width'], {
+                            easing: theme.transitions.easing.easeInOut,
+                            duration: theme.transitions.duration.standard,
+                        }),
+                        borderRadius: 0,
+                        overflowX: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        height: '100vh',
+                        borderRight: '1px solid',
+                        borderColor: alpha(theme.palette.primary.main, 0.08),
+                        backgroundSize: '20px 20px',
+                        top: 0,
+                        left: 0,
+                        position: 'fixed',
+                        zIndex: isSmallScreen
+                            ? theme.zIndex.modal
+                            : theme.zIndex.drawer,
+                    },
+                    // Ensure overlay stays on top for small screens
+                    ...(isSmallScreen && {
+                        zIndex: theme.zIndex.modal,
+                    }),
                 }}
             >
-                {isOpen && (
-                    <Typography
-                        variant="h6"
-                        sx={{
-                            fontFamily: "'Kalam', cursive",
-                            color: 'primary.main',
-                            pl: 1,
-                            fontSize: '1.3rem',
-                            fontWeight: 700,
-                            letterSpacing: '-0.01em',
-                        }}
-                    >
-                        Collections
-                    </Typography>
-                )}
-                <Tooltip title="">
-                    <IconButton
-                        onClick={handleToggleDrawer}
-                        color="primary"
-                        sx={{
-                            '&:hover': {
-                                bgcolor: alpha(
-                                    theme.palette.primary.main,
-                                    0.08
-                                ),
-                                borderRadius: 2,
-                            },
-                        }}
-                    >
-                        {isOpen ? <MenuOpenRoundedIcon /> : <MenuRoundedIcon />}
-                    </IconButton>
-                </Tooltip>
-            </Box>
+                {/* Fixed header with expand/collapse button */}
+                <Box
+                    sx={{
+                        position: 'sticky',
+                        top: 0,
+                        zIndex: 1,
+                        bgcolor: alpha(theme.palette.paper.main, 0.9),
+                        backdropFilter: 'blur(8px)',
+                        p: 2,
+                        pr: isOpen ? 1 : 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: isOpen ? 'space-between' : 'center',
+                        height: { xs: 57, sm: 65 }, // Match header height
+                    }}
+                >
+                    {isOpen && (
+                        <Typography
+                            variant="h6"
+                            sx={{
+                                fontFamily: "'Kalam', cursive",
+                                color: 'primary.main',
+                                pl: 1,
+                                fontSize: '1.3rem',
+                                fontWeight: 700,
+                                letterSpacing: '-0.01em',
+                            }}
+                        >
+                            Collections
+                        </Typography>
+                    )}
+                    <Tooltip title="">
+                        <IconButton
+                            onClick={handleToggleDrawer}
+                            color="primary"
+                            sx={{
+                                '&:hover': {
+                                    bgcolor: alpha(
+                                        theme.palette.primary.main,
+                                        0.08
+                                    ),
+                                    borderRadius: 2,
+                                },
+                            }}
+                        >
+                            {isOpen ? (
+                                <MenuOpenRoundedIcon />
+                            ) : (
+                                <MenuRoundedIcon />
+                            )}
+                        </IconButton>
+                    </Tooltip>
+                </Box>
 
-            {/* Scrollable collections list */}
-            <Box
-                sx={{
-                    overflow: 'auto',
-                    flexGrow: 1,
-                }}
-            >
-                {isLoading ? (
-                    <List sx={{ px: 1, pt: 1 }}>
-                        {[0, 1, 2, 3, 4].map((index) => (
-                            <ListItem
-                                key={index}
-                                disablePadding
-                                sx={{ mb: 0.5 }}
-                            >
-                                <Box
-                                    sx={{ width: '100%', position: 'relative' }}
+                {/* Scrollable collections list */}
+                <Box
+                    sx={{
+                        overflow: 'auto',
+                        flexGrow: 1,
+                    }}
+                >
+                    {isLoading ? (
+                        <List sx={{ px: 1, pt: 1 }}>
+                            {[0, 1, 2, 3, 4].map((index) => (
+                                <ListItem
+                                    key={index}
+                                    disablePadding
+                                    sx={{ mb: 0.5 }}
                                 >
-                                    <Paper
-                                        elevation={0}
+                                    <Box
                                         sx={{
                                             width: '100%',
-                                            height: COLLECTION_ITEM_HEIGHT,
-                                            borderRadius: 2,
-                                            overflow: 'hidden',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            bgcolor: alpha(
-                                                theme.palette.primary.light,
-                                                0.04
-                                            ),
+                                            position: 'relative',
                                         }}
                                     >
-                                        <Box
+                                        <Paper
+                                            elevation={0}
                                             sx={{
+                                                width: '100%',
+                                                height: COLLECTION_ITEM_HEIGHT,
+                                                borderRadius: 2,
+                                                overflow: 'hidden',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                width: '100%',
-                                                px: 2,
+                                                bgcolor: alpha(
+                                                    theme.palette.primary.light,
+                                                    0.04
+                                                ),
                                             }}
                                         >
-                                            <Skeleton
-                                                variant="circular"
-                                                width={24}
-                                                height={24}
-                                                animation="pulse"
+                                            <Box
                                                 sx={{
-                                                    mr: 2,
-                                                    bgcolor: alpha(
-                                                        theme.palette.primary
-                                                            .light,
-                                                        0.1
-                                                    ),
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    width: '100%',
+                                                    px: 2,
                                                 }}
-                                            />
-                                            <Box sx={{ width: '100%' }}>
+                                            >
                                                 <Skeleton
-                                                    variant="text"
-                                                    width="60%"
-                                                    height={20}
-                                                    animation="wave"
+                                                    variant="circular"
+                                                    width={24}
+                                                    height={24}
+                                                    animation="pulse"
                                                     sx={{
+                                                        mr: 2,
                                                         bgcolor: alpha(
                                                             theme.palette
                                                                 .primary.light,
@@ -423,475 +441,597 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                                                         ),
                                                     }}
                                                 />
-                                                <Skeleton
-                                                    variant="text"
-                                                    width="40%"
-                                                    height={16}
-                                                    animation="wave"
-                                                    sx={{
-                                                        bgcolor: alpha(
-                                                            theme.palette
-                                                                .primary.light,
-                                                            0.07
-                                                        ),
-                                                    }}
-                                                />
+                                                <Box sx={{ width: '100%' }}>
+                                                    <Skeleton
+                                                        variant="text"
+                                                        width="60%"
+                                                        height={20}
+                                                        animation="wave"
+                                                        sx={{
+                                                            bgcolor: alpha(
+                                                                theme.palette
+                                                                    .primary
+                                                                    .light,
+                                                                0.1
+                                                            ),
+                                                        }}
+                                                    />
+                                                    <Skeleton
+                                                        variant="text"
+                                                        width="40%"
+                                                        height={16}
+                                                        animation="wave"
+                                                        sx={{
+                                                            bgcolor: alpha(
+                                                                theme.palette
+                                                                    .primary
+                                                                    .light,
+                                                                0.07
+                                                            ),
+                                                        }}
+                                                    />
+                                                </Box>
                                             </Box>
-                                        </Box>
-                                    </Paper>
-                                </Box>
-                            </ListItem>
-                        ))}
-                    </List>
-                ) : (
-                    <List sx={{ px: 1, pt: 1 }}>
-                        {sortedCollections.map((collection) => (
-                            <Collapse
-                                key={collection.id}
-                                in={
-                                    !collectionsBeingRemoved.includes(
-                                        collection.id
-                                    )
-                                }
-                                appear={true}
-                                timeout={{
-                                    enter: 400,
-                                    exit: 300,
-                                }}
-                                unmountOnExit
-                                sx={{
-                                    transformOrigin: 'top center',
-                                    animation: isNewCollection(collection.id)
-                                        ? 'highlight-new-collection 1.5s ease-out'
-                                        : 'none',
-                                    '@keyframes highlight-new-collection': {
-                                        '0%': {
-                                            transform: 'scale(0.95)',
-                                            boxShadow:
-                                                '0 0 0 0 rgba(44, 62, 80, 0.1)',
-                                        },
-                                        '20%': {
-                                            transform: 'scale(1.02)',
-                                            boxShadow:
-                                                '0 0 0 6px rgba(44, 62, 80, 0)',
-                                        },
-                                        '100%': {
-                                            transform: 'scale(1)',
-                                            boxShadow:
-                                                '0 0 0 0 rgba(44, 62, 80, 0)',
-                                        },
-                                    },
-                                }}
-                                onMouseEnter={() =>
-                                    setHoveredCollection(collection.id)
-                                }
-                                onMouseLeave={() => setHoveredCollection(null)}
-                                ref={(el: HTMLLIElement | null) => {
-                                    if (el) {
-                                        listItemRefs.current[collection.id] =
-                                            el as unknown as HTMLDivElement;
-                                    } else {
-                                        listItemRefs.current[collection.id] =
-                                            null;
+                                        </Paper>
+                                    </Box>
+                                </ListItem>
+                            ))}
+                        </List>
+                    ) : (
+                        <List sx={{ px: 1, pt: 1 }}>
+                            {sortedCollections.map((collection) => (
+                                <Collapse
+                                    key={collection.id}
+                                    in={
+                                        !collectionsBeingRemoved.includes(
+                                            collection.id
+                                        )
                                     }
-                                }}
-                            >
-                                <ListItem
-                                    disablePadding
+                                    appear={true}
+                                    timeout={{
+                                        enter: 400,
+                                        exit: 300,
+                                    }}
+                                    unmountOnExit
                                     sx={{
-                                        mb: 0.5,
-                                        position: 'relative',
-                                        overflow: 'visible', // Important but not enough for buttons that break out
+                                        transformOrigin: 'top center',
+                                        animation: isNewCollection(
+                                            collection.id
+                                        )
+                                            ? 'highlight-new-collection 1.5s ease-out'
+                                            : 'none',
+                                        '@keyframes highlight-new-collection': {
+                                            '0%': {
+                                                transform: 'scale(0.95)',
+                                                boxShadow:
+                                                    '0 0 0 0 rgba(44, 62, 80, 0.1)',
+                                            },
+                                            '20%': {
+                                                transform: 'scale(1.02)',
+                                                boxShadow:
+                                                    '0 0 0 6px rgba(44, 62, 80, 0)',
+                                            },
+                                            '100%': {
+                                                transform: 'scale(1)',
+                                                boxShadow:
+                                                    '0 0 0 0 rgba(44, 62, 80, 0)',
+                                            },
+                                        },
+                                    }}
+                                    onMouseEnter={() =>
+                                        setHoveredCollection(collection.id)
+                                    }
+                                    onMouseLeave={() =>
+                                        setHoveredCollection(null)
+                                    }
+                                    ref={(el: HTMLLIElement | null) => {
+                                        if (el) {
+                                            listItemRefs.current[
+                                                collection.id
+                                            ] = el as unknown as HTMLDivElement;
+                                        } else {
+                                            listItemRefs.current[
+                                                collection.id
+                                            ] = null;
+                                        }
                                     }}
                                 >
-                                    {/* Wrapper div with ref for Slide transitions */}
-                                    <Box
-                                        ref={
-                                            collection.id ===
-                                                editingCollection ||
-                                            collection.id === deletingCollection
-                                                ? collectionItemRef
-                                                : null
-                                        }
+                                    <ListItem
+                                        disablePadding
                                         sx={{
-                                            width: '100%',
+                                            mb: 0.5,
                                             position: 'relative',
-                                            transform: 'translateZ(0)', // Force hardware acceleration for smoother animations
-                                            bgcolor: isNewCollection(
-                                                collection.id
-                                            )
-                                                ? alpha(
-                                                      theme.palette.primary
-                                                          .light,
-                                                      0.2
-                                                  )
-                                                : 'transparent',
-                                            borderRadius: 2,
-                                            transition:
-                                                'background-color 1.5s ease-out',
+                                            overflow: 'visible', // Important but not enough for buttons that break out
                                         }}
                                     >
-                                        {/* Delete confirmation slide-in panel */}
-                                        <Slide
-                                            direction="left"
-                                            in={
-                                                deletingCollection ===
-                                                collection.id
+                                        {/* Wrapper div with ref for Slide transitions */}
+                                        <Box
+                                            ref={
+                                                collection.id ===
+                                                    editingCollection ||
+                                                collection.id ===
+                                                    deletingCollection
+                                                    ? collectionItemRef
+                                                    : null
                                             }
-                                            timeout={300}
-                                            mountOnEnter
-                                            unmountOnExit
-                                            container={
-                                                collectionItemRef.current
-                                            }
+                                            sx={{
+                                                width: '100%',
+                                                position: 'relative',
+                                                transform: 'translateZ(0)', // Force hardware acceleration for smoother animations
+                                                bgcolor: isNewCollection(
+                                                    collection.id
+                                                )
+                                                    ? alpha(
+                                                          theme.palette.primary
+                                                              .light,
+                                                          0.2
+                                                      )
+                                                    : 'transparent',
+                                                borderRadius: 2,
+                                                transition:
+                                                    'background-color 1.5s ease-out',
+                                            }}
                                         >
-                                            <Box
-                                                sx={{
-                                                    position: 'absolute',
-                                                    top: 0,
-                                                    left: 0,
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    zIndex: 5,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    pr: 0,
-                                                }}
+                                            {/* Delete confirmation slide-in panel */}
+                                            <Slide
+                                                direction="left"
+                                                in={
+                                                    deletingCollection ===
+                                                    collection.id
+                                                }
+                                                timeout={300}
+                                                mountOnEnter
+                                                unmountOnExit
+                                                container={
+                                                    collectionItemRef.current
+                                                }
                                             >
-                                                <Paper
-                                                    elevation={2}
+                                                <Box
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        top: 0,
+                                                        left: 0,
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        zIndex: 5,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        pr: 0,
+                                                    }}
+                                                >
+                                                    <Paper
+                                                        elevation={2}
+                                                        sx={{
+                                                            display: 'flex',
+                                                            alignItems:
+                                                                'center',
+                                                            justifyContent:
+                                                                'space-between',
+                                                            width: '100%',
+                                                            height: COLLECTION_ITEM_HEIGHT,
+                                                            p: 1,
+                                                            backgroundColor:
+                                                                '#ffebee',
+                                                            border: '1px solid',
+                                                            borderColor:
+                                                                '#ef9a9a',
+                                                            borderRadius: 2,
+                                                            animation:
+                                                                'pulse 1.5s ease-in-out',
+                                                            '@keyframes pulse':
+                                                                {
+                                                                    '0%': {
+                                                                        boxShadow:
+                                                                            '0 0 0 0 rgba(239, 154, 154, 0.4)',
+                                                                    },
+                                                                    '70%': {
+                                                                        boxShadow:
+                                                                            '0 0 0 6px rgba(239, 154, 154, 0)',
+                                                                    },
+                                                                    '100%': {
+                                                                        boxShadow:
+                                                                            '0 0 0 0 rgba(239, 154, 154, 0)',
+                                                                    },
+                                                                },
+                                                        }}
+                                                    >
+                                                        <Typography
+                                                            variant="body2"
+                                                            sx={{
+                                                                pl: 1,
+                                                                color: '#d32f2f',
+                                                                fontWeight: 500,
+                                                            }}
+                                                        >
+                                                            Delete collection
+                                                            and recipes?
+                                                        </Typography>
+                                                        <Box
+                                                            sx={{
+                                                                display: 'flex',
+                                                                gap: 0,
+                                                            }}
+                                                        >
+                                                            <Zoom
+                                                                in={true}
+                                                                timeout={200}
+                                                                style={{
+                                                                    transitionDelay:
+                                                                        '150ms',
+                                                                }}
+                                                            >
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={() =>
+                                                                        handleDeleteCollection(
+                                                                            collection.id
+                                                                        )
+                                                                    }
+                                                                    sx={{
+                                                                        color: alpha(
+                                                                            theme
+                                                                                .palette
+                                                                                .primary
+                                                                                .light,
+                                                                            0.8
+                                                                        ),
+                                                                        transition:
+                                                                            'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                                        '&:hover':
+                                                                            {
+                                                                                bgcolor:
+                                                                                    alpha(
+                                                                                        theme
+                                                                                            .palette
+                                                                                            .primary
+                                                                                            .light,
+                                                                                        0.05
+                                                                                    ),
+                                                                                transform:
+                                                                                    'scale(1.1)',
+                                                                            },
+                                                                    }}
+                                                                >
+                                                                    <CheckRoundedIcon fontSize="small" />
+                                                                </IconButton>
+                                                            </Zoom>
+                                                            <Zoom
+                                                                in={true}
+                                                                timeout={200}
+                                                                style={{
+                                                                    transitionDelay:
+                                                                        '250ms',
+                                                                }}
+                                                            >
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={
+                                                                        handleCancelDelete
+                                                                    }
+                                                                    sx={{
+                                                                        color: alpha(
+                                                                            theme
+                                                                                .palette
+                                                                                .primary
+                                                                                .light,
+                                                                            0.8
+                                                                        ),
+                                                                        transition:
+                                                                            'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                                        '&:hover':
+                                                                            {
+                                                                                bgcolor:
+                                                                                    alpha(
+                                                                                        theme
+                                                                                            .palette
+                                                                                            .primary
+                                                                                            .light,
+                                                                                        0.05
+                                                                                    ),
+                                                                                transform:
+                                                                                    'scale(1.1)',
+                                                                            },
+                                                                    }}
+                                                                >
+                                                                    <CloseRoundedIcon fontSize="small" />
+                                                                </IconButton>
+                                                            </Zoom>
+                                                        </Box>
+                                                    </Paper>
+                                                </Box>
+                                            </Slide>
+
+                                            {/* Normal or Editing view */}
+                                            {editingCollection ===
+                                            collection.id ? (
+                                                <Box
                                                     sx={{
                                                         display: 'flex',
                                                         alignItems: 'center',
-                                                        justifyContent:
-                                                            'space-between',
+                                                        p: 1,
                                                         width: '100%',
                                                         height: COLLECTION_ITEM_HEIGHT,
-                                                        p: 1,
-                                                        backgroundColor:
-                                                            '#ffebee',
-                                                        border: '1px solid',
-                                                        borderColor: '#ef9a9a',
                                                         borderRadius: 2,
-                                                        animation:
-                                                            'pulse 1.5s ease-in-out',
-                                                        '@keyframes pulse': {
-                                                            '0%': {
-                                                                boxShadow:
-                                                                    '0 0 0 0 rgba(239, 154, 154, 0.4)',
+                                                        bgcolor: alpha(
+                                                            theme.palette
+                                                                .primary.light,
+                                                            0.05
+                                                        ),
+                                                        border: '1px solid',
+                                                        borderColor: alpha(
+                                                            theme.palette
+                                                                .primary.main,
+                                                            0.1
+                                                        ),
+                                                    }}
+                                                >
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={
+                                                            handleOpenEmojiPicker
+                                                        }
+                                                        sx={{ mr: 1 }}
+                                                    >
+                                                        {getCollectionIcon(
+                                                            collection
+                                                        )}
+                                                    </IconButton>
+                                                    <TextField
+                                                        value={editingName}
+                                                        onChange={(e) =>
+                                                            setEditingName(
+                                                                e.target.value
+                                                            )
+                                                        }
+                                                        variant="standard"
+                                                        size="small"
+                                                        fullWidth
+                                                        autoFocus
+                                                        InputProps={{
+                                                            disableUnderline:
+                                                                true,
+                                                            sx: {
+                                                                fontSize:
+                                                                    '0.95rem',
+                                                                fontWeight: 500,
                                                             },
-                                                            '70%': {
-                                                                boxShadow:
-                                                                    '0 0 0 6px rgba(239, 154, 154, 0)',
+                                                        }}
+                                                    />
+                                                </Box>
+                                            ) : (
+                                                <ListItemButton
+                                                    selected={
+                                                        selectedCollection ===
+                                                        collection.id
+                                                    }
+                                                    onClick={() =>
+                                                        onCollectionSelect(
+                                                            collection.id
+                                                        )
+                                                    }
+                                                    sx={{
+                                                        borderRadius: 2,
+                                                        height: COLLECTION_ITEM_HEIGHT,
+                                                        transition:
+                                                            'all 0.2s ease',
+                                                        position: 'relative',
+                                                        '&:hover': {
+                                                            bgcolor: alpha(
+                                                                theme.palette
+                                                                    .primary
+                                                                    .main,
+                                                                0.06
+                                                            ),
+                                                        },
+                                                        '&.Mui-selected': {
+                                                            bgcolor: alpha(
+                                                                theme.palette
+                                                                    .primary
+                                                                    .light,
+                                                                0.1
+                                                            ),
+                                                            color: 'primary.dark',
+                                                            boxShadow: `0 1px 3px ${alpha(
+                                                                theme.palette
+                                                                    .primary
+                                                                    .main,
+                                                                0.1
+                                                            )}`,
+                                                            '&:hover': {
+                                                                bgcolor: alpha(
+                                                                    theme
+                                                                        .palette
+                                                                        .primary
+                                                                        .light,
+                                                                    0.3
+                                                                ),
                                                             },
-                                                            '100%': {
-                                                                boxShadow:
-                                                                    '0 0 0 0 rgba(239, 154, 154, 0)',
-                                                            },
+                                                            '& .MuiListItemIcon-root':
+                                                                {
+                                                                    color: 'primary.main',
+                                                                },
+                                                            '& .MuiListItemText-secondary':
+                                                                {
+                                                                    color: alpha(
+                                                                        theme
+                                                                            .palette
+                                                                            .primary
+                                                                            .main,
+                                                                        0.7
+                                                                    ),
+                                                                },
                                                         },
                                                     }}
                                                 >
-                                                    <Typography
-                                                        variant="body2"
+                                                    <ListItemIcon
                                                         sx={{
-                                                            pl: 1,
-                                                            color: '#d32f2f',
-                                                            fontWeight: 500,
+                                                            minWidth: isOpen
+                                                                ? 36
+                                                                : 0,
+                                                            color:
+                                                                selectedCollection ===
+                                                                collection.id
+                                                                    ? 'primary.main'
+                                                                    : 'primary.main',
+                                                            fontSize: '1.2rem',
                                                         }}
                                                     >
-                                                        Delete collection and
-                                                        recipes?
-                                                    </Typography>
-                                                    <Box
-                                                        sx={{
-                                                            display: 'flex',
-                                                            gap: 0,
+                                                        {getCollectionIcon(
+                                                            collection
+                                                        )}
+                                                    </ListItemIcon>
+                                                    {isOpen && (
+                                                        <ListItemText
+                                                            primary={
+                                                                collection.name
+                                                            }
+                                                            secondary={formatRecipeCount(
+                                                                collection.count
+                                                            )}
+                                                            primaryTypographyProps={{
+                                                                noWrap: true,
+                                                                sx: {
+                                                                    fontWeight:
+                                                                        selectedCollection ===
+                                                                        collection.id
+                                                                            ? 600
+                                                                            : 500,
+                                                                    color:
+                                                                        selectedCollection ===
+                                                                        collection.id
+                                                                            ? 'primary.dark'
+                                                                            : 'text.primary',
+                                                                },
+                                                            }}
+                                                            secondaryTypographyProps={{
+                                                                noWrap: true,
+                                                                sx: {
+                                                                    fontSize:
+                                                                        '0.75rem',
+                                                                    color:
+                                                                        selectedCollection ===
+                                                                        collection.id
+                                                                            ? alpha(
+                                                                                  theme
+                                                                                      .palette
+                                                                                      .primary
+                                                                                      .main,
+                                                                                  0.7
+                                                                              )
+                                                                            : 'text.secondary',
+                                                                },
+                                                            }}
+                                                        />
+                                                    )}
+                                                </ListItemButton>
+                                            )}
+                                        </Box>
+
+                                        {/* Edit pencil icon that appears on hover - using Portal to break out */}
+                                        {isOpen &&
+                                            hoveredCollection ===
+                                                collection.id &&
+                                            !editingCollection &&
+                                            !deletingCollection &&
+                                            buttonPositions[collection.id] &&
+                                            collection.id !== 'all' && ( // Don't show edit button for "All Recipes"
+                                                <Portal>
+                                                    <Grow
+                                                        in={true}
+                                                        timeout={{
+                                                            enter: 200,
+                                                            exit: 150,
+                                                        }}
+                                                        style={{
+                                                            transformOrigin:
+                                                                'center right',
                                                         }}
                                                     >
-                                                        <Zoom
-                                                            in={true}
-                                                            timeout={200}
-                                                            style={{
-                                                                transitionDelay:
-                                                                    '150ms',
+                                                        <Box
+                                                            sx={{
+                                                                position:
+                                                                    'fixed',
+                                                                left: `${
+                                                                    buttonPositions[
+                                                                        collection
+                                                                            .id
+                                                                    ].left
+                                                                }px`,
+                                                                top: `${
+                                                                    buttonPositions[
+                                                                        collection
+                                                                            .id
+                                                                    ].top - 16
+                                                                }px`,
+                                                                zIndex:
+                                                                    theme.zIndex
+                                                                        .drawer +
+                                                                    1,
                                                             }}
                                                         >
                                                             <IconButton
                                                                 size="small"
                                                                 onClick={() =>
-                                                                    handleDeleteCollection(
+                                                                    handleEditCollection(
                                                                         collection.id
                                                                     )
                                                                 }
                                                                 sx={{
-                                                                    color: alpha(
-                                                                        theme
-                                                                            .palette
-                                                                            .primary
-                                                                            .light,
-                                                                        0.8
-                                                                    ),
+                                                                    bgcolor:
+                                                                        alpha(
+                                                                            theme
+                                                                                .palette
+                                                                                .background
+                                                                                .paper,
+                                                                            0.7
+                                                                        ),
+                                                                    boxShadow: 1,
+                                                                    width: 28,
+                                                                    height: 28,
                                                                     transition:
-                                                                        'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                                        'all 0.15s ease',
                                                                     '&:hover': {
                                                                         bgcolor:
                                                                             alpha(
                                                                                 theme
                                                                                     .palette
-                                                                                    .primary
-                                                                                    .light,
-                                                                                0.05
+                                                                                    .background
+                                                                                    .paper,
+                                                                                0.9
                                                                             ),
                                                                         transform:
-                                                                            'scale(1.1)',
+                                                                            'scale(1.02)',
                                                                     },
                                                                 }}
                                                             >
-                                                                <CheckRoundedIcon fontSize="small" />
+                                                                <EditRoundedIcon
+                                                                    fontSize="small"
+                                                                    sx={{
+                                                                        fontSize:
+                                                                            '0.9rem',
+                                                                        color: alpha(
+                                                                            theme
+                                                                                .palette
+                                                                                .text
+                                                                                .secondary,
+                                                                            0.8
+                                                                        ),
+                                                                    }}
+                                                                />
                                                             </IconButton>
-                                                        </Zoom>
-                                                        <Zoom
-                                                            in={true}
-                                                            timeout={200}
-                                                            style={{
-                                                                transitionDelay:
-                                                                    '250ms',
-                                                            }}
-                                                        >
-                                                            <IconButton
-                                                                size="small"
-                                                                onClick={
-                                                                    handleCancelDelete
-                                                                }
-                                                                sx={{
-                                                                    color: alpha(
-                                                                        theme
-                                                                            .palette
-                                                                            .primary
-                                                                            .light,
-                                                                        0.8
-                                                                    ),
-                                                                    transition:
-                                                                        'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                                    '&:hover': {
-                                                                        bgcolor:
-                                                                            alpha(
-                                                                                theme
-                                                                                    .palette
-                                                                                    .primary
-                                                                                    .light,
-                                                                                0.05
-                                                                            ),
-                                                                        transform:
-                                                                            'scale(1.1)',
-                                                                    },
-                                                                }}
-                                                            >
-                                                                <CloseRoundedIcon fontSize="small" />
-                                                            </IconButton>
-                                                        </Zoom>
-                                                    </Box>
-                                                </Paper>
-                                            </Box>
-                                        </Slide>
+                                                        </Box>
+                                                    </Grow>
+                                                </Portal>
+                                            )}
 
-                                        {/* Normal or Editing view */}
-                                        {editingCollection === collection.id ? (
-                                            <Box
-                                                sx={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    p: 1,
-                                                    width: '100%',
-                                                    height: COLLECTION_ITEM_HEIGHT,
-                                                    borderRadius: 2,
-                                                    bgcolor: alpha(
-                                                        theme.palette.primary
-                                                            .light,
-                                                        0.05
-                                                    ),
-                                                    border: '1px solid',
-                                                    borderColor: alpha(
-                                                        theme.palette.primary
-                                                            .main,
-                                                        0.1
-                                                    ),
-                                                }}
-                                            >
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={
-                                                        handleOpenEmojiPicker
-                                                    }
-                                                    sx={{ mr: 1 }}
-                                                >
-                                                    {getCollectionIcon(
-                                                        collection
-                                                    )}
-                                                </IconButton>
-                                                <TextField
-                                                    value={editingName}
-                                                    onChange={(e) =>
-                                                        setEditingName(
-                                                            e.target.value
-                                                        )
-                                                    }
-                                                    variant="standard"
-                                                    size="small"
-                                                    fullWidth
-                                                    autoFocus
-                                                    InputProps={{
-                                                        disableUnderline: true,
-                                                        sx: {
-                                                            fontSize: '0.95rem',
-                                                            fontWeight: 500,
-                                                        },
-                                                    }}
-                                                />
-                                            </Box>
-                                        ) : (
-                                            <ListItemButton
-                                                selected={
-                                                    selectedCollection ===
-                                                    collection.id
-                                                }
-                                                onClick={() =>
-                                                    onCollectionSelect(
-                                                        collection.id
-                                                    )
-                                                }
-                                                sx={{
-                                                    borderRadius: 2,
-                                                    height: COLLECTION_ITEM_HEIGHT,
-                                                    transition: 'all 0.2s ease',
-                                                    position: 'relative',
-                                                    '&:hover': {
-                                                        bgcolor: alpha(
-                                                            theme.palette
-                                                                .primary.main,
-                                                            0.06
-                                                        ),
-                                                    },
-                                                    '&.Mui-selected': {
-                                                        bgcolor: alpha(
-                                                            theme.palette
-                                                                .primary.light,
-                                                            0.1
-                                                        ),
-                                                        color: 'primary.dark',
-                                                        boxShadow: `0 1px 3px ${alpha(
-                                                            theme.palette
-                                                                .primary.main,
-                                                            0.1
-                                                        )}`,
-                                                        '&:hover': {
-                                                            bgcolor: alpha(
-                                                                theme.palette
-                                                                    .primary
-                                                                    .light,
-                                                                0.3
-                                                            ),
-                                                        },
-                                                        '& .MuiListItemIcon-root':
-                                                            {
-                                                                color: 'primary.main',
-                                                            },
-                                                        '& .MuiListItemText-secondary':
-                                                            {
-                                                                color: alpha(
-                                                                    theme
-                                                                        .palette
-                                                                        .primary
-                                                                        .main,
-                                                                    0.7
-                                                                ),
-                                                            },
-                                                    },
-                                                }}
-                                            >
-                                                <ListItemIcon
-                                                    sx={{
-                                                        minWidth: isOpen
-                                                            ? 36
-                                                            : 0,
-                                                        color:
-                                                            selectedCollection ===
-                                                            collection.id
-                                                                ? 'primary.main'
-                                                                : 'primary.main',
-                                                        fontSize: '1.2rem',
-                                                    }}
-                                                >
-                                                    {getCollectionIcon(
-                                                        collection
-                                                    )}
-                                                </ListItemIcon>
-                                                {isOpen && (
-                                                    <ListItemText
-                                                        primary={
-                                                            collection.name
-                                                        }
-                                                        secondary={formatRecipeCount(
-                                                            collection.count
-                                                        )}
-                                                        primaryTypographyProps={{
-                                                            noWrap: true,
-                                                            sx: {
-                                                                fontWeight:
-                                                                    selectedCollection ===
-                                                                    collection.id
-                                                                        ? 600
-                                                                        : 500,
-                                                                color:
-                                                                    selectedCollection ===
-                                                                    collection.id
-                                                                        ? 'primary.dark'
-                                                                        : 'text.primary',
-                                                            },
-                                                        }}
-                                                        secondaryTypographyProps={{
-                                                            noWrap: true,
-                                                            sx: {
-                                                                fontSize:
-                                                                    '0.75rem',
-                                                                color:
-                                                                    selectedCollection ===
-                                                                    collection.id
-                                                                        ? alpha(
-                                                                              theme
-                                                                                  .palette
-                                                                                  .primary
-                                                                                  .main,
-                                                                              0.7
-                                                                          )
-                                                                        : 'text.secondary',
-                                                            },
-                                                        }}
-                                                    />
-                                                )}
-                                            </ListItemButton>
-                                        )}
-                                    </Box>
-
-                                    {/* Edit pencil icon that appears on hover - using Portal to break out */}
-                                    {isOpen &&
-                                        hoveredCollection === collection.id &&
-                                        !editingCollection &&
-                                        !deletingCollection &&
-                                        buttonPositions[collection.id] &&
-                                        collection.id !== 'all' && ( // Don't show edit button for "All Recipes"
-                                            <Portal>
-                                                <Grow
-                                                    in={true}
-                                                    timeout={{
-                                                        enter: 200,
-                                                        exit: 150,
-                                                    }}
-                                                    style={{
-                                                        transformOrigin:
-                                                            'center right',
-                                                    }}
-                                                >
+                                        {/* Edit mode controls - using Portal to break out */}
+                                        {isOpen &&
+                                            editingCollection ===
+                                                collection.id &&
+                                            buttonPositions[collection.id] &&
+                                            deletingCollection !==
+                                                collection.id && (
+                                                <Portal>
                                                     <Box
                                                         sx={{
                                                             position: 'fixed',
@@ -905,408 +1045,331 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                                                                 buttonPositions[
                                                                     collection
                                                                         .id
-                                                                ].top - 16
+                                                                ].top - 48
                                                             }px`,
+                                                            display: 'flex',
+                                                            flexDirection:
+                                                                'column',
+                                                            gap: 0.5,
                                                             zIndex:
                                                                 theme.zIndex
                                                                     .drawer + 1,
                                                         }}
                                                     >
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() =>
-                                                                handleEditCollection(
-                                                                    collection.id
-                                                                )
+                                                        {/* The save button */}
+                                                        <Grow
+                                                            in={
+                                                                editingCollection ===
+                                                                collection.id
                                                             }
-                                                            sx={{
-                                                                bgcolor: alpha(
-                                                                    theme
-                                                                        .palette
-                                                                        .background
-                                                                        .paper,
-                                                                    0.7
-                                                                ),
-                                                                boxShadow: 1,
-                                                                width: 28,
-                                                                height: 28,
-                                                                transition:
-                                                                    'all 0.15s ease',
-                                                                '&:hover': {
-                                                                    bgcolor:
-                                                                        alpha(
-                                                                            theme
-                                                                                .palette
-                                                                                .background
-                                                                                .paper,
-                                                                            0.9
-                                                                        ),
-                                                                    transform:
-                                                                        'scale(1.02)',
-                                                                },
+                                                            timeout={{
+                                                                enter: 300,
+                                                                exit: 200,
                                                             }}
+                                                            style={{
+                                                                transformOrigin:
+                                                                    'center left',
+                                                                transitionDelay:
+                                                                    editingCollection ===
+                                                                    collection.id
+                                                                        ? '0ms'
+                                                                        : '0ms',
+                                                            }}
+                                                            unmountOnExit
                                                         >
-                                                            <EditRoundedIcon
-                                                                fontSize="small"
+                                                            <IconButton
+                                                                size="small"
+                                                                color="primary"
+                                                                onClick={() =>
+                                                                    handleSaveCollection(
+                                                                        collection.id
+                                                                    )
+                                                                }
                                                                 sx={{
-                                                                    fontSize:
-                                                                        '0.9rem',
-                                                                    color: alpha(
-                                                                        theme
-                                                                            .palette
-                                                                            .text
-                                                                            .secondary,
-                                                                        0.8
-                                                                    ),
+                                                                    bgcolor:
+                                                                        'background.paper',
+                                                                    boxShadow: 1,
+                                                                    width: 28,
+                                                                    height: 28,
+                                                                    '&:hover': {
+                                                                        bgcolor:
+                                                                            '#f5f5f5',
+                                                                        transform:
+                                                                            'scale(1.02)',
+                                                                    },
                                                                 }}
-                                                            />
-                                                        </IconButton>
+                                                            >
+                                                                <CheckRoundedIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </Grow>
+
+                                                        {/* The delete button */}
+                                                        <Grow
+                                                            in={
+                                                                editingCollection ===
+                                                                collection.id
+                                                            }
+                                                            timeout={{
+                                                                enter: 300,
+                                                                exit: 200,
+                                                            }}
+                                                            style={{
+                                                                transformOrigin:
+                                                                    'center left',
+                                                                transitionDelay:
+                                                                    editingCollection ===
+                                                                    collection.id
+                                                                        ? '75ms'
+                                                                        : '0ms',
+                                                            }}
+                                                            unmountOnExit
+                                                        >
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() =>
+                                                                    handleConfirmDelete(
+                                                                        collection.id
+                                                                    )
+                                                                }
+                                                                sx={{
+                                                                    bgcolor:
+                                                                        'background.paper',
+                                                                    boxShadow: 1,
+                                                                    width: 28,
+                                                                    height: 28,
+                                                                    color: '#ef9a9a',
+                                                                    '&:hover': {
+                                                                        bgcolor:
+                                                                            '#fff8f8',
+                                                                        transform:
+                                                                            'scale(1.02)',
+                                                                    },
+                                                                }}
+                                                            >
+                                                                <DeleteRoundedIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </Grow>
+
+                                                        {/* The cancel button */}
+                                                        <Grow
+                                                            in={
+                                                                editingCollection ===
+                                                                collection.id
+                                                            }
+                                                            timeout={{
+                                                                enter: 300,
+                                                                exit: 200,
+                                                            }}
+                                                            style={{
+                                                                transformOrigin:
+                                                                    'center left',
+                                                                transitionDelay:
+                                                                    editingCollection ===
+                                                                    collection.id
+                                                                        ? '150ms'
+                                                                        : '0ms',
+                                                            }}
+                                                            unmountOnExit
+                                                        >
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={
+                                                                    handleCancelEdit
+                                                                }
+                                                                sx={{
+                                                                    bgcolor:
+                                                                        'background.paper',
+                                                                    boxShadow: 1,
+                                                                    width: 28,
+                                                                    height: 28,
+                                                                    '&:hover': {
+                                                                        bgcolor:
+                                                                            '#f5f5f5',
+                                                                        transform:
+                                                                            'scale(1.02)',
+                                                                    },
+                                                                }}
+                                                            >
+                                                                <CloseRoundedIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </Grow>
                                                     </Box>
-                                                </Grow>
-                                            </Portal>
-                                        )}
+                                                </Portal>
+                                            )}
+                                    </ListItem>
+                                </Collapse>
+                            ))}
+                        </List>
+                    )}
+                </Box>
 
-                                    {/* Edit mode controls - using Portal to break out */}
-                                    {isOpen &&
-                                        editingCollection === collection.id &&
-                                        buttonPositions[collection.id] &&
-                                        deletingCollection !==
-                                            collection.id && (
-                                            <Portal>
-                                                <Box
-                                                    sx={{
-                                                        position: 'fixed',
-                                                        left: `${
-                                                            buttonPositions[
-                                                                collection.id
-                                                            ].left
-                                                        }px`,
-                                                        top: `${
-                                                            buttonPositions[
-                                                                collection.id
-                                                            ].top - 48
-                                                        }px`,
-                                                        display: 'flex',
-                                                        flexDirection: 'column',
-                                                        gap: 0.5,
-                                                        zIndex:
-                                                            theme.zIndex
-                                                                .drawer + 1,
-                                                    }}
-                                                >
-                                                    {/* The save button */}
-                                                    <Grow
-                                                        in={
-                                                            editingCollection ===
-                                                            collection.id
-                                                        }
-                                                        timeout={{
-                                                            enter: 300,
-                                                            exit: 200,
-                                                        }}
-                                                        style={{
-                                                            transformOrigin:
-                                                                'center left',
-                                                            transitionDelay:
-                                                                editingCollection ===
-                                                                collection.id
-                                                                    ? '0ms'
-                                                                    : '0ms',
-                                                        }}
-                                                        unmountOnExit
-                                                    >
-                                                        <IconButton
-                                                            size="small"
-                                                            color="primary"
-                                                            onClick={() =>
-                                                                handleSaveCollection(
-                                                                    collection.id
-                                                                )
-                                                            }
-                                                            sx={{
-                                                                bgcolor:
-                                                                    'background.paper',
-                                                                boxShadow: 1,
-                                                                width: 28,
-                                                                height: 28,
-                                                                '&:hover': {
-                                                                    bgcolor:
-                                                                        '#f5f5f5',
-                                                                    transform:
-                                                                        'scale(1.02)',
-                                                                },
-                                                            }}
-                                                        >
-                                                            <CheckRoundedIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Grow>
-
-                                                    {/* The delete button */}
-                                                    <Grow
-                                                        in={
-                                                            editingCollection ===
-                                                            collection.id
-                                                        }
-                                                        timeout={{
-                                                            enter: 300,
-                                                            exit: 200,
-                                                        }}
-                                                        style={{
-                                                            transformOrigin:
-                                                                'center left',
-                                                            transitionDelay:
-                                                                editingCollection ===
-                                                                collection.id
-                                                                    ? '75ms'
-                                                                    : '0ms',
-                                                        }}
-                                                        unmountOnExit
-                                                    >
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() =>
-                                                                handleConfirmDelete(
-                                                                    collection.id
-                                                                )
-                                                            }
-                                                            sx={{
-                                                                bgcolor:
-                                                                    'background.paper',
-                                                                boxShadow: 1,
-                                                                width: 28,
-                                                                height: 28,
-                                                                color: '#ef9a9a',
-                                                                '&:hover': {
-                                                                    bgcolor:
-                                                                        '#fff8f8',
-                                                                    transform:
-                                                                        'scale(1.02)',
-                                                                },
-                                                            }}
-                                                        >
-                                                            <DeleteRoundedIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Grow>
-
-                                                    {/* The cancel button */}
-                                                    <Grow
-                                                        in={
-                                                            editingCollection ===
-                                                            collection.id
-                                                        }
-                                                        timeout={{
-                                                            enter: 300,
-                                                            exit: 200,
-                                                        }}
-                                                        style={{
-                                                            transformOrigin:
-                                                                'center left',
-                                                            transitionDelay:
-                                                                editingCollection ===
-                                                                collection.id
-                                                                    ? '150ms'
-                                                                    : '0ms',
-                                                        }}
-                                                        unmountOnExit
-                                                    >
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={
-                                                                handleCancelEdit
-                                                            }
-                                                            sx={{
-                                                                bgcolor:
-                                                                    'background.paper',
-                                                                boxShadow: 1,
-                                                                width: 28,
-                                                                height: 28,
-                                                                '&:hover': {
-                                                                    bgcolor:
-                                                                        '#f5f5f5',
-                                                                    transform:
-                                                                        'scale(1.02)',
-                                                                },
-                                                            }}
-                                                        >
-                                                            <CloseRoundedIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Grow>
-                                                </Box>
-                                            </Portal>
-                                        )}
-                                </ListItem>
-                            </Collapse>
-                        ))}
-                    </List>
-                )}
-            </Box>
-
-            {/* Fixed footer with "New Collection" button */}
-            <Box
-                sx={{
-                    position: 'sticky',
-                    bottom: 0,
-                    borderTop: '1px solid',
-                    borderColor: alpha(theme.palette.primary.main, 0.08),
-                    p: isOpen ? 1.5 : 1,
-                    bgcolor: alpha(theme.palette.paper.main, 0.9),
-                    backdropFilter: 'blur(8px)',
-                    zIndex: 1,
-                    height: '60px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: theme.transitions.create(['padding'], {
-                        easing: theme.transitions.easing.easeInOut,
-                        duration: theme.transitions.duration.standard,
-                    }),
-                }}
-            >
+                {/* Fixed footer with "New Collection" button */}
                 <Box
                     sx={{
-                        width: '100%',
-                        height: '36px',
-                        position: 'relative',
+                        position: 'sticky',
+                        bottom: 0,
+                        borderTop: '1px solid',
+                        borderColor: alpha(theme.palette.primary.main, 0.08),
+                        p: isOpen ? 1.5 : 1,
+                        bgcolor: alpha(theme.palette.paper.main, 0.9),
+                        backdropFilter: 'blur(8px)',
+                        zIndex: 1,
+                        height: '60px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        opacity: 0.8,
+                        transition: theme.transitions.create(['padding'], {
+                            easing: theme.transitions.easing.easeInOut,
+                            duration: theme.transitions.duration.standard,
+                        }),
                     }}
                 >
-                    <Fade
-                        in={isOpen}
-                        timeout={{ enter: 400, exit: 200 }}
-                        style={{
-                            position: 'absolute',
+                    <Box
+                        sx={{
                             width: '100%',
-                            transitionDelay: isOpen ? '100ms' : '0ms',
+                            height: '36px',
+                            position: 'relative',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            opacity: 0.8,
                         }}
-                        unmountOnExit
                     >
-                        <Button
-                            variant="outlined"
-                            color="primary"
-                            startIcon={<AddRoundedIcon fontSize="small" />}
-                            fullWidth
-                            sx={{
-                                borderRadius: 2,
-                                textTransform: 'none',
-                                fontWeight: 600,
-                                height: '36px',
-                                py: 0.5,
-                                border: '1px dashed',
-                                borderColor: 'primary.light',
-                                boxShadow: 'none',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                fontSize: '0.9rem',
-                                '&:hover': {
-                                    border: '1px dashed',
-                                    borderColor: 'primary.dark',
-                                    bgcolor: alpha(
-                                        theme.palette.primary.main,
-                                        0.04
-                                    ),
-                                },
-                                '& .MuiButton-startIcon': {
-                                    marginRight: 0.5,
-                                    transform: 'scale(0.9)',
-                                },
+                        <Fade
+                            in={isOpen}
+                            timeout={{ enter: 400, exit: 200 }}
+                            style={{
+                                position: 'absolute',
+                                width: '100%',
+                                transitionDelay: isOpen ? '100ms' : '0ms',
                             }}
-                            onClick={onCreateCollection}
+                            unmountOnExit
                         >
-                            New Collection
-                        </Button>
-                    </Fade>
-
-                    <Zoom
-                        in={!isOpen}
-                        timeout={{ enter: 300, exit: 200 }}
-                        style={{
-                            transitionDelay: !isOpen ? '75ms' : '0ms',
-                        }}
-                        unmountOnExit
-                    >
-                        <Tooltip title="">
-                            <IconButton
+                            <Button
+                                variant="outlined"
                                 color="primary"
-                                size="medium"
+                                startIcon={<AddRoundedIcon fontSize="small" />}
+                                fullWidth
                                 sx={{
-                                    width: '36px',
+                                    borderRadius: 2,
+                                    textTransform: 'none',
+                                    fontWeight: 600,
                                     height: '36px',
+                                    py: 0.5,
                                     border: '1px dashed',
                                     borderColor: 'primary.light',
-                                    padding: 0.75,
+                                    boxShadow: 'none',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    fontSize: '0.9rem',
                                     '&:hover': {
+                                        border: '1px dashed',
+                                        borderColor: 'primary.dark',
                                         bgcolor: alpha(
                                             theme.palette.primary.main,
                                             0.04
                                         ),
-                                        borderColor: 'primary.dark',
                                     },
-                                    '& .MuiSvgIcon-root': {
-                                        fontSize: '1.25rem',
+                                    '& .MuiButton-startIcon': {
+                                        marginRight: 0.5,
+                                        transform: 'scale(0.9)',
                                     },
                                 }}
                                 onClick={onCreateCollection}
                             >
-                                <AddRoundedIcon fontSize="inherit" />
-                            </IconButton>
-                        </Tooltip>
-                    </Zoom>
-                </Box>
-            </Box>
+                                New Collection
+                            </Button>
+                        </Fade>
 
-            {/* Emoji picker popover */}
-            <Popover
-                anchorEl={emojiPickerAnchorEl}
-                open={Boolean(emojiPickerAnchorEl)}
-                onClose={handleCloseEmojiPicker}
-                anchorOrigin={{
-                    vertical: 'center',
-                    horizontal: 'right',
-                }}
-                transformOrigin={{
-                    vertical: 'center',
-                    horizontal: 'left',
-                }}
-                sx={{
-                    '.MuiPopover-paper': {
-                        overflow: 'hidden',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                        borderRadius: 3,
-                        border: '1px solid',
-                        borderColor: alpha(theme.palette.divider, 0.2),
-                    },
-                }}
-            >
-                <Picker
-                    data={data}
-                    onEmojiSelect={handleSelectEmoji}
-                    previewPosition="none"
-                    skinTonePosition="none"
-                    theme={theme.palette.mode === 'dark' ? 'dark' : 'light'}
-                    set="native"
-                    navPosition="top"
-                    categories={[
-                        'foods',
-                        'places',
-                        'activities',
-                        'nature',
-                        'flags',
-                        'objects',
-                        'symbols',
-                    ]}
-                    perLine={7}
-                    maxFrequentRows={0}
-                    emojiSize={24}
-                    emojiButtonSize={36}
-                    searchPosition="sticky"
-                    autoFocus={false}
-                />
-            </Popover>
-        </Drawer>
+                        <Zoom
+                            in={!isOpen}
+                            timeout={{ enter: 300, exit: 200 }}
+                            style={{
+                                transitionDelay: !isOpen ? '75ms' : '0ms',
+                            }}
+                            unmountOnExit
+                        >
+                            <Tooltip title="">
+                                <IconButton
+                                    color="primary"
+                                    size="medium"
+                                    sx={{
+                                        width: '36px',
+                                        height: '36px',
+                                        border: '1px dashed',
+                                        borderColor: 'primary.light',
+                                        padding: 0.75,
+                                        '&:hover': {
+                                            bgcolor: alpha(
+                                                theme.palette.primary.main,
+                                                0.04
+                                            ),
+                                            borderColor: 'primary.dark',
+                                        },
+                                        '& .MuiSvgIcon-root': {
+                                            fontSize: '1.25rem',
+                                        },
+                                    }}
+                                    onClick={onCreateCollection}
+                                >
+                                    <AddRoundedIcon fontSize="inherit" />
+                                </IconButton>
+                            </Tooltip>
+                        </Zoom>
+                    </Box>
+                </Box>
+
+                {/* Emoji picker popover */}
+                <Popover
+                    anchorEl={emojiPickerAnchorEl}
+                    open={Boolean(emojiPickerAnchorEl)}
+                    onClose={handleCloseEmojiPicker}
+                    anchorOrigin={{
+                        vertical: 'center',
+                        horizontal: 'right',
+                    }}
+                    transformOrigin={{
+                        vertical: 'center',
+                        horizontal: 'left',
+                    }}
+                    sx={{
+                        '.MuiPopover-paper': {
+                            overflow: 'hidden',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                            borderRadius: 3,
+                            border: '1px solid',
+                            borderColor: alpha(theme.palette.divider, 0.2),
+                        },
+                    }}
+                >
+                    <Picker
+                        data={data}
+                        onEmojiSelect={handleSelectEmoji}
+                        previewPosition="none"
+                        skinTonePosition="none"
+                        theme={theme.palette.mode === 'dark' ? 'dark' : 'light'}
+                        set="native"
+                        navPosition="top"
+                        categories={[
+                            'foods',
+                            'places',
+                            'activities',
+                            'nature',
+                            'flags',
+                            'objects',
+                            'symbols',
+                        ]}
+                        perLine={7}
+                        maxFrequentRows={0}
+                        emojiSize={24}
+                        emojiButtonSize={36}
+                        searchPosition="sticky"
+                        autoFocus={false}
+                    />
+                </Popover>
+            </Drawer>
+        </>
     );
 };
 

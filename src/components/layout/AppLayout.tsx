@@ -19,7 +19,9 @@ import RestaurantIcon from '@mui/icons-material/Restaurant';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import LoginIcon from '@mui/icons-material/Login';
+import MenuIcon from '@mui/icons-material/Menu';
 import { useAuth } from '../../context/AuthContext';
+
 interface AppLayoutProps {
     children: ReactNode;
     headerContent?: ReactNode;
@@ -31,6 +33,7 @@ interface AppLayoutProps {
     drawerWidth?: number;
     collapsedDrawerWidth?: number;
     isDrawerOpen?: boolean;
+    onToggleDrawer?: () => void;
 }
 
 const AppLayout: FC<AppLayoutProps> = ({
@@ -44,6 +47,7 @@ const AppLayout: FC<AppLayoutProps> = ({
     drawerWidth = 240,
     collapsedDrawerWidth = 72,
     isDrawerOpen = true,
+    onToggleDrawer,
 }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -97,8 +101,14 @@ const AppLayout: FC<AppLayoutProps> = ({
                 sx={{
                     bgcolor: 'paper.light',
                     borderBottom: 'none',
-                    width: hasDrawer ? `calc(100% - ${headerMargin})` : '100%',
-                    marginLeft: headerMargin,
+                    width: {
+                        xs: '100%',
+                        sm: hasDrawer ? `calc(100% - ${headerMargin})` : '100%',
+                    },
+                    marginLeft: {
+                        xs: 0,
+                        sm: hasDrawer ? headerMargin : 0,
+                    },
                     borderRadius: 0,
                     borderLeft: 'none',
                     top: 0,
@@ -158,6 +168,18 @@ const AppLayout: FC<AppLayoutProps> = ({
                             zIndex: 1,
                         }}
                     >
+                        {hasDrawer && isMobile && (
+                            <IconButton
+                                color="primary"
+                                aria-label="open drawer"
+                                edge="start"
+                                onClick={onToggleDrawer}
+                                sx={{ mr: 2 }}
+                            >
+                                <MenuIcon />
+                            </IconButton>
+                        )}
+
                         <Box
                             sx={{
                                 display: 'flex',

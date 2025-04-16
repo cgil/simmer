@@ -518,6 +518,7 @@ const CatalogPage: FC = () => {
             drawerWidth={drawerWidth}
             collapsedDrawerWidth={collapsedDrawerWidth}
             isDrawerOpen={drawerOpen}
+            onToggleDrawer={() => setDrawerOpen(!drawerOpen)}
             headerContent={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                     <Box
@@ -567,6 +568,7 @@ const CatalogPage: FC = () => {
                     onUpdateCollection={handleUpdateCollection}
                     onDeleteCollection={handleDeleteCollection}
                     collectionsBeingRemoved={collectionsBeingRemoved}
+                    isOpen={drawerOpen}
                 />
 
                 {/* Content container - adjusted with left margin to account for drawer width */}
@@ -581,9 +583,12 @@ const CatalogPage: FC = () => {
                         flex: 1,
                         bgcolor: 'paper.light',
                         position: 'relative',
-                        marginLeft: drawerOpen
-                            ? `${drawerWidth}px`
-                            : `${collapsedDrawerWidth}px`,
+                        marginLeft: {
+                            xs: 0, // No margin on small screens regardless of drawer state
+                            sm: drawerOpen
+                                ? `${drawerWidth}px`
+                                : `${collapsedDrawerWidth}px`,
+                        },
                         transition: theme.transitions.create(['margin'], {
                             easing: theme.transitions.easing.easeInOut,
                             duration: theme.transitions.duration.standard,
