@@ -7,9 +7,12 @@ import {
     CircularProgress,
     Fade,
     useTheme,
+    Card,
+    CardMedia,
+    CardContent,
+    Theme, // Import Theme type
 } from '@mui/material';
 import AppLayout from '../../components/layout/AppLayout';
-import { Card, CardMedia, CardContent } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -24,12 +27,364 @@ import MatchCornerFold, {
     MatchType,
 } from '../../components/recipe/MatchCornerFold';
 import CollectionsDrawer from '../../components/collections/CollectionsDrawer';
+// Import DnD hooks and types
+import { useDrag } from 'react-dnd';
+import { ItemTypes, RecipeDragItem } from '../../types/dnd'; // Import the type definition
+
 // Import from collection.ts including the new constant
 import {
     CollectionItem,
     ALL_RECIPES_ID,
     COLLECTION_ROUTE_PATH,
 } from '../../types/collection';
+
+// --- Internal Draggable Recipe Card Component ---
+interface DraggableRecipeCardProps {
+    recipe: Recipe;
+    isLastElement: boolean;
+    lastRecipeElementRef: (node: HTMLDivElement | null) => void;
+    handleRecipeClick: (recipe: Recipe) => void;
+    determineMatchType: (recipe: Recipe, searchQuery: string) => MatchType;
+    searchQuery: string;
+    selectedCollection: string;
+    theme: Theme; // Pass theme explicitly
+}
+
+const DraggableRecipeCard: FC<DraggableRecipeCardProps> = ({
+    recipe,
+    isLastElement,
+    lastRecipeElementRef,
+    handleRecipeClick,
+    determineMatchType,
+    searchQuery,
+    selectedCollection,
+    theme,
+}) => {
+    // Determine match type if search is active
+    const matchType = searchQuery
+        ? determineMatchType(recipe, searchQuery)
+        : null;
+
+    // Reference for the drag source
+    const [{ isDragging }, drag] = useDrag(() => ({
+        type: ItemTypes.RECIPE_CARD,
+        item: {
+            type: ItemTypes.RECIPE_CARD,
+            recipeId: recipe.id,
+            // Pass the ID of the collection the recipe is currently displayed in
+            sourceCollectionId:
+                selectedCollection === ALL_RECIPES_ID
+                    ? null
+                    : selectedCollection,
+        } as RecipeDragItem, // Ensure type conformance
+        collect: (monitor) => ({
+            isDragging: !!monitor.isDragging(),
+        }),
+        // Optional: Add logic for canDrag if needed
+        // Optional: Add endDrag handler for cleanup or feedback
+    }));
+
+    return (
+        <Grid
+            item
+            xs={1}
+            key={recipe.id}
+            ref={drag} // Apply the drag ref to the Grid item
+            sx={{
+                opacity: isDragging ? 0.5 : 1, // Style for dragging state
+                cursor: 'move', // Indicate draggable
+                // Add transition for smoother opacity change
+                transition: theme.transitions.create('opacity', {
+                    duration: theme.transitions.duration.short,
+                }),
+            }}
+        >
+            <div // Non-draggable container for the last element ref
+                ref={isLastElement ? lastRecipeElementRef : null}
+                style={{ height: '100%' }} // Ensure div takes full height for Card
+            >
+                <Card
+                    onClick={() => handleRecipeClick(recipe)}
+                    sx={{
+                        position: 'relative',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        cursor: 'pointer',
+                        borderRadius: 1,
+                        overflow: 'hidden',
+                        boxShadow: `
+                            0 1px 2px rgba(0,0,0,0.03),
+                            0 4px 20px rgba(0,0,0,0.06),
+                            inset 0 0 0 1px rgba(255,255,255,0.9)
+                        `,
+                        transition: 'all 0.15s ease-in-out',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: 'background.paper',
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '100%',
+                            background: 'rgba(255,255,255,0.5)',
+                            backdropFilter: 'blur(4px)',
+                            borderRadius: 1,
+                            zIndex: 0,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                        },
+                        '& > *': {
+                            position: 'relative',
+                            zIndex: 1,
+                        },
+                        '&:hover': {
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                            borderColor: 'rgba(44, 62, 80, 0.15)',
+                        },
+                    }}
+                >
+                    {/* Match Corner Fold - only appears during search */}
+                    {searchQuery && <MatchCornerFold matchType={matchType} />}
+
+                    {recipe.images && recipe.images.length > 0 ? (
+                        <CardMedia
+                            component="img"
+                            height="180"
+                            image={recipe.images[0]}
+                            alt={recipe.title}
+                            sx={{
+                                objectFit: 'cover',
+                            }}
+                        />
+                    ) : (
+                        <Box
+                            sx={{
+                                height: 180,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: `linear-gradient(135deg, ${theme.palette.secondary.light} 0%, ${theme.palette.secondary.main} 100%)`,
+                                position: 'relative',
+                                overflow: 'hidden',
+                                padding: 2,
+                                '&::before': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    backgroundImage: `repeating-linear-gradient(
+                                        -45deg,
+                                        rgba(255, 255, 255, 0.3),
+                                        rgba(255, 255, 255, 0.3) 5px,
+                                        transparent 5px,
+                                        transparent 10px
+                                    )`,
+                                    opacity: 0.5,
+                                },
+                                '&::after': {
+                                    content: `"${
+                                        recipe.title.length > 20
+                                            ? recipe.title.substring(0, 20) +
+                                              '...'
+                                            : recipe.title
+                                    }"`,
+                                    position: 'absolute',
+                                    fontFamily: "'Kalam', cursive",
+                                    fontSize: '1.75rem',
+                                    color: theme.palette.primary.main,
+                                    opacity: 0.15,
+                                    transform: 'rotate(-5deg)',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '1px',
+                                    textAlign: 'center',
+                                    width: '100%',
+                                    maxWidth: '90%',
+                                    left: '5%',
+                                    right: '5%',
+                                },
+                            }}
+                        />
+                    )}
+                    <CardContent
+                        sx={{
+                            flexGrow: 1,
+                            p: { xs: 2, sm: 3 },
+                            display: 'flex',
+                            flexDirection: 'column',
+                        }}
+                    >
+                        <Typography
+                            variant="h6"
+                            component="h2"
+                            gutterBottom
+                            sx={{
+                                fontWeight: 600,
+                                fontSize: {
+                                    xs: '1.1rem',
+                                    sm: '1.25rem',
+                                },
+                                mb: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                fontFamily: "'Kalam', cursive",
+                                color: 'primary.main',
+                            }}
+                        >
+                            {recipe.title}
+                        </Typography>
+                        <Typography
+                            color="text.secondary"
+                            sx={{
+                                mb: 2,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                fontSize: {
+                                    xs: '0.875rem',
+                                    sm: '1rem',
+                                },
+                                minHeight: {
+                                    xs: '40px',
+                                    sm: '48px',
+                                },
+                                fontFamily: "'Inter', sans-serif",
+                            }}
+                        >
+                            {recipe.description}
+                        </Typography>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                gap: 0.75,
+                                flexWrap: 'wrap',
+                                mb: 1,
+                                mt: 'auto',
+                            }}
+                        >
+                            {recipe.tags &&
+                                recipe.tags.length > 0 &&
+                                recipe.tags.slice(0, 3).map((tag) => (
+                                    <Chip
+                                        key={tag}
+                                        label={tag}
+                                        size="small"
+                                        color="secondary"
+                                        sx={{
+                                            fontSize: '0.75rem',
+                                            height: '24px',
+                                            fontFamily: "'Inter', sans-serif",
+                                        }}
+                                    />
+                                ))}
+                            {recipe.tags && recipe.tags.length > 3 && (
+                                <Chip
+                                    label={`+${recipe.tags.length - 3}`}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{
+                                        fontSize: '0.75rem',
+                                        height: '24px',
+                                        fontFamily: "'Inter', sans-serif",
+                                    }}
+                                />
+                            )}
+                        </Box>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: {
+                                    xs: 1.5,
+                                    sm: 2,
+                                },
+                                mt: 2,
+                                pt: 2,
+                                borderTop: '1px solid',
+                                borderColor: 'divider',
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                }}
+                            >
+                                <RestaurantIcon
+                                    sx={{
+                                        fontSize: {
+                                            xs: '1rem',
+                                            sm: '1.25rem',
+                                        },
+                                        color: 'primary.main',
+                                    }}
+                                />
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    sx={{
+                                        fontSize: {
+                                            xs: '0.75rem',
+                                            sm: '0.875rem',
+                                        },
+                                        fontFamily: "'Inter', sans-serif",
+                                    }}
+                                >
+                                    {recipe.servings} servings
+                                </Typography>
+                            </Box>
+                            {recipe.time_estimate && (
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 0.5,
+                                    }}
+                                >
+                                    <AccessTimeIcon
+                                        sx={{
+                                            fontSize: {
+                                                xs: '1rem',
+                                                sm: '1.25rem',
+                                            },
+                                            color: 'primary.main',
+                                        }}
+                                    />
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                        sx={{
+                                            fontSize: {
+                                                xs: '0.75rem',
+                                                sm: '0.875rem',
+                                            },
+                                            fontFamily: "'Inter', sans-serif",
+                                        }}
+                                    >
+                                        {formatTimeDisplay(
+                                            recipe.time_estimate.total
+                                        )}
+                                    </Typography>
+                                </Box>
+                            )}
+                        </Box>
+                    </CardContent>
+                </Card>
+            </div>
+        </Grid>
+    );
+};
 
 /**
  * Determines the highest priority match type for a recipe
@@ -194,7 +549,8 @@ const CatalogPage: FC = () => {
 
                 // Validate that the collection exists or default to ALL_RECIPES_ID
                 const collectionExists = collectionId
-                    ? fetchedCollections.some((c) => c.id === collectionId)
+                    ? fetchedCollections.some((c) => c.id === collectionId) ||
+                      collectionId === ALL_RECIPES_ID // Also allow ALL_RECIPES_ID
                     : true;
 
                 const finalCollectionId = collectionExists
@@ -511,6 +867,130 @@ const CatalogPage: FC = () => {
         });
     };
 
+    // Handle drop event from CollectionsDrawer
+    const handleDropRecipeOnCollection = useCallback(
+        async (recipeId: string, targetCollectionId: string) => {
+            if (!user) return;
+
+            // The source collection is the one currently selected/viewed in the UI
+            const sourceCollectionId = selectedCollection;
+
+            // Prevent dropping onto the same collection view (no action needed)
+            // Note: Dropping onto "All Recipes" is handled by the drop target itself
+            if (sourceCollectionId === targetCollectionId) {
+                console.log(
+                    'Recipe dropped onto the same collection view. No action needed.'
+                );
+                return;
+            }
+
+            // Find the recipe being dragged (from the currently loaded recipes)
+            const recipe = recipes.find((r) => r.id === recipeId);
+            if (!recipe) {
+                console.error(
+                    'Dragged recipe not found in current view state.'
+                );
+                setError(
+                    'An error occurred while moving the recipe. Please refresh and try again.'
+                );
+                return;
+            }
+
+            console.log(
+                `Attempting to move recipe ${recipeId} from view ${sourceCollectionId} to target ${targetCollectionId}`
+            );
+
+            // Store original states for potential rollback
+            const originalCollections = [...collections];
+            const originalRecipes = [...recipes];
+
+            try {
+                let needsUIRemoval = false; // Should the recipe be removed from the current UI list?
+                let needsTargetCountIncrease = false;
+                let needsSourceCountDecrease = false;
+
+                // --- Perform Backend Operations ---
+
+                // 1. Add to Target Collection (if target is a specific collection)
+                if (targetCollectionId !== ALL_RECIPES_ID) {
+                    console.log(
+                        `Backend Call: Add recipe ${recipeId} to collection ${targetCollectionId}`
+                    );
+                    await RecipeService.addRecipeToCollection(
+                        recipeId,
+                        targetCollectionId
+                    );
+                    needsTargetCountIncrease = true;
+                }
+
+                // 2. Remove from Source Collection (if source was a specific collection)
+                // This runs if dragging from a specific collection, regardless of target.
+                if (sourceCollectionId !== ALL_RECIPES_ID) {
+                    console.log(
+                        `Backend Call: Remove recipe ${recipeId} from collection ${sourceCollectionId}`
+                    );
+                    await RecipeService.removeRecipeFromCollection(
+                        recipeId,
+                        sourceCollectionId
+                    );
+                    needsSourceCountDecrease = true;
+                    // We only remove from the UI list if the recipe was dragged out of the *currently viewed* collection.
+                    needsUIRemoval = true;
+                }
+
+                // --- Optimistic UI Updates ---
+
+                console.log('Applying optimistic UI updates...');
+
+                // 1. Update collection counts
+                setCollections((prev) =>
+                    prev.map((c) => {
+                        let count = c.count;
+                        // Increment target count if added to a specific collection
+                        if (
+                            needsTargetCountIncrease &&
+                            c.id === targetCollectionId
+                        ) {
+                            count++;
+                        }
+                        // Decrement source count if removed from a specific collection
+                        if (
+                            needsSourceCountDecrease &&
+                            c.id === sourceCollectionId
+                        ) {
+                            count = Math.max(0, count - 1); // Prevent count going below 0
+                        }
+                        return { ...c, count };
+                    })
+                );
+
+                // 2. Remove recipe from the currently displayed list if needed
+                if (needsUIRemoval) {
+                    console.log(
+                        `Optimistic UI: Removing recipe ${recipeId} from current view.`
+                    );
+                    setRecipes((prev) => prev.filter((r) => r.id !== recipeId));
+                }
+
+                console.log('Optimistic UI updates applied successfully.');
+                // Optional: Add success feedback (e.g., Snackbar)
+            } catch (err) {
+                console.error('Error moving recipe:', err);
+                const targetName =
+                    collections.find((c) => c.id === targetCollectionId)
+                        ?.name || 'target collection';
+                setError(
+                    `Failed to move recipe to ${targetName}. Please try again.`
+                );
+                // Rollback UI updates on error
+                setCollections(originalCollections);
+                setRecipes(originalRecipes);
+                // Optional: Show error notification
+            }
+        },
+        [user, selectedCollection, recipes, collections] // Dependencies
+    );
+
     return (
         <AppLayout
             showAddButton
@@ -569,6 +1049,8 @@ const CatalogPage: FC = () => {
                     onDeleteCollection={handleDeleteCollection}
                     collectionsBeingRemoved={collectionsBeingRemoved}
                     isOpen={drawerOpen}
+                    // Pass the drop handler
+                    onDropRecipe={handleDropRecipeOnCollection}
                 />
 
                 {/* Content container - adjusted with left margin to account for drawer width */}
@@ -704,408 +1186,29 @@ const CatalogPage: FC = () => {
                                         const isLastElement =
                                             index === visibleRecipes.length - 1;
 
-                                        // Determine match type if search is active
-                                        const matchType = searchQuery
-                                            ? determineMatchType(
-                                                  recipe,
-                                                  searchQuery
-                                              )
-                                            : null;
-
                                         return (
-                                            <Grid
-                                                item
-                                                xs={1}
+                                            <DraggableRecipeCard
                                                 key={
                                                     recipe.id ||
                                                     `recipe-${index}`
                                                 }
-                                                ref={
-                                                    isLastElement
-                                                        ? lastRecipeElementRef
-                                                        : null
+                                                recipe={recipe}
+                                                isLastElement={isLastElement}
+                                                lastRecipeElementRef={
+                                                    lastRecipeElementRef
                                                 }
-                                            >
-                                                <Card
-                                                    onClick={() =>
-                                                        handleRecipeClick(
-                                                            recipe
-                                                        )
-                                                    }
-                                                    sx={{
-                                                        position: 'relative', // Added to support absolute positioning of the corner fold
-                                                        height: '100%',
-                                                        display: 'flex',
-                                                        flexDirection: 'column',
-                                                        cursor: 'pointer',
-                                                        borderRadius: 1,
-                                                        overflow: 'hidden',
-                                                        boxShadow: `
-                                                            0 1px 2px rgba(0,0,0,0.03),
-                                                            0 4px 20px rgba(0,0,0,0.06),
-                                                            inset 0 0 0 1px rgba(255,255,255,0.9)
-                                                        `,
-                                                        transition:
-                                                            'all 0.15s ease-in-out',
-                                                        border: '1px solid',
-                                                        borderColor: 'divider',
-                                                        bgcolor:
-                                                            'background.paper',
-                                                        '&::before': {
-                                                            content: '""',
-                                                            position:
-                                                                'absolute',
-                                                            top: 0,
-                                                            left: 0,
-                                                            right: 0,
-                                                            height: '100%',
-                                                            background:
-                                                                'rgba(255,255,255,0.5)',
-                                                            backdropFilter:
-                                                                'blur(4px)',
-                                                            borderRadius: 1,
-                                                            zIndex: 0,
-                                                            border: '1px solid',
-                                                            borderColor:
-                                                                'divider',
-                                                        },
-                                                        '& > *': {
-                                                            position:
-                                                                'relative',
-                                                            zIndex: 1,
-                                                        },
-                                                        '&:hover': {
-                                                            transform:
-                                                                'translateY(-2px)',
-                                                            boxShadow:
-                                                                '0 4px 12px rgba(0,0,0,0.06)',
-                                                            borderColor:
-                                                                'rgba(44, 62, 80, 0.15)',
-                                                        },
-                                                    }}
-                                                >
-                                                    {/* Match Corner Fold - only appears during search */}
-                                                    {searchQuery && (
-                                                        <MatchCornerFold
-                                                            matchType={
-                                                                matchType
-                                                            }
-                                                        />
-                                                    )}
-
-                                                    {recipe.images &&
-                                                    recipe.images.length > 0 ? (
-                                                        <CardMedia
-                                                            component="img"
-                                                            height="180"
-                                                            image={
-                                                                recipe.images[0]
-                                                            }
-                                                            alt={recipe.title}
-                                                            sx={{
-                                                                objectFit:
-                                                                    'cover',
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <Box
-                                                            sx={{
-                                                                height: 180,
-                                                                display: 'flex',
-                                                                alignItems:
-                                                                    'center',
-                                                                justifyContent:
-                                                                    'center',
-                                                                background: `linear-gradient(135deg, ${theme.palette.secondary.light} 0%, ${theme.palette.secondary.main} 100%)`,
-                                                                position:
-                                                                    'relative',
-                                                                overflow:
-                                                                    'hidden',
-                                                                padding: 2,
-                                                                '&::before': {
-                                                                    content:
-                                                                        '""',
-                                                                    position:
-                                                                        'absolute',
-                                                                    top: 0,
-                                                                    left: 0,
-                                                                    right: 0,
-                                                                    bottom: 0,
-                                                                    backgroundImage: `repeating-linear-gradient(
-                                                                        -45deg,
-                                                                        rgba(255, 255, 255, 0.3),
-                                                                        rgba(255, 255, 255, 0.3) 5px,
-                                                                        transparent 5px,
-                                                                        transparent 10px
-                                                                    )`,
-                                                                    opacity: 0.5,
-                                                                },
-                                                                '&::after': {
-                                                                    content: `"${
-                                                                        recipe
-                                                                            .title
-                                                                            .length >
-                                                                        20
-                                                                            ? recipe.title.substring(
-                                                                                  0,
-                                                                                  20
-                                                                              ) +
-                                                                              '...'
-                                                                            : recipe.title
-                                                                    }"`,
-                                                                    position:
-                                                                        'absolute',
-                                                                    fontFamily:
-                                                                        "'Kalam', cursive",
-                                                                    fontSize:
-                                                                        '1.75rem',
-                                                                    color: theme
-                                                                        .palette
-                                                                        .primary
-                                                                        .main,
-                                                                    opacity: 0.15,
-                                                                    transform:
-                                                                        'rotate(-5deg)',
-                                                                    textTransform:
-                                                                        'uppercase',
-                                                                    letterSpacing:
-                                                                        '1px',
-                                                                    textAlign:
-                                                                        'center',
-                                                                    width: '100%',
-                                                                    maxWidth:
-                                                                        '90%',
-                                                                    left: '5%',
-                                                                    right: '5%',
-                                                                },
-                                                            }}
-                                                        />
-                                                    )}
-                                                    <CardContent
-                                                        sx={{
-                                                            flexGrow: 1,
-                                                            p: { xs: 2, sm: 3 },
-                                                            display: 'flex',
-                                                            flexDirection:
-                                                                'column',
-                                                        }}
-                                                    >
-                                                        <Typography
-                                                            variant="h6"
-                                                            component="h2"
-                                                            gutterBottom
-                                                            sx={{
-                                                                fontWeight: 600,
-                                                                fontSize: {
-                                                                    xs: '1.1rem',
-                                                                    sm: '1.25rem',
-                                                                },
-                                                                mb: 1,
-                                                                overflow:
-                                                                    'hidden',
-                                                                textOverflow:
-                                                                    'ellipsis',
-                                                                display:
-                                                                    '-webkit-box',
-                                                                WebkitLineClamp: 2,
-                                                                WebkitBoxOrient:
-                                                                    'vertical',
-                                                                fontFamily:
-                                                                    "'Kalam', cursive",
-                                                                color: 'primary.main',
-                                                            }}
-                                                        >
-                                                            {recipe.title}
-                                                        </Typography>
-                                                        <Typography
-                                                            color="text.secondary"
-                                                            sx={{
-                                                                mb: 2,
-                                                                overflow:
-                                                                    'hidden',
-                                                                textOverflow:
-                                                                    'ellipsis',
-                                                                display:
-                                                                    '-webkit-box',
-                                                                WebkitLineClamp: 2,
-                                                                WebkitBoxOrient:
-                                                                    'vertical',
-                                                                fontSize: {
-                                                                    xs: '0.875rem',
-                                                                    sm: '1rem',
-                                                                },
-                                                                minHeight: {
-                                                                    xs: '40px',
-                                                                    sm: '48px',
-                                                                },
-                                                                fontFamily:
-                                                                    "'Inter', sans-serif",
-                                                            }}
-                                                        >
-                                                            {recipe.description}
-                                                        </Typography>
-                                                        <Box
-                                                            sx={{
-                                                                display: 'flex',
-                                                                gap: 0.75,
-                                                                flexWrap:
-                                                                    'wrap',
-                                                                mb: 1,
-                                                                mt: 'auto',
-                                                            }}
-                                                        >
-                                                            {recipe.tags &&
-                                                                recipe.tags
-                                                                    .length >
-                                                                    0 &&
-                                                                recipe.tags
-                                                                    .slice(0, 3)
-                                                                    .map(
-                                                                        (
-                                                                            tag
-                                                                        ) => (
-                                                                            <Chip
-                                                                                key={
-                                                                                    tag
-                                                                                }
-                                                                                label={
-                                                                                    tag
-                                                                                }
-                                                                                size="small"
-                                                                                color="secondary"
-                                                                                sx={{
-                                                                                    fontSize:
-                                                                                        '0.75rem',
-                                                                                    height: '24px',
-                                                                                    fontFamily:
-                                                                                        "'Inter', sans-serif",
-                                                                                }}
-                                                                            />
-                                                                        )
-                                                                    )}
-                                                            {recipe.tags &&
-                                                                recipe.tags
-                                                                    .length >
-                                                                    3 && (
-                                                                    <Chip
-                                                                        label={`+${
-                                                                            recipe
-                                                                                .tags
-                                                                                .length -
-                                                                            3
-                                                                        }`}
-                                                                        size="small"
-                                                                        variant="outlined"
-                                                                        sx={{
-                                                                            fontSize:
-                                                                                '0.75rem',
-                                                                            height: '24px',
-                                                                            fontFamily:
-                                                                                "'Inter', sans-serif",
-                                                                        }}
-                                                                    />
-                                                                )}
-                                                        </Box>
-                                                        <Box
-                                                            sx={{
-                                                                display: 'flex',
-                                                                alignItems:
-                                                                    'center',
-                                                                gap: {
-                                                                    xs: 1.5,
-                                                                    sm: 2,
-                                                                },
-                                                                mt: 2,
-                                                                pt: 2,
-                                                                borderTop:
-                                                                    '1px solid',
-                                                                borderColor:
-                                                                    'divider',
-                                                            }}
-                                                        >
-                                                            <Box
-                                                                sx={{
-                                                                    display:
-                                                                        'flex',
-                                                                    alignItems:
-                                                                        'center',
-                                                                    gap: 0.5,
-                                                                }}
-                                                            >
-                                                                <RestaurantIcon
-                                                                    sx={{
-                                                                        fontSize:
-                                                                            {
-                                                                                xs: '1rem',
-                                                                                sm: '1.25rem',
-                                                                            },
-                                                                        color: 'primary.main',
-                                                                    }}
-                                                                />
-                                                                <Typography
-                                                                    variant="body2"
-                                                                    color="text.secondary"
-                                                                    sx={{
-                                                                        fontSize:
-                                                                            {
-                                                                                xs: '0.75rem',
-                                                                                sm: '0.875rem',
-                                                                            },
-                                                                        fontFamily:
-                                                                            "'Inter', sans-serif",
-                                                                    }}
-                                                                >
-                                                                    {
-                                                                        recipe.servings
-                                                                    }{' '}
-                                                                    servings
-                                                                </Typography>
-                                                            </Box>
-                                                            {recipe.time_estimate && (
-                                                                <Box
-                                                                    sx={{
-                                                                        display:
-                                                                            'flex',
-                                                                        alignItems:
-                                                                            'center',
-                                                                        gap: 0.5,
-                                                                    }}
-                                                                >
-                                                                    <AccessTimeIcon
-                                                                        sx={{
-                                                                            fontSize:
-                                                                                {
-                                                                                    xs: '1rem',
-                                                                                    sm: '1.25rem',
-                                                                                },
-                                                                            color: 'primary.main',
-                                                                        }}
-                                                                    />
-                                                                    <Typography
-                                                                        variant="body2"
-                                                                        color="text.secondary"
-                                                                        sx={{
-                                                                            fontSize:
-                                                                                {
-                                                                                    xs: '0.75rem',
-                                                                                    sm: '0.875rem',
-                                                                                },
-                                                                            fontFamily:
-                                                                                "'Inter', sans-serif",
-                                                                        }}
-                                                                    >
-                                                                        {formatTimeDisplay(
-                                                                            recipe
-                                                                                .time_estimate
-                                                                                .total
-                                                                        )}
-                                                                    </Typography>
-                                                                </Box>
-                                                            )}
-                                                        </Box>
-                                                    </CardContent>
-                                                </Card>
-                                            </Grid>
+                                                handleRecipeClick={
+                                                    handleRecipeClick
+                                                }
+                                                determineMatchType={
+                                                    determineMatchType
+                                                }
+                                                searchQuery={searchQuery}
+                                                selectedCollection={
+                                                    selectedCollection
+                                                }
+                                                theme={theme} // Pass theme
+                                            />
                                         );
                                     })}
                                 </Grid>
