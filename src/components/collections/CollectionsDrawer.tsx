@@ -407,7 +407,7 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                     }}
                 >
                     {isLoading ? (
-                        <List sx={{ px: 1, pt: 1 }}>
+                        <List sx={{ px: isOpen ? 1 : 0.75, pt: 1 }}>
                             {[0, 1, 2, 3, 4].map((index) => (
                                 <ListItem
                                     key={index}
@@ -429,41 +429,31 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                                                 overflow: 'hidden',
                                                 display: 'flex',
                                                 alignItems: 'center',
+                                                justifyContent: isOpen
+                                                    ? 'flex-start'
+                                                    : 'center',
                                                 bgcolor: alpha(
                                                     theme.palette.primary.light,
                                                     0.04
                                                 ),
                                             }}
                                         >
-                                            <Box
-                                                sx={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    width: '100%',
-                                                    px: 2,
-                                                }}
-                                            >
-                                                <Skeleton
-                                                    variant="circular"
-                                                    width={24}
-                                                    height={24}
-                                                    animation="pulse"
+                                            {isOpen ? (
+                                                <Box
                                                     sx={{
-                                                        mr: 2,
-                                                        bgcolor: alpha(
-                                                            theme.palette
-                                                                .primary.light,
-                                                            0.1
-                                                        ),
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        width: '100%',
+                                                        px: 2,
                                                     }}
-                                                />
-                                                <Box sx={{ width: '100%' }}>
+                                                >
                                                     <Skeleton
-                                                        variant="text"
-                                                        width="60%"
-                                                        height={20}
-                                                        animation="wave"
+                                                        variant="circular"
+                                                        width={24}
+                                                        height={24}
+                                                        animation="pulse"
                                                         sx={{
+                                                            mr: 2,
                                                             bgcolor: alpha(
                                                                 theme.palette
                                                                     .primary
@@ -472,29 +462,61 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                                                             ),
                                                         }}
                                                     />
-                                                    <Skeleton
-                                                        variant="text"
-                                                        width="40%"
-                                                        height={16}
-                                                        animation="wave"
-                                                        sx={{
-                                                            bgcolor: alpha(
-                                                                theme.palette
-                                                                    .primary
-                                                                    .light,
-                                                                0.07
-                                                            ),
-                                                        }}
-                                                    />
+                                                    <Box sx={{ width: '100%' }}>
+                                                        <Skeleton
+                                                            variant="text"
+                                                            width="60%"
+                                                            height={20}
+                                                            animation="wave"
+                                                            sx={{
+                                                                bgcolor: alpha(
+                                                                    theme
+                                                                        .palette
+                                                                        .primary
+                                                                        .light,
+                                                                    0.1
+                                                                ),
+                                                            }}
+                                                        />
+                                                        <Skeleton
+                                                            variant="text"
+                                                            width="40%"
+                                                            height={16}
+                                                            animation="wave"
+                                                            sx={{
+                                                                bgcolor: alpha(
+                                                                    theme
+                                                                        .palette
+                                                                        .primary
+                                                                        .light,
+                                                                    0.07
+                                                                ),
+                                                            }}
+                                                        />
+                                                    </Box>
                                                 </Box>
-                                            </Box>
+                                            ) : (
+                                                <Skeleton
+                                                    variant="circular"
+                                                    width={32}
+                                                    height={32}
+                                                    animation="pulse"
+                                                    sx={{
+                                                        bgcolor: alpha(
+                                                            theme.palette
+                                                                .primary.light,
+                                                            0.1
+                                                        ),
+                                                    }}
+                                                />
+                                            )}
                                         </Paper>
                                     </Box>
                                 </ListItem>
                             ))}
                         </List>
                     ) : (
-                        <List sx={{ px: 1, pt: 1 }}>
+                        <List sx={{ px: isOpen ? 1 : 0.75, pt: 1 }}>
                             {sortedCollections.map((collection) => (
                                 <Collapse
                                     key={collection.id}
@@ -1251,88 +1273,192 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                             opacity: 0.8,
                         }}
                     >
-                        <Fade
-                            in={isOpen}
-                            timeout={{ enter: 400, exit: 200 }}
-                            style={{
-                                position: 'absolute',
-                                width: '100%',
-                                transitionDelay: isOpen ? '100ms' : '0ms',
-                            }}
-                            unmountOnExit
-                        >
-                            <Button
-                                variant="outlined"
-                                color="primary"
-                                startIcon={<AddRoundedIcon fontSize="small" />}
-                                fullWidth
-                                sx={{
-                                    borderRadius: 2,
-                                    textTransform: 'none',
-                                    fontWeight: 600,
-                                    height: '36px',
-                                    py: 0.5,
-                                    border: '1px dashed',
-                                    borderColor: 'primary.light',
-                                    boxShadow: 'none',
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    fontSize: '0.9rem',
-                                    '&:hover': {
-                                        border: '1px dashed',
-                                        borderColor: 'primary.dark',
-                                        bgcolor: alpha(
-                                            theme.palette.primary.main,
-                                            0.04
-                                        ),
-                                    },
-                                    '& .MuiButton-startIcon': {
-                                        marginRight: 0.5,
-                                        transform: 'scale(0.9)',
-                                    },
-                                }}
-                                onClick={onCreateCollection}
-                            >
-                                New Collection
-                            </Button>
-                        </Fade>
-
-                        <Zoom
-                            in={!isOpen}
-                            timeout={{ enter: 300, exit: 200 }}
-                            style={{
-                                transitionDelay: !isOpen ? '75ms' : '0ms',
-                            }}
-                            unmountOnExit
-                        >
-                            <Tooltip title="">
-                                <IconButton
-                                    color="primary"
-                                    size="medium"
-                                    sx={{
-                                        width: '36px',
-                                        height: '36px',
-                                        border: '1px dashed',
-                                        borderColor: 'primary.light',
-                                        padding: 0.75,
-                                        '&:hover': {
+                        {isLoading ? (
+                            <>
+                                {/* Skeleton for open drawer */}
+                                <Fade
+                                    in={isOpen}
+                                    timeout={{ enter: 400, exit: 200 }}
+                                    style={{
+                                        position: 'absolute',
+                                        width: '100%',
+                                        transitionDelay: isOpen
+                                            ? '100ms'
+                                            : '0ms',
+                                    }}
+                                    unmountOnExit
+                                >
+                                    <Paper
+                                        elevation={0}
+                                        sx={{
+                                            width: '100%',
+                                            height: '36px',
+                                            borderRadius: 2,
+                                            border: '1px dashed',
+                                            borderColor: alpha(
+                                                theme.palette.primary.light,
+                                                0.3
+                                            ),
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            pl: 1.5,
                                             bgcolor: alpha(
-                                                theme.palette.primary.main,
+                                                theme.palette.primary.light,
                                                 0.04
                                             ),
-                                            borderColor: 'primary.dark',
-                                        },
-                                        '& .MuiSvgIcon-root': {
-                                            fontSize: '1.25rem',
-                                        },
+                                        }}
+                                    >
+                                        <Skeleton
+                                            variant="circular"
+                                            width={20}
+                                            height={20}
+                                            animation="pulse"
+                                            sx={{
+                                                mr: 1,
+                                                bgcolor: alpha(
+                                                    theme.palette.primary.light,
+                                                    0.1
+                                                ),
+                                            }}
+                                        />
+                                        <Skeleton
+                                            variant="text"
+                                            width="60%"
+                                            height={20}
+                                            animation="wave"
+                                            sx={{
+                                                bgcolor: alpha(
+                                                    theme.palette.primary.light,
+                                                    0.1
+                                                ),
+                                            }}
+                                        />
+                                    </Paper>
+                                </Fade>
+
+                                {/* Skeleton for collapsed drawer */}
+                                <Zoom
+                                    in={!isOpen}
+                                    timeout={{ enter: 300, exit: 200 }}
+                                    style={{
+                                        transitionDelay: !isOpen
+                                            ? '75ms'
+                                            : '0ms',
                                     }}
-                                    onClick={onCreateCollection}
+                                    unmountOnExit
                                 >
-                                    <AddRoundedIcon fontSize="inherit" />
-                                </IconButton>
-                            </Tooltip>
-                        </Zoom>
+                                    <Skeleton
+                                        variant="circular"
+                                        width={36}
+                                        height={36}
+                                        animation="pulse"
+                                        sx={{
+                                            bgcolor: alpha(
+                                                theme.palette.primary.light,
+                                                0.1
+                                            ),
+                                            border: '1px dashed',
+                                            borderColor: alpha(
+                                                theme.palette.primary.light,
+                                                0.3
+                                            ),
+                                        }}
+                                    />
+                                </Zoom>
+                            </>
+                        ) : (
+                            <>
+                                <Fade
+                                    in={isOpen}
+                                    timeout={{ enter: 400, exit: 200 }}
+                                    style={{
+                                        position: 'absolute',
+                                        width: '100%',
+                                        transitionDelay: isOpen
+                                            ? '100ms'
+                                            : '0ms',
+                                    }}
+                                    unmountOnExit
+                                >
+                                    <Button
+                                        variant="outlined"
+                                        color="primary"
+                                        startIcon={
+                                            <AddRoundedIcon fontSize="small" />
+                                        }
+                                        fullWidth
+                                        sx={{
+                                            borderRadius: 2,
+                                            textTransform: 'none',
+                                            fontWeight: 600,
+                                            height: '36px',
+                                            py: 0.5,
+                                            border: '1px dashed',
+                                            borderColor: 'primary.light',
+                                            boxShadow: 'none',
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            fontSize: '0.9rem',
+                                            '&:hover': {
+                                                border: '1px dashed',
+                                                borderColor: 'primary.dark',
+                                                bgcolor: alpha(
+                                                    theme.palette.primary.main,
+                                                    0.04
+                                                ),
+                                            },
+                                            '& .MuiButton-startIcon': {
+                                                marginRight: 0.5,
+                                                transform: 'scale(0.9)',
+                                            },
+                                        }}
+                                        onClick={onCreateCollection}
+                                    >
+                                        New Collection
+                                    </Button>
+                                </Fade>
+
+                                <Zoom
+                                    in={!isOpen}
+                                    timeout={{ enter: 300, exit: 200 }}
+                                    style={{
+                                        transitionDelay: !isOpen
+                                            ? '75ms'
+                                            : '0ms',
+                                    }}
+                                    unmountOnExit
+                                >
+                                    <Tooltip title="">
+                                        <IconButton
+                                            color="primary"
+                                            size="medium"
+                                            sx={{
+                                                width: '36px',
+                                                height: '36px',
+                                                border: '1px dashed',
+                                                borderColor: 'primary.light',
+                                                padding: 0.75,
+                                                '&:hover': {
+                                                    bgcolor: alpha(
+                                                        theme.palette.primary
+                                                            .main,
+                                                        0.04
+                                                    ),
+                                                    borderColor: 'primary.dark',
+                                                },
+                                                '& .MuiSvgIcon-root': {
+                                                    fontSize: '1.25rem',
+                                                },
+                                            }}
+                                            onClick={onCreateCollection}
+                                        >
+                                            <AddRoundedIcon fontSize="inherit" />
+                                        </IconButton>
+                                    </Tooltip>
+                                </Zoom>
+                            </>
+                        )}
                     </Box>
                 </Box>
 
