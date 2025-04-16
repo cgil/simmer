@@ -87,7 +87,7 @@ const CatalogPage: FC = () => {
     const [selectedCollection, setSelectedCollection] = useState<string>(
         collectionId || ALL_RECIPES_ID
     );
-    const [drawerOpen, setDrawerOpen] = useState(true);
+    const [drawerOpen, setDrawerOpen] = useState(false);
     // New state for collections
     const [collections, setCollections] = useState<CollectionItem[]>([]);
     const [collectionsLoading, setCollectionsLoading] = useState(true);

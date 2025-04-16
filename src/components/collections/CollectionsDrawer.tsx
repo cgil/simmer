@@ -83,7 +83,7 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
     onUpdateCollection,
     onDeleteCollection,
     collectionsBeingRemoved = [], // Default to empty array
-    isOpen = true, // Default to open
+    isOpen = false, // Default to closed
 }) => {
     const theme = useTheme();
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
@@ -289,6 +289,7 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                 />
             )}
             <Drawer
+                id="collections-drawer"
                 variant={isSmallScreen ? 'temporary' : 'permanent'}
                 open={isSmallScreen ? isOpen : undefined}
                 onClose={isSmallScreen ? handleToggleDrawer : undefined}
@@ -328,6 +329,14 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                         zIndex: theme.zIndex.modal,
                     }),
                 }}
+                // Fix for accessibility - hide content properly from screen readers when closed on small screens
+                slotProps={{
+                    backdrop: {
+                        sx: { zIndex: theme.zIndex.drawer },
+                    },
+                }}
+                // Don't keep elements in DOM when hidden on small screens
+                keepMounted={!isSmallScreen}
             >
                 {/* Fixed header with expand/collapse button */}
                 <Box
@@ -364,6 +373,13 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                         <IconButton
                             onClick={handleToggleDrawer}
                             color="primary"
+                            aria-label={
+                                isOpen
+                                    ? 'collapse collections'
+                                    : 'expand collections'
+                            }
+                            aria-expanded={isOpen}
+                            aria-controls="collections-drawer"
                             sx={{
                                 '&:hover': {
                                     bgcolor: alpha(

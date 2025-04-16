@@ -1,4 +1,4 @@
-import { FC, ReactNode, useState } from 'react';
+import { FC, ReactNode, useState, useRef, useEffect } from 'react';
 import {
     AppBar,
     Box,
@@ -46,17 +46,29 @@ const AppLayout: FC<AppLayoutProps> = ({
     hasDrawer = false,
     drawerWidth = 240,
     collapsedDrawerWidth = 72,
-    isDrawerOpen = true,
+    isDrawerOpen = false,
     onToggleDrawer,
 }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const navigate = useNavigate();
     const { user, signOut } = useAuth();
+    const menuButtonRef = useRef<HTMLButtonElement>(null);
 
     // User menu state
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
+
+    // Focus the menu button when drawer closes on mobile
+    useEffect(() => {
+        if (isMobile && !isDrawerOpen && menuButtonRef.current) {
+            // Add a small delay to ensure DOM updates first
+            const timer = setTimeout(() => {
+                menuButtonRef.current?.focus();
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [isMobile, isDrawerOpen]);
 
     const handleUserMenuClick = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
@@ -168,6 +180,7 @@ const AppLayout: FC<AppLayoutProps> = ({
                             zIndex: 1,
                         }}
                     >
+                        {/* Menu toggle button for small screens */}
                         {hasDrawer && isMobile && (
                             <IconButton
                                 color="primary"
@@ -175,6 +188,7 @@ const AppLayout: FC<AppLayoutProps> = ({
                                 edge="start"
                                 onClick={onToggleDrawer}
                                 sx={{ mr: 2 }}
+                                ref={menuButtonRef}
                             >
                                 <MenuIcon />
                             </IconButton>
