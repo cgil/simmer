@@ -108,7 +108,7 @@ const DraggableRecipeCard: FC<DraggableRecipeCardProps> = ({
                     item.recipeId !== recipe.id
                 );
             },
-            hover: (item: RecipeDragItem, monitor) => {
+            hover: (_item: RecipeDragItem, monitor) => {
                 // Get current mouse position
                 const clientOffset = monitor.getClientOffset();
                 if (!clientOffset) return;
