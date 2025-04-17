@@ -65,8 +65,7 @@ serve(async (req) => {
 
         // Generate complete recipe using OpenAI with Zod schema
         const completion = await openai.chat.completions.create({
-            model: "o3-mini",
-            reasoning_effort: "high",
+            model: "4.1",
             response_format: zodResponseFormat(
                 RecipeSchema,
                 "recipe_creation",
