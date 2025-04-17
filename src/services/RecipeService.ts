@@ -1236,24 +1236,50 @@ export class RecipeService {
         recipeId: string,
         collectionId: string,
     ): Promise<boolean> {
-        const { error } = await supabase
-            .from("recipe_collections")
-            .insert({
-                recipe_id: recipeId,
-                collection_id: collectionId,
-            });
+        try {
+            // First, find the maximum position value in the collection
+            const { data: positionData, error: positionError } = await supabase
+                .from("recipe_collections")
+                .select("position")
+                .eq("collection_id", collectionId)
+                .order("position", { ascending: false })
+                .limit(1);
 
-        if (error) {
-            // If error is duplicate, just return true
-            if (error.code === "23505") { // Unique violation
-                console.log("Recipe already in collection");
-                return true;
+            if (positionError) {
+                console.error("Error getting max position:", positionError);
+                throw positionError;
             }
-            console.error("Error adding recipe to collection:", error);
+
+            // Calculate new position - either 1000 higher than the current max, or 1000 if no recipes exist
+            const maxPosition = positionData && positionData.length > 0
+                ? positionData[0].position
+                : 0;
+            const newPosition = maxPosition + 1000;
+
+            // Insert with the calculated position
+            const { error } = await supabase
+                .from("recipe_collections")
+                .insert({
+                    recipe_id: recipeId,
+                    collection_id: collectionId,
+                    position: newPosition,
+                });
+
+            if (error) {
+                // If error is duplicate, just return true
+                if (error.code === "23505") { // Unique violation
+                    console.log("Recipe already in collection");
+                    return true;
+                }
+                console.error("Error adding recipe to collection:", error);
+                throw error;
+            }
+
+            return true;
+        } catch (error) {
+            console.error("Error in addRecipeToCollection:", error);
             throw error;
         }
-
-        return true;
     }
 
     /**
@@ -1291,22 +1317,30 @@ export class RecipeService {
         collectionId: string,
     ): Promise<Recipe[]> {
         try {
-            const { data: recipeIds, error: recipeIdsError } = await supabase
+            // First, get recipe IDs with their positions in the collection
+            const { data: recipeData, error: recipeDataError } = await supabase
                 .from("recipe_collections")
-                .select("recipe_id")
-                .eq("collection_id", collectionId);
+                .select("recipe_id, position")
+                .eq("collection_id", collectionId)
+                .order("position"); // Order by position
 
-            if (recipeIdsError) {
-                console.error("Error fetching recipe IDs:", recipeIdsError);
-                throw recipeIdsError;
+            if (recipeDataError) {
+                console.error("Error fetching recipe data:", recipeDataError);
+                throw recipeDataError;
             }
 
-            if (!recipeIds || recipeIds.length === 0) {
+            if (!recipeData || recipeData.length === 0) {
                 return [];
             }
 
-            const ids = recipeIds.map((r) => r.recipe_id);
+            // Extract recipe IDs
+            const ids = recipeData.map((r) => r.recipe_id);
+            // Create a map of recipe ID to position for later sorting
+            const positionMap = Object.fromEntries(
+                recipeData.map((r) => [r.recipe_id, r.position]),
+            );
 
+            // Get the full recipe data for these IDs
             const { data: recipes, error } = await supabase
                 .from("recipes")
                 .select(`
@@ -1319,19 +1353,28 @@ export class RecipeService {
                     )
                 `)
                 .eq("user_id", userId)
-                .in("id", ids)
-                .order("title");
+                .in("id", ids);
 
             if (error) {
                 console.error("Error fetching recipes by collection:", error);
                 throw error;
             }
 
-            return recipes
-                ? recipes.map((recipe) =>
-                    this.mapDbRecipeToRecipe(recipe as RecipeWithRelations)
-                )
-                : [];
+            if (!recipes) {
+                return [];
+            }
+
+            // Map recipes to our application model and sort by the position in the collection
+            const mappedRecipes = recipes.map((recipe) =>
+                this.mapDbRecipeToRecipe(recipe as RecipeWithRelations)
+            );
+
+            // Sort by the position values we retrieved earlier
+            return mappedRecipes.sort((a, b) => {
+                const posA = a.id && positionMap[a.id] ? positionMap[a.id] : 0;
+                const posB = b.id && positionMap[b.id] ? positionMap[b.id] : 0;
+                return posA - posB;
+            });
         } catch (error) {
             console.error("Error in getRecipesByCollection:", error);
             throw error;
@@ -1381,6 +1424,89 @@ export class RecipeService {
             return collections;
         } catch (error) {
             console.error("Error in getCollectionsForRecipe:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update the position of a recipe within a collection
+     * This supports drag-and-drop reordering of recipes
+     * @param recipeId - The ID of the recipe to reposition
+     * @param collectionId - The ID of the collection
+     * @param newPosition - The new position value
+     * @returns True if successful
+     */
+    static async updateRecipePositionInCollection(
+        recipeId: string,
+        collectionId: string,
+        newPosition: number,
+    ): Promise<boolean> {
+        try {
+            // First, get the current recipe_collections record
+            const { data: existingRecord, error: fetchError } = await supabase
+                .from("recipe_collections")
+                .select("id, position")
+                .eq("recipe_id", recipeId)
+                .eq("collection_id", collectionId)
+                .single();
+
+            if (fetchError) {
+                console.error(
+                    "Error fetching recipe collection record:",
+                    fetchError,
+                );
+                throw fetchError;
+            }
+
+            if (!existingRecord) {
+                throw new Error("Recipe not found in this collection");
+            }
+
+            // Update the position
+            const { error: updateError } = await supabase
+                .from("recipe_collections")
+                .update({ position: newPosition })
+                .eq("id", existingRecord.id);
+
+            if (updateError) {
+                console.error("Error updating recipe position:", updateError);
+                throw updateError;
+            }
+
+            return true;
+        } catch (error) {
+            console.error("Error in updateRecipePositionInCollection:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get the positions of recipes in a collection
+     * Useful for determining available positions for reordering
+     * @param collectionId - The ID of the collection
+     * @returns Array of recipe positions
+     */
+    static async getRecipePositionsInCollection(
+        collectionId: string,
+    ): Promise<{ recipeId: string; position: number }[]> {
+        try {
+            const { data, error } = await supabase
+                .from("recipe_collections")
+                .select("recipe_id, position")
+                .eq("collection_id", collectionId)
+                .order("position");
+
+            if (error) {
+                console.error("Error fetching recipe positions:", error);
+                throw error;
+            }
+
+            return data?.map((item) => ({
+                recipeId: item.recipe_id,
+                position: item.position,
+            })) || [];
+        } catch (error) {
+            console.error("Error in getRecipePositionsInCollection:", error);
             throw error;
         }
     }

@@ -28,7 +28,7 @@ import MatchCornerFold, {
 } from '../../components/recipe/MatchCornerFold';
 import CollectionsDrawer from '../../components/collections/CollectionsDrawer';
 // Import DnD hooks and types
-import { useDrag } from 'react-dnd';
+import { useDrag, useDrop } from 'react-dnd';
 import { ItemTypes, RecipeDragItem } from '../../types/dnd'; // Import the type definition
 
 // Import from collection.ts including the new constant
@@ -48,6 +48,14 @@ interface DraggableRecipeCardProps {
     searchQuery: string;
     selectedCollection: string;
     theme: Theme; // Pass theme explicitly
+    recipePosition?: number; // Add position prop
+    onRecipeReorder?: (
+        draggedId: string,
+        targetId: string,
+        newPosition: number
+    ) => void; // Add reordering handler
+    isFirstItem?: boolean; // Add prop to identify if this is the first item
+    isLastItem?: boolean; // Add prop to identify if this is the last item
 }
 
 const DraggableRecipeCard: FC<DraggableRecipeCardProps> = ({
@@ -59,11 +67,20 @@ const DraggableRecipeCard: FC<DraggableRecipeCardProps> = ({
     searchQuery,
     selectedCollection,
     theme,
+    recipePosition,
+    onRecipeReorder,
+    isFirstItem = false,
+    isLastItem = false,
 }) => {
     // Determine match type if search is active
     const matchType = searchQuery
         ? determineMatchType(recipe, searchQuery)
         : null;
+
+    // State to track mouse position for determining left/right drop position
+    const [dropPosition, setDropPosition] = useState<'left' | 'right' | null>(
+        null
+    );
 
     // Reference for the drag source
     const [{ isDragging }, drag] = useDrag(() => ({
@@ -71,32 +88,194 @@ const DraggableRecipeCard: FC<DraggableRecipeCardProps> = ({
         item: {
             type: ItemTypes.RECIPE_CARD,
             recipeId: recipe.id,
-            // Pass the ID of the collection the recipe is currently displayed in
-            sourceCollectionId:
-                selectedCollection === ALL_RECIPES_ID
-                    ? null
-                    : selectedCollection,
-        } as RecipeDragItem, // Ensure type conformance
+            sourceCollectionId: selectedCollection,
+            currentPosition: recipePosition,
+            isReordering: selectedCollection !== ALL_RECIPES_ID,
+        } as RecipeDragItem,
         collect: (monitor) => ({
             isDragging: !!monitor.isDragging(),
         }),
-        // Optional: Add logic for canDrag if needed
-        // Optional: Add endDrag handler for cleanup or feedback
     }));
+
+    // Reference for drop target (to enable reordering within same collection)
+    const [{ isOver, canDrop }, drop] = useDrop(
+        () => ({
+            accept: ItemTypes.RECIPE_CARD,
+            canDrop: (item: RecipeDragItem) => {
+                return (
+                    item.sourceCollectionId === selectedCollection &&
+                    selectedCollection !== ALL_RECIPES_ID &&
+                    item.recipeId !== recipe.id
+                );
+            },
+            hover: (item: RecipeDragItem, monitor) => {
+                // Get current mouse position
+                const clientOffset = monitor.getClientOffset();
+                if (!clientOffset) return;
+
+                // Set left/right based on which half of the screen we're in
+                const screenMiddleX = window.innerWidth / 2;
+                const newPosition =
+                    clientOffset.x < screenMiddleX ? 'left' : 'right';
+                setDropPosition(newPosition);
+            },
+            drop: (item: RecipeDragItem) => {
+                // Reset drop position after drop
+                const position = dropPosition;
+                setDropPosition(null);
+
+                // Skip if we don't have the required data
+                if (
+                    !onRecipeReorder ||
+                    !item.recipeId ||
+                    item.sourceCollectionId !== selectedCollection ||
+                    selectedCollection === ALL_RECIPES_ID ||
+                    recipePosition === undefined
+                ) {
+                    return;
+                }
+
+                // All checks passed, item.recipeId and recipe.id are both defined strings
+                const safeRecipeId = item.recipeId as string;
+                const safeTargetId = recipe.id as string;
+
+                // Special handling for first and last positions
+                if (position === 'left' && isFirstItem) {
+                    // When dropping at the left of the first item, use a position before this item
+                    onRecipeReorder(
+                        safeRecipeId,
+                        safeTargetId,
+                        recipePosition - 1000
+                    );
+                } else if (position === 'right' && isLastItem) {
+                    // When dropping at the right of the last item, use a position after this item
+                    onRecipeReorder(
+                        safeRecipeId,
+                        safeTargetId,
+                        recipePosition + 1000
+                    );
+                } else {
+                    // Normal case - use the current recipe's position
+                    onRecipeReorder(safeRecipeId, safeTargetId, recipePosition);
+                }
+            },
+            collect: (monitor) => ({
+                isOver: !!monitor.isOver(),
+                canDrop: !!monitor.canDrop(),
+            }),
+        }),
+        [
+            selectedCollection,
+            recipe.id,
+            recipePosition,
+            onRecipeReorder,
+            isLastItem,
+        ]
+    );
+
+    // Combine drag and drop refs using React DnD's method
+    const dragDropRef = useCallback(
+        (node: HTMLDivElement | null) => {
+            // Apply the drag and drop refs
+            drag(node);
+            drop(node);
+
+            // Apply the last element ref if needed
+            if (isLastElement && node) {
+                lastRecipeElementRef(node);
+            }
+        },
+        [drag, drop, isLastElement, lastRecipeElementRef]
+    );
+
+    // Reset drop position when no longer over the component
+    useEffect(() => {
+        if (!isOver) {
+            setDropPosition(null);
+        }
+    }, [isOver]);
 
     return (
         <Grid
             item
             xs={1}
             key={recipe.id}
-            ref={drag} // Apply the drag ref to the Grid item
+            ref={dragDropRef}
             sx={{
-                opacity: isDragging ? 0.5 : 1, // Style for dragging state
-                cursor: 'move', // Indicate draggable
-                // Add transition for smoother opacity change
+                opacity: isDragging ? 0.5 : 1,
+                cursor: 'move',
                 transition: theme.transitions.create('opacity', {
                     duration: theme.transitions.duration.short,
                 }),
+                position: 'relative',
+                // Left highlight
+                ...(canDrop && isOver && dropPosition === 'left'
+                    ? {
+                          '&::before': {
+                              content: '""',
+                              position: 'absolute',
+                              top: '10%',
+                              left: 10,
+                              width: 2,
+                              height: '80%',
+                              backgroundColor: theme.palette.primary.light,
+                              borderRadius: 4,
+                              zIndex: 10,
+                              opacity: 0.5,
+                          },
+                      }
+                    : {}),
+                // Right highlight
+                ...(canDrop && isOver && dropPosition === 'right'
+                    ? {
+                          '&::after': {
+                              content: '""',
+                              position: 'absolute',
+                              top: '10%',
+                              right: -12,
+                              width: 2,
+                              height: '80%',
+                              backgroundColor: theme.palette.primary.light,
+                              borderRadius: 4,
+                              zIndex: 10,
+                              opacity: 0.5,
+                          },
+                      }
+                    : {}),
+                // Special case for first item - left edge
+                ...(canDrop && isOver && dropPosition === 'left' && isFirstItem
+                    ? {
+                          '&::before': {
+                              content: '""',
+                              position: 'absolute',
+                              top: '10%',
+                              left: 10,
+                              width: 2,
+                              height: '80%',
+                              backgroundColor: theme.palette.primary.light,
+                              borderRadius: 4,
+                              zIndex: 10,
+                              opacity: 0.5,
+                          },
+                      }
+                    : {}),
+                // Special case for last item - right edge
+                ...(canDrop && isOver && dropPosition === 'right' && isLastItem
+                    ? {
+                          '&::after': {
+                              content: '""',
+                              position: 'absolute',
+                              top: '10%',
+                              right: -10,
+                              width: 2,
+                              height: '80%',
+                              backgroundColor: theme.palette.primary.light,
+                              borderRadius: 4,
+                              zIndex: 10,
+                              opacity: 0.5,
+                          },
+                      }
+                    : {}),
             }}
         >
             <div // Non-draggable container for the last element ref
@@ -145,6 +324,14 @@ const DraggableRecipeCard: FC<DraggableRecipeCardProps> = ({
                             boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
                             borderColor: 'rgba(44, 62, 80, 0.15)',
                         },
+                        // Apply subtle elevation when being targeted
+                        ...(canDrop && isOver
+                            ? {
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: '0 4px 16px rgba(0,0,0,0.09)',
+                                  transition: 'all 0.2s ease-out',
+                              }
+                            : {}),
                     }}
                 >
                     {/* Match Corner Fold - only appears during search */}
@@ -991,6 +1178,109 @@ const CatalogPage: FC = () => {
         [user, selectedCollection, recipes, collections] // Dependencies
     );
 
+    // Handle reordering of recipes within a collection
+    const handleRecipeReordering = useCallback(
+        async (draggedId: string, targetId: string, newIndex: number) => {
+            if (!user || selectedCollection === ALL_RECIPES_ID) return;
+
+            console.log(
+                `Reordering recipe ${draggedId} to position ${newIndex}`
+            );
+
+            // Store original recipe order for potential rollback
+            const originalRecipes = [...recipes];
+
+            try {
+                // Find the dragged recipe and its index
+                const draggedRecipeIndex = recipes.findIndex(
+                    (r) => r.id === draggedId
+                );
+                if (draggedRecipeIndex === -1) {
+                    console.error('Dragged recipe not found in list');
+                    return;
+                }
+
+                // Find the target recipe
+                const targetRecipeIndex = recipes.findIndex(
+                    (r) => r.id === targetId
+                );
+                if (targetRecipeIndex === -1) {
+                    console.error('Target recipe not found in list');
+                    return;
+                }
+
+                // Get all current recipe positions in this collection
+                const positionData =
+                    await RecipeService.getRecipePositionsInCollection(
+                        selectedCollection
+                    );
+
+                // If we have no position data, or empty collection, bail out
+                if (!positionData.length) {
+                    console.error('No position data available for reordering');
+                    return;
+                }
+
+                // Calculate new position for the dragged recipe
+                // Strategy: We place it between the items where it's dropped
+                let newPosition: number;
+
+                if (targetRecipeIndex === 0) {
+                    // If dropped before the first item
+                    newPosition = positionData[0].position - 1000;
+                } else if (targetRecipeIndex === recipes.length - 1) {
+                    // If dropped after the last item
+                    newPosition =
+                        positionData[positionData.length - 1].position + 1000;
+                } else {
+                    // If dropped between two items
+                    // Find the position values of the target and the item before it
+                    const beforePositionItem = positionData.find(
+                        (p) => p.recipeId === recipes[targetRecipeIndex - 1].id
+                    );
+                    const targetPositionItem = positionData.find(
+                        (p) => p.recipeId === targetId
+                    );
+
+                    if (!beforePositionItem || !targetPositionItem) {
+                        console.error('Cannot find position data for recipes');
+                        return;
+                    }
+
+                    // Place between the two positions
+                    newPosition =
+                        (beforePositionItem.position +
+                            targetPositionItem.position) /
+                        2;
+                }
+
+                // Optimistically update UI
+                const draggedRecipe = recipes[draggedRecipeIndex];
+                const newRecipes = [...recipes];
+                newRecipes.splice(draggedRecipeIndex, 1); // Remove from old position
+                newRecipes.splice(targetRecipeIndex, 0, draggedRecipe); // Insert at new position
+                setRecipes(newRecipes);
+
+                // Update the position in the database
+                await RecipeService.updateRecipePositionInCollection(
+                    draggedId,
+                    selectedCollection,
+                    newPosition
+                );
+
+                console.log(
+                    `Recipe ${draggedId} successfully reordered to position ${newPosition}`
+                );
+            } catch (err) {
+                console.error('Error reordering recipe:', err);
+                // Rollback UI updates on error
+                setRecipes(originalRecipes);
+                setError('Failed to reorder recipe. Please try again.');
+            }
+        },
+        [user, selectedCollection, recipes] // Dependencies
+    );
+
     return (
         <AppLayout
             showAddButton
@@ -1208,6 +1498,17 @@ const CatalogPage: FC = () => {
                                                     selectedCollection
                                                 }
                                                 theme={theme} // Pass theme
+                                                recipePosition={index * 1000} // Use index * 1000 for spacing
+                                                onRecipeReorder={
+                                                    selectedCollection !==
+                                                    ALL_RECIPES_ID
+                                                        ? handleRecipeReordering
+                                                        : undefined
+                                                }
+                                                isFirstItem={index === 0}
+                                                isLastItem={
+                                                    index === recipes.length - 1
+                                                }
                                             />
                                         );
                                     })}

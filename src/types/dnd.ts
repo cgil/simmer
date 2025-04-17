@@ -5,5 +5,7 @@ export const ItemTypes = {
 export interface RecipeDragItem {
     type: typeof ItemTypes.RECIPE_CARD;
     recipeId: string;
-    sourceCollectionId: string | null; // The ID of the collection the recipe is being dragged FROM (null if 'All Recipes')
+    sourceCollectionId: string; // The ID of the collection the recipe is being dragged FROM ('all' for All Recipes)
+    currentPosition?: number; // Current position of the recipe (for reordering within a collection)
+    isReordering?: boolean; // Flag to indicate this is a reordering operation within the same collection
 }
