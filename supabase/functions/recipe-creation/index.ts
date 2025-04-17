@@ -66,6 +66,7 @@ serve(async (req) => {
         // Generate complete recipe using OpenAI with Zod schema
         const completion = await openai.chat.completions.create({
             model: "o4-mini",
+            reasoning_effort: "high",
             response_format: zodResponseFormat(
                 RecipeSchema,
                 "recipe_creation",
@@ -115,6 +116,8 @@ serve(async (req) => {
             - For example: "Add @[olive oil](olive-oil), where the quantity is 1 and the unit type is "tablespoons" will automatically show as "1 tablespoon of olive oil" in the step.
             - We wish to avoid showing something like "Add 2 tablespoons 2 tablespoons Maggi all-purpose seasoning" in the step.
             - For this reason, ingredients and units should be correctly captured in the ingredients list and not hard-coded into the steps.
+        - If an ingredient must be listed more than once because it's used in multiple steps with different quantities, make sure to reference the correct ingredient with the correct quantity and unit type in each step.
+        - Be careful to avoid subtle cases such as unit type "whole", quantity "1", and ingredient name "whole chicken", which will render as "1 whole whole chicken" in the step when referenced.
 
         Resting Time Rules:
             - Look for and identify any resting, proofing, marinating, chilling, cooling, or other active waiting times in the recipe
