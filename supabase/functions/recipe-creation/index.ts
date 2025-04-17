@@ -102,16 +102,20 @@ serve(async (req) => {
         - Provide ral and accurate time estimates for prep, cooking, and resting times
         - Return an empty array for images, don't make up any images
 
-          CRITICAL INSTRUCTION FOR INGREDIENT MENTIONS:
-          - In instruction steps, you MUST format ingredient mentions using this exact format: @[ingredient_name](ingredient_id)
-          - The ingredient_id should be a kebab-case version of the ingredient name (lowercase with hyphens instead of spaces)
-          - For example: "Add @[olive oil](olive-oil) and @[garlic](garlic) to the pan"
-          - You must ensure every ingredient mentioned in the instructions has this formatting
-          - For compound ingredients like "lemon juice" or "olive oil", use the full name in both the display and ID parts
-          - Example: "@[lemon juice](lemon-juice)" NOT "@[lemon](lemon) juice"
-          - Make sure there are no typos or errors in the ingredient names or IDs
-          - The name in the mention MUST match exactly the name in the ingredients list
-          - Every single ingredient mentioned in any instruction step must have this formatting
+        CRITICAL INSTRUCTION FOR INGREDIENT MENTIONS:
+        - In instruction steps, you MUST format ingredient mentions using this exact format: @[ingredient_name](ingredient_id)
+        - The ingredient_id should be a kebab-case version of the ingredient name (lowercase with hyphens instead of spaces)
+        - For example: "Add @[olive oil](olive-oil) and @[garlic](garlic) to the pan"
+        - You must ensure every ingredient mentioned in the instructions has this formatting
+        - For compound ingredients like "lemon juice" or "olive oil", use the full name in both the display and ID parts
+        - Example: "@[lemon juice](lemon-juice)" NOT "@[lemon](lemon) juice"
+        - Make sure there are no typos or errors in the ingredient names or IDs
+        - The name in the mention MUST match exactly the name in the ingredients list
+        - Every single ingredient mentioned in any instruction step must have this formatting
+        - When ingredients are rendered in a step they will automatically show the quantity and unit type (if known), so do not include the quantity and unit type in the mention.
+            - For example: "Add @[olive oil](olive-oil), where the quantity is 1 and the unit type is "tablespoons" will automatically show as "1 tablespoon of olive oil" in the step.
+            - We wish to avoid showing something like "Add 2 tablespoons 2 tablespoons Maggi all-purpose seasoning" in the step.
+            - Fo this reason, ingredients and units should be correctly captured in the ingredients list and not hard-coded into the steps
 
         Resting Time Rules:
             - Look for and identify any resting, proofing, marinating, chilling, cooling, or other active waiting times in the recipe
