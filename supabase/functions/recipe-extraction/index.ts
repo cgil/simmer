@@ -421,6 +421,7 @@ serve(async (req) => {
                                 - For this reason, ingredients and units should be correctly captured in the ingredients list and not hard-coded into the steps.
                             - If an ingredient must be listed more than once because it's used in multiple steps with different quantities, make sure to reference the correct ingredient with the correct quantity and unit type in each step.
                             - Be careful to avoid subtle cases such as unit type "whole", quantity "1", and ingredient name "whole chicken", which will render as "1 whole whole chicken" in the step when referenced.
+                            - Limit quantities in ingredients to a maximum of 2 decimal places, such as 0.33, if it's a whole number don't include a decimal point. Such as 1, 1.5, 1.75.
 
                             Resting Time Rules:
                             - Look for and identify any resting, proofing, marinating, chilling, cooling, or other active waiting times in the recipe
