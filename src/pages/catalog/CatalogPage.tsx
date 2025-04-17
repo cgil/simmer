@@ -931,7 +931,7 @@ const CatalogPage: FC = () => {
             const newCollection: CollectionItem = {
                 id: tempId,
                 name: 'New Collection',
-                emoji: '📁',
+                emoji: '🥘',
                 count: 0,
             };
 
@@ -942,7 +942,7 @@ const CatalogPage: FC = () => {
             const createdCollection = await RecipeService.createCollection(
                 user.id,
                 'New Collection',
-                '📁'
+                '🥘'
             );
 
             // Update collections with the actual data from backend
