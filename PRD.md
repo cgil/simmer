@@ -144,6 +144,31 @@ The app follows a "Paper Notebook Recipe Journal" aesthetic with these key eleme
 -   Ingredient scaling
 -   Mobile-friendly interface
 
+### 3.7. Sharing
+
+-   **Share Recipes and Collections:** Users can share individual recipes or entire collections with other registered users.
+-   **Public/Private Visibility:**
+    -   Users can set recipes or collections as public or private
+    -   Public items can be viewed by anyone with the link, without requiring an account
+    -   Private items are only accessible to specifically invited users
+    -   Default visibility is public for easy sharing
+-   **Share Dialog:** A dedicated dialog provides the interface for sharing and managing access.
+    -   Invite users by email address.
+    -   Set permissions (Viewer or Editor) using a dropdown.
+    -   Default permission for invites is "Viewer".
+    -   Toggle between public and private sharing modes via an icon in the dialog footer
+-   **Access Management:**
+    -   Displays a list of users with access, including their email, avatar, and permission level.
+    -   The owner of the item is displayed prominently with a disabled "Owner" chip and cannot be removed or have their permissions changed.
+    -   Current user is identified with a "(you)" label.
+    -   Long email addresses are truncated with tooltips showing the full email.
+    -   Users can change the access level (Viewer/Editor) of others via a dropdown menu attached to the permission chip.
+    -   Users can remove access for others via a "Remove access" option within the permission dropdown menu.
+-   **Share Button Placement:**
+    -   For recipes, the share option is available in the three-dot menu on the Recipe page.
+    -   For collections, the share button (paper airplane icon) is located in the header, next to the "New Recipe" button.
+-   **Visual Indicator:** A small badge with a paper airplane icon appears on recipe cards in the catalog to indicate shared items.
+
 ---
 
 ## 4. User Flows
@@ -220,7 +245,6 @@ The app follows a "Paper Notebook Recipe Journal" aesthetic with these key eleme
 -   Cooking mode with timers
 -   Shopping list generation
 -   Print-friendly layouts
--   Recipe sharing
 
 ### 6.2. Scalability
 

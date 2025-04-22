@@ -38,6 +38,7 @@ import IngredientReferenceInput from './components/IngredientReferenceInput';
 import { convertRecipeIngredientMentions } from '../../utils/ingredientMentions';
 import { useAuth } from '../../context/AuthContext';
 import { RecipeService } from '../../services/RecipeService';
+import { CollectionService } from '../../services/CollectionService';
 import { generateUuidV4, ensureUuid, isValidUuid } from '../../utils/uuid';
 
 const EditRecipePage: FC = () => {
@@ -84,9 +85,19 @@ const EditRecipePage: FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [isMobileDevice, setIsMobileDevice] = useState<boolean>(false);
-    const [collections, setCollections] = useState<CollectionItem[]>([]);
+    const [isCollectionsChanged, setIsCollectionsChanged] =
+        useState<boolean>(false);
     const [selectedCollection, setSelectedCollection] =
         useState<string>(ALL_RECIPES_ID);
+    const [selectedCollections, setSelectedCollections] = useState<string[]>(
+        []
+    );
+    const [initialCollectionIds, setInitialCollectionIds] = useState<string[]>(
+        []
+    );
+    const [availableCollections, setAvailableCollections] = useState<
+        CollectionItem[]
+    >([]);
 
     // Check if the device is mobile
     useEffect(() => {
@@ -156,36 +167,97 @@ const EditRecipePage: FC = () => {
     // Load collections when component mounts
     useEffect(() => {
         const loadCollections = async () => {
-            if (!user) return;
+            if (!user || !recipe) return;
 
             try {
-                const fetchedCollections =
-                    await RecipeService.getCollectionItems(user.id);
-                setCollections(fetchedCollections);
+                // Get available collections for dropdown
+                const collections = await CollectionService.getCollectionItems(
+                    user.id
+                );
+                setAvailableCollections(collections);
 
-                // Check if recipe is already in any collection
+                // Get collections for this recipe if it's an existing recipe
                 if (recipe.id && recipe.id !== 'new') {
                     const recipeCollections =
-                        await RecipeService.getCollectionsForRecipe(recipe.id);
-                    if (recipeCollections.length > 0) {
-                        setSelectedCollection(recipeCollections[0].id);
-                    } else {
-                        // If recipe doesn't belong to any collection, set to "All Recipes"
-                        setSelectedCollection(ALL_RECIPES_ID);
-                    }
-                } else {
-                    // For new recipes, default to "All Recipes"
-                    setSelectedCollection(ALL_RECIPES_ID);
+                        await CollectionService.getCollectionsForRecipe(
+                            recipe.id
+                        );
+                    const collectionIds = recipeCollections.map((c) => c.id);
+                    setSelectedCollections(collectionIds);
+                    setInitialCollectionIds(collectionIds);
                 }
             } catch (err) {
                 console.error('Error loading collections:', err);
-                // If there's an error, default to "All Recipes"
-                setSelectedCollection(ALL_RECIPES_ID);
             }
         };
 
         loadCollections();
     }, [user, recipe.id]);
+
+    // Track collection changes
+    useEffect(() => {
+        // Check if collections selection has changed from initial state
+        if (
+            initialCollectionIds.length === 0 &&
+            selectedCollections.length === 0
+        ) {
+            setIsCollectionsChanged(false);
+            return;
+        }
+
+        // Check if arrays have different lengths
+        if (initialCollectionIds.length !== selectedCollections.length) {
+            setIsCollectionsChanged(true);
+            return;
+        }
+
+        // Check if arrays have the same elements
+        const hasChanges =
+            !initialCollectionIds.every((id) =>
+                selectedCollections.includes(id)
+            ) ||
+            !selectedCollections.every((id) =>
+                initialCollectionIds.includes(id)
+            );
+
+        setIsCollectionsChanged(hasChanges);
+    }, [selectedCollections, initialCollectionIds]);
+
+    // Save collections function
+    const saveCollections = async (recipeId: string) => {
+        if (!selectedCollections) return;
+
+        try {
+            // Get current collections for this recipe
+            const currentCollections = initialCollectionIds
+                ? [...initialCollectionIds]
+                : (
+                      await CollectionService.getCollectionsForRecipe(recipeId)
+                  ).map((c) => c.id);
+
+            // Remove from collections it's no longer part of
+            for (const collectionId of currentCollections) {
+                if (!selectedCollections.includes(collectionId)) {
+                    await CollectionService.removeRecipeFromCollection(
+                        recipeId,
+                        collectionId
+                    );
+                }
+            }
+
+            // Add to new collections
+            for (const collectionId of selectedCollections) {
+                if (!currentCollections.includes(collectionId)) {
+                    await CollectionService.addRecipeToCollection(
+                        recipeId,
+                        collectionId
+                    );
+                }
+            }
+        } catch (err) {
+            console.error('Error updating collections:', err);
+        }
+    };
 
     if (!recipe) {
         navigate('/');
@@ -311,47 +383,9 @@ const EditRecipePage: FC = () => {
             // Handle collection assignment based on user selection
             if (savedRecipe.id) {
                 try {
-                    // Get current collections for this recipe
-                    const currentCollections =
-                        recipe.id && recipe.id !== 'new'
-                            ? await RecipeService.getCollectionsForRecipe(
-                                  recipe.id
-                              )
-                            : [];
-
-                    if (selectedCollection === ALL_RECIPES_ID) {
-                        // User selected "All Recipes" - remove recipe from all collections
-                        for (const collection of currentCollections) {
-                            await RecipeService.removeRecipeFromCollection(
-                                savedRecipe.id,
-                                collection.id
-                            );
-                        }
-                    } else {
-                        // User selected a specific collection
-
-                        // First remove from any other collections
-                        for (const collection of currentCollections) {
-                            if (collection.id !== selectedCollection) {
-                                await RecipeService.removeRecipeFromCollection(
-                                    savedRecipe.id,
-                                    collection.id
-                                );
-                            }
-                        }
-
-                        // Then ensure it's in the selected collection
-                        // (Add only if not already in the selected collection)
-                        if (
-                            !currentCollections.some(
-                                (c) => c.id === selectedCollection
-                            )
-                        ) {
-                            await RecipeService.addRecipeToCollection(
-                                savedRecipe.id,
-                                selectedCollection
-                            );
-                        }
+                    // Only save collections if they have changed
+                    if (isCollectionsChanged) {
+                        await saveCollections(savedRecipe.id);
                     }
                 } catch (collectionError) {
                     console.error(
@@ -362,8 +396,7 @@ const EditRecipePage: FC = () => {
                 }
             }
 
-            // Navigate to the saved recipe page instead of the returnTo path
-            // This ensures users can immediately view their recipe after saving, even on first save
+            // Navigate to the saved recipe page
             navigate(`/recipe/${savedRecipe.id}`);
         } catch (error: unknown) {
             console.error('Error saving recipe:', error);
@@ -632,8 +665,8 @@ const EditRecipePage: FC = () => {
     };
 
     // Handle collection selection
-    const handleCollectionChange = (event: SelectChangeEvent) => {
-        setSelectedCollection(event.target.value as string);
+    const handleCollectionChange = (event: SelectChangeEvent<string>) => {
+        setSelectedCollection(event.target.value);
     };
 
     const headerContent = (
@@ -767,7 +800,24 @@ const EditRecipePage: FC = () => {
                                 },
                             }}
                         >
-                            {collections
+                            <MenuItem
+                                key={ALL_RECIPES_ID}
+                                value={ALL_RECIPES_ID}
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    fontFamily: "'Inter', sans-serif",
+                                }}
+                            >
+                                <span style={{ fontSize: '1.2rem' }}>📚</span>
+                                All Recipes
+                            </MenuItem>
+                            {availableCollections
+                                .filter(
+                                    (collection) =>
+                                        collection.id !== ALL_RECIPES_ID
+                                )
                                 .sort((a, b) => a.name.localeCompare(b.name))
                                 .map((collection) => (
                                     <MenuItem

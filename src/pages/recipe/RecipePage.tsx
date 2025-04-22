@@ -12,17 +12,18 @@ import {
     CircularProgress,
     IconButton,
     Menu,
-    MenuItem,
     Dialog,
     DialogActions,
     DialogContent,
     DialogContentText,
     DialogTitle,
+    Divider,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import SendIcon from '@mui/icons-material/Send';
 import AppLayout from '../../components/layout/AppLayout';
 import IngredientsList from './components/IngredientsList';
 import CookingInstructions from './components/CookingInstructions';
@@ -32,6 +33,8 @@ import TimeEstimate from './components/TimeEstimate';
 import { RecipeService } from '../../services/RecipeService';
 import { useAuth } from '../../context/AuthContext';
 import { Recipe } from '../../types/recipe';
+import ShareDialog from '../../components/sharing/ShareDialog';
+import ShareMenuItem from '../../components/sharing/ShareMenuItem';
 
 const RecipePage: FC = () => {
     const { id } = useParams();
@@ -55,6 +58,7 @@ const RecipePage: FC = () => {
     const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
     // Menu handlers
     const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -148,6 +152,39 @@ const RecipePage: FC = () => {
         navigate(returnTo);
     };
 
+    // Add this handler function after handleDeleteClick
+    const handleShareClick = () => {
+        handleCloseMenu();
+        setShareDialogOpen(true);
+    };
+
+    // Add this function after handleDeleteConfirm
+    const handleShareDialogClose = () => {
+        setShareDialogOpen(false);
+    };
+
+    // Mock shared users for UI testing (would come from API in real implementation)
+    const mockSharedUsers = [
+        {
+            id: '1',
+            email: 'friend@example.com',
+            access: 'view' as const,
+        },
+        {
+            id: '2',
+            email: 'colleague@example.com',
+            avatarUrl: 'https://i.pravatar.cc/150?img=3',
+            access: 'edit' as const,
+        },
+        {
+            id: '3',
+            email: user?.email || 'current.user@example.com',
+            avatarUrl: user?.user_metadata?.avatar_url,
+            access: 'edit' as const,
+            isCurrentUser: true,
+        },
+    ];
+
     if (loading) {
         return (
             <AppLayout>
@@ -225,27 +262,24 @@ const RecipePage: FC = () => {
                         },
                     }}
                 >
-                    <MenuItem onClick={handleEditClick}>
-                        <EditIcon sx={{ mr: 2, fontSize: 20 }} />
-                        <Typography>Edit Recipe</Typography>
-                    </MenuItem>
-                    <MenuItem
+                    <ShareMenuItem
+                        icon={SendIcon}
+                        label="Share Recipe"
+                        onClick={handleShareClick}
+                        iconSx={{ transform: 'rotate(-45deg)' }}
+                    />
+                    <ShareMenuItem
+                        icon={EditIcon}
+                        label="Edit Recipe"
+                        onClick={handleEditClick}
+                    />
+                    <Divider sx={{ my: 0.5 }} />
+                    <ShareMenuItem
+                        icon={DeleteIcon}
+                        label="Delete Recipe"
                         onClick={handleDeleteClick}
-                        sx={{
-                            color: 'error.main',
-                            '&:hover': { bgcolor: 'error.lighter' },
-                        }}
-                    >
-                        <DeleteIcon
-                            sx={{
-                                mr: 2,
-                                fontSize: 20,
-                                color: (theme) =>
-                                    theme.palette.error.contrastText,
-                            }}
-                        />
-                        <Typography>Delete Recipe</Typography>
-                    </MenuItem>
+                        color={theme.palette.error.contrastText}
+                    />
                 </Menu>
 
                 {/* Delete confirmation dialog */}
@@ -683,6 +717,20 @@ const RecipePage: FC = () => {
                     )}
                 </Grid>
             </Box>
+
+            {/* Share Dialog */}
+            <ShareDialog
+                open={shareDialogOpen}
+                onClose={handleShareDialogClose}
+                title="Share Recipe"
+                itemType="recipe"
+                itemTitle={recipe.title}
+                sharedUsers={mockSharedUsers}
+                ownerEmail={user?.email || 'owner@example.com'}
+                ownerAvatarUrl={user?.user_metadata?.avatar_url}
+                ownerId={user?.id}
+                currentUserId={user?.id}
+            />
         </AppLayout>
     );
 };

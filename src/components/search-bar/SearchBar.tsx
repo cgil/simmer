@@ -1,10 +1,11 @@
-import { FC, ChangeEvent } from 'react';
+import { FC, ChangeEvent, ReactNode } from 'react';
 import {
     Paper,
     InputBase,
     Typography,
     CircularProgress,
     Fade,
+    Box,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 
@@ -14,6 +15,7 @@ interface SearchBarProps {
     placeholder?: string;
     resultsCount?: number;
     isSearching?: boolean;
+    actionButton?: ReactNode;
 }
 
 const SearchBar: FC<SearchBarProps> = ({
@@ -22,6 +24,7 @@ const SearchBar: FC<SearchBarProps> = ({
     placeholder = 'Search recipes...',
     resultsCount,
     isSearching = false,
+    actionButton,
 }) => {
     const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
         onChange(event.target.value);
@@ -93,38 +96,43 @@ const SearchBar: FC<SearchBarProps> = ({
                 inputProps={{ 'aria-label': 'search recipes' }}
                 fullWidth
             />
-            {isSearching ? (
-                <Fade in={isSearching}>
-                    <CircularProgress
-                        size={20}
-                        sx={{
-                            mr: 2,
-                            opacity: 0.7,
-                        }}
-                    />
-                </Fade>
-            ) : (
-                value &&
-                resultsCount !== undefined && (
-                    <Typography
-                        variant="body2"
-                        sx={{
-                            px: { xs: 1.5, sm: 2 },
-                            py: '2px',
-                            bgcolor: 'secondary.light',
-                            borderRadius: 1,
-                            fontSize: { xs: '0.75rem', sm: '0.8rem' },
-                            color: 'text.primary',
-                            fontFamily: "'Inter', sans-serif",
-                            userSelect: 'none',
-                            mr: 1,
-                        }}
-                    >
-                        {resultsCount}{' '}
-                        {resultsCount === 1 ? 'recipe' : 'recipes'}
-                    </Typography>
-                )
-            )}
+
+            {/* Result count or loading indicator */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {isSearching ? (
+                    <Fade in={isSearching}>
+                        <CircularProgress
+                            size={20}
+                            sx={{
+                                opacity: 0.7,
+                            }}
+                        />
+                    </Fade>
+                ) : (
+                    value &&
+                    resultsCount !== undefined && (
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                px: { xs: 1.5, sm: 2 },
+                                py: '2px',
+                                bgcolor: 'secondary.light',
+                                borderRadius: 1,
+                                fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                                color: 'text.primary',
+                                fontFamily: "'Inter', sans-serif",
+                                userSelect: 'none',
+                            }}
+                        >
+                            {resultsCount}{' '}
+                            {resultsCount === 1 ? 'recipe' : 'recipes'}
+                        </Typography>
+                    )
+                )}
+
+                {/* Action button */}
+                {actionButton}
+            </Box>
         </Paper>
     );
 };

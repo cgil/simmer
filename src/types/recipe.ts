@@ -11,6 +11,7 @@ export interface Recipe {
     time_estimate?: TimeEstimate;
     user_id?: string;
     is_public?: boolean;
+    is_shared?: boolean;
 }
 
 export interface RecipeIdea {

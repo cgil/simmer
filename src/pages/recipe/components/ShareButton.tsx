@@ -15,7 +15,7 @@ import {
     Snackbar,
     Alert,
 } from '@mui/material';
-import ShareIcon from '@mui/icons-material/Share';
+import SendIcon from '@mui/icons-material/Send';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { RecipeService } from '../../../services/RecipeService';
@@ -95,7 +95,7 @@ const ShareButton: FC<ShareButtonProps> = ({ recipe, onRecipeUpdated }) => {
             <Button
                 variant="outlined"
                 color="primary"
-                startIcon={<ShareIcon />}
+                startIcon={<SendIcon sx={{ transform: 'rotate(-45deg)' }} />}
                 onClick={handleOpenDialog}
                 sx={{
                     borderRadius: 1,

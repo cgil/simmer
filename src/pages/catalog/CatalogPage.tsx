@@ -1,35 +1,15 @@
 import { FC, useState, useEffect, useRef, useCallback } from 'react';
-import {
-    Grid,
-    Typography,
-    Box,
-    Chip,
-    CircularProgress,
-    Fade,
-    useTheme,
-    Card,
-    CardMedia,
-    CardContent,
-    Theme, // Import Theme type
-} from '@mui/material';
+import { Box, Typography, useTheme, Button } from '@mui/material';
 import AppLayout from '../../components/layout/AppLayout';
 import { useNavigate, useParams } from 'react-router-dom';
-import RestaurantIcon from '@mui/icons-material/Restaurant';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import { formatTimeDisplay } from '../../utils/time';
 import { useAuth } from '../../context/AuthContext';
 import { RecipeService } from '../../services/RecipeService';
+import { CollectionService } from '../../services/CollectionService';
 import { Recipe } from '../../types/recipe';
-import EmptyRecipeBook from '../../components/icons/EmptyRecipeBook';
 import SearchBar from '../../components/search-bar/SearchBar';
 import { useDebounce } from '../../hooks';
-import MatchCornerFold, {
-    MatchType,
-} from '../../components/recipe/MatchCornerFold';
+import { MatchType } from '../../components/recipe/MatchCornerFold';
 import CollectionsDrawer from '../../components/collections/CollectionsDrawer';
-// Import DnD hooks and types
-import { useDrag, useDrop } from 'react-dnd';
-import { ItemTypes, RecipeDragItem } from '../../types/dnd'; // Import the type definition
 
 // Import from collection.ts including the new constant
 import {
@@ -38,540 +18,12 @@ import {
     COLLECTION_ROUTE_PATH,
 } from '../../types/collection';
 
-// --- Internal Draggable Recipe Card Component ---
-interface DraggableRecipeCardProps {
-    recipe: Recipe;
-    isLastElement: boolean;
-    lastRecipeElementRef: (node: HTMLDivElement | null) => void;
-    handleRecipeClick: (recipe: Recipe) => void;
-    determineMatchType: (recipe: Recipe, searchQuery: string) => MatchType;
-    searchQuery: string;
-    selectedCollection: string;
-    theme: Theme; // Pass theme explicitly
-    recipePosition?: number; // Add position prop
-    onRecipeReorder?: (
-        draggedId: string,
-        targetId: string,
-        newPosition: number
-    ) => void; // Add reordering handler
-    isFirstItem?: boolean; // Add prop to identify if this is the first item
-    isLastItem?: boolean; // Add prop to identify if this is the last item
-}
+// Sharing components
+import SendIcon from '@mui/icons-material/Send';
+import ShareDialog from '../../components/sharing/ShareDialog';
 
-const DraggableRecipeCard: FC<DraggableRecipeCardProps> = ({
-    recipe,
-    isLastElement,
-    lastRecipeElementRef,
-    handleRecipeClick,
-    determineMatchType,
-    searchQuery,
-    selectedCollection,
-    theme,
-    recipePosition,
-    onRecipeReorder,
-    isFirstItem = false,
-    isLastItem = false,
-}) => {
-    // Determine match type if search is active
-    const matchType = searchQuery
-        ? determineMatchType(recipe, searchQuery)
-        : null;
-
-    // State to track mouse position for determining left/right drop position
-    const [dropPosition, setDropPosition] = useState<'left' | 'right' | null>(
-        null
-    );
-
-    // Reference for the drag source
-    const [{ isDragging }, drag] = useDrag(() => ({
-        type: ItemTypes.RECIPE_CARD,
-        item: {
-            type: ItemTypes.RECIPE_CARD,
-            recipeId: recipe.id,
-            sourceCollectionId: selectedCollection,
-            currentPosition: recipePosition,
-            isReordering: selectedCollection !== ALL_RECIPES_ID,
-        } as RecipeDragItem,
-        collect: (monitor) => ({
-            isDragging: !!monitor.isDragging(),
-        }),
-    }));
-
-    // Reference for drop target (to enable reordering within same collection)
-    const [{ isOver, canDrop }, drop] = useDrop(
-        () => ({
-            accept: ItemTypes.RECIPE_CARD,
-            canDrop: (item: RecipeDragItem) => {
-                return (
-                    item.sourceCollectionId === selectedCollection &&
-                    selectedCollection !== ALL_RECIPES_ID &&
-                    item.recipeId !== recipe.id
-                );
-            },
-            hover: (_item: RecipeDragItem, monitor) => {
-                // Get current mouse position
-                const clientOffset = monitor.getClientOffset();
-                if (!clientOffset) return;
-
-                // Set left/right based on which half of the screen we're in
-                const screenMiddleX = window.innerWidth / 2;
-                const newPosition =
-                    clientOffset.x < screenMiddleX ? 'left' : 'right';
-                setDropPosition(newPosition);
-            },
-            drop: (item: RecipeDragItem) => {
-                // Reset drop position after drop
-                const position = dropPosition;
-                setDropPosition(null);
-
-                // Skip if we don't have the required data
-                if (
-                    !onRecipeReorder ||
-                    !item.recipeId ||
-                    item.sourceCollectionId !== selectedCollection ||
-                    selectedCollection === ALL_RECIPES_ID ||
-                    recipePosition === undefined
-                ) {
-                    return;
-                }
-
-                // All checks passed, item.recipeId and recipe.id are both defined strings
-                const safeRecipeId = item.recipeId as string;
-                const safeTargetId = recipe.id as string;
-
-                // Special handling for first and last positions
-                if (position === 'left' && isFirstItem) {
-                    // When dropping at the left of the first item, use a position before this item
-                    onRecipeReorder(
-                        safeRecipeId,
-                        safeTargetId,
-                        recipePosition - 1000
-                    );
-                } else if (position === 'right' && isLastItem) {
-                    // When dropping at the right of the last item, use a position after this item
-                    onRecipeReorder(
-                        safeRecipeId,
-                        safeTargetId,
-                        recipePosition + 1000
-                    );
-                } else {
-                    // Normal case - use the current recipe's position
-                    onRecipeReorder(safeRecipeId, safeTargetId, recipePosition);
-                }
-            },
-            collect: (monitor) => ({
-                isOver: !!monitor.isOver(),
-                canDrop: !!monitor.canDrop(),
-            }),
-        }),
-        [
-            selectedCollection,
-            recipe.id,
-            recipePosition,
-            onRecipeReorder,
-            isLastItem,
-        ]
-    );
-
-    // Combine drag and drop refs using React DnD's method
-    const dragDropRef = useCallback(
-        (node: HTMLDivElement | null) => {
-            // Apply the drag and drop refs
-            drag(node);
-            drop(node);
-
-            // Apply the last element ref if needed
-            if (isLastElement && node) {
-                lastRecipeElementRef(node);
-            }
-        },
-        [drag, drop, isLastElement, lastRecipeElementRef]
-    );
-
-    // Reset drop position when no longer over the component
-    useEffect(() => {
-        if (!isOver) {
-            setDropPosition(null);
-        }
-    }, [isOver]);
-
-    return (
-        <Grid
-            item
-            xs={1}
-            key={recipe.id}
-            ref={dragDropRef}
-            sx={{
-                opacity: isDragging ? 0.5 : 1,
-                cursor: 'move',
-                transition: theme.transitions.create('opacity', {
-                    duration: theme.transitions.duration.short,
-                }),
-                position: 'relative',
-                // Left highlight
-                ...(canDrop && isOver && dropPosition === 'left'
-                    ? {
-                          '&::before': {
-                              content: '""',
-                              position: 'absolute',
-                              top: '10%',
-                              left: 10,
-                              width: 2,
-                              height: '80%',
-                              backgroundColor: theme.palette.primary.light,
-                              borderRadius: 4,
-                              zIndex: 10,
-                              opacity: 0.5,
-                          },
-                      }
-                    : {}),
-                // Right highlight
-                ...(canDrop && isOver && dropPosition === 'right'
-                    ? {
-                          '&::after': {
-                              content: '""',
-                              position: 'absolute',
-                              top: '10%',
-                              right: -12,
-                              width: 2,
-                              height: '80%',
-                              backgroundColor: theme.palette.primary.light,
-                              borderRadius: 4,
-                              zIndex: 10,
-                              opacity: 0.5,
-                          },
-                      }
-                    : {}),
-                // Special case for first item - left edge
-                ...(canDrop && isOver && dropPosition === 'left' && isFirstItem
-                    ? {
-                          '&::before': {
-                              content: '""',
-                              position: 'absolute',
-                              top: '10%',
-                              left: 10,
-                              width: 2,
-                              height: '80%',
-                              backgroundColor: theme.palette.primary.light,
-                              borderRadius: 4,
-                              zIndex: 10,
-                              opacity: 0.5,
-                          },
-                      }
-                    : {}),
-                // Special case for last item - right edge
-                ...(canDrop && isOver && dropPosition === 'right' && isLastItem
-                    ? {
-                          '&::after': {
-                              content: '""',
-                              position: 'absolute',
-                              top: '10%',
-                              right: -10,
-                              width: 2,
-                              height: '80%',
-                              backgroundColor: theme.palette.primary.light,
-                              borderRadius: 4,
-                              zIndex: 10,
-                              opacity: 0.5,
-                          },
-                      }
-                    : {}),
-            }}
-        >
-            <div // Non-draggable container for the last element ref
-                ref={isLastElement ? lastRecipeElementRef : null}
-                style={{ height: '100%' }} // Ensure div takes full height for Card
-            >
-                <Card
-                    onClick={() => handleRecipeClick(recipe)}
-                    sx={{
-                        position: 'relative',
-                        height: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        cursor: 'pointer',
-                        borderRadius: 1,
-                        overflow: 'hidden',
-                        boxShadow: `
-                            0 1px 2px rgba(0,0,0,0.03),
-                            0 4px 20px rgba(0,0,0,0.06),
-                            inset 0 0 0 1px rgba(255,255,255,0.9)
-                        `,
-                        transition: 'all 0.15s ease-in-out',
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        bgcolor: 'background.paper',
-                        '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            height: '100%',
-                            background: 'rgba(255,255,255,0.5)',
-                            backdropFilter: 'blur(4px)',
-                            borderRadius: 1,
-                            zIndex: 0,
-                            border: '1px solid',
-                            borderColor: 'divider',
-                        },
-                        '& > *': {
-                            position: 'relative',
-                            zIndex: 1,
-                        },
-                        '&:hover': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-                            borderColor: 'rgba(44, 62, 80, 0.15)',
-                        },
-                        // Apply subtle elevation when being targeted
-                        ...(canDrop && isOver
-                            ? {
-                                  transform: 'translateY(-2px)',
-                                  boxShadow: '0 4px 16px rgba(0,0,0,0.09)',
-                                  transition: 'all 0.2s ease-out',
-                              }
-                            : {}),
-                    }}
-                >
-                    {/* Match Corner Fold - only appears during search */}
-                    {searchQuery && <MatchCornerFold matchType={matchType} />}
-
-                    {recipe.images && recipe.images.length > 0 ? (
-                        <CardMedia
-                            component="img"
-                            height="180"
-                            image={recipe.images[0]}
-                            alt={recipe.title}
-                            sx={{
-                                objectFit: 'cover',
-                            }}
-                        />
-                    ) : (
-                        <Box
-                            sx={{
-                                height: 180,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                background: `linear-gradient(135deg, ${theme.palette.secondary.light} 0%, ${theme.palette.secondary.main} 100%)`,
-                                position: 'relative',
-                                overflow: 'hidden',
-                                padding: 2,
-                                '&::before': {
-                                    content: '""',
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    bottom: 0,
-                                    backgroundImage: `repeating-linear-gradient(
-                                        -45deg,
-                                        rgba(255, 255, 255, 0.3),
-                                        rgba(255, 255, 255, 0.3) 5px,
-                                        transparent 5px,
-                                        transparent 10px
-                                    )`,
-                                    opacity: 0.5,
-                                },
-                                '&::after': {
-                                    content: `"${
-                                        recipe.title.length > 20
-                                            ? recipe.title.substring(0, 20) +
-                                              '...'
-                                            : recipe.title
-                                    }"`,
-                                    position: 'absolute',
-                                    fontFamily: "'Kalam', cursive",
-                                    fontSize: '1.75rem',
-                                    color: theme.palette.primary.main,
-                                    opacity: 0.15,
-                                    transform: 'rotate(-5deg)',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '1px',
-                                    textAlign: 'center',
-                                    width: '100%',
-                                    maxWidth: '90%',
-                                    left: '5%',
-                                    right: '5%',
-                                },
-                            }}
-                        />
-                    )}
-                    <CardContent
-                        sx={{
-                            flexGrow: 1,
-                            p: { xs: 2, sm: 3 },
-                            display: 'flex',
-                            flexDirection: 'column',
-                        }}
-                    >
-                        <Typography
-                            variant="h6"
-                            component="h2"
-                            gutterBottom
-                            sx={{
-                                fontWeight: 600,
-                                fontSize: {
-                                    xs: '1.1rem',
-                                    sm: '1.25rem',
-                                },
-                                mb: 1,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                fontFamily: "'Kalam', cursive",
-                                color: 'primary.main',
-                            }}
-                        >
-                            {recipe.title}
-                        </Typography>
-                        <Typography
-                            color="text.secondary"
-                            sx={{
-                                mb: 2,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                fontSize: {
-                                    xs: '0.875rem',
-                                    sm: '1rem',
-                                },
-                                minHeight: {
-                                    xs: '40px',
-                                    sm: '48px',
-                                },
-                                fontFamily: "'Inter', sans-serif",
-                            }}
-                        >
-                            {recipe.description}
-                        </Typography>
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                gap: 0.75,
-                                flexWrap: 'wrap',
-                                mb: 1,
-                                mt: 'auto',
-                            }}
-                        >
-                            {recipe.tags &&
-                                recipe.tags.length > 0 &&
-                                recipe.tags.slice(0, 3).map((tag) => (
-                                    <Chip
-                                        key={tag}
-                                        label={tag}
-                                        size="small"
-                                        color="secondary"
-                                        sx={{
-                                            fontSize: '0.75rem',
-                                            height: '24px',
-                                            fontFamily: "'Inter', sans-serif",
-                                        }}
-                                    />
-                                ))}
-                            {recipe.tags && recipe.tags.length > 3 && (
-                                <Chip
-                                    label={`+${recipe.tags.length - 3}`}
-                                    size="small"
-                                    variant="outlined"
-                                    sx={{
-                                        fontSize: '0.75rem',
-                                        height: '24px',
-                                        fontFamily: "'Inter', sans-serif",
-                                    }}
-                                />
-                            )}
-                        </Box>
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: {
-                                    xs: 1.5,
-                                    sm: 2,
-                                },
-                                mt: 2,
-                                pt: 2,
-                                borderTop: '1px solid',
-                                borderColor: 'divider',
-                            }}
-                        >
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 0.5,
-                                }}
-                            >
-                                <RestaurantIcon
-                                    sx={{
-                                        fontSize: {
-                                            xs: '1rem',
-                                            sm: '1.25rem',
-                                        },
-                                        color: 'primary.main',
-                                    }}
-                                />
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                    sx={{
-                                        fontSize: {
-                                            xs: '0.75rem',
-                                            sm: '0.875rem',
-                                        },
-                                        fontFamily: "'Inter', sans-serif",
-                                    }}
-                                >
-                                    {recipe.servings} servings
-                                </Typography>
-                            </Box>
-                            {recipe.time_estimate && (
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 0.5,
-                                    }}
-                                >
-                                    <AccessTimeIcon
-                                        sx={{
-                                            fontSize: {
-                                                xs: '1rem',
-                                                sm: '1.25rem',
-                                            },
-                                            color: 'primary.main',
-                                        }}
-                                    />
-                                    <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                        sx={{
-                                            fontSize: {
-                                                xs: '0.75rem',
-                                                sm: '0.875rem',
-                                            },
-                                            fontFamily: "'Inter', sans-serif",
-                                        }}
-                                    >
-                                        {formatTimeDisplay(
-                                            recipe.time_estimate.total
-                                        )}
-                                    </Typography>
-                                </Box>
-                            )}
-                        </Box>
-                    </CardContent>
-                </Card>
-            </div>
-        </Grid>
-    );
-};
+// Import our new components
+import RecipeGrid from '../../features/catalog/components/RecipeGrid';
 
 /**
  * Determines the highest priority match type for a recipe
@@ -637,6 +89,10 @@ const CatalogPage: FC = () => {
     const [collectionsBeingRemoved, setCollectionsBeingRemoved] = useState<
         string[]
     >([]);
+
+    // Add state for collection sharing
+    const [collectionShareDialogOpen, setCollectionShareDialogOpen] =
+        useState(false);
 
     const drawerWidth = 240;
     const collapsedDrawerWidth = 72;
@@ -725,9 +181,8 @@ const CatalogPage: FC = () => {
 
         setCollectionsLoading(true);
         try {
-            const fetchedCollections = await RecipeService.getCollectionItems(
-                user.id
-            );
+            const fetchedCollections =
+                await CollectionService.getCollectionItems(user.id);
             setCollections(fetchedCollections);
 
             // If this is the first time loading collections, load the selected collection from URL or default to "All Recipes"
@@ -770,39 +225,33 @@ const CatalogPage: FC = () => {
         try {
             let fetchedRecipes: Recipe[] = [];
 
+            // Check if this is "All Recipes" view or a specific collection
             if (collectionId === ALL_RECIPES_ID) {
-                // Load all recipes if "All Recipes" is selected
-                fetchedRecipes = await RecipeService.searchRecipes(
-                    user.id,
-                    searchQuery || '' // Use current search query if exists
-                );
+                fetchedRecipes = await RecipeService.getRecipes(user.id);
             } else {
-                // Load recipes for the specific collection
-                fetchedRecipes = await RecipeService.getRecipesByCollection(
+                fetchedRecipes = await CollectionService.getRecipesByCollection(
                     user.id,
                     collectionId
                 );
+            }
 
-                // If there's a search query, filter the recipes client-side
-                if (searchQuery) {
-                    const normalizedSearch = searchQuery.toLowerCase().trim();
-                    fetchedRecipes = fetchedRecipes.filter(
-                        (recipe) =>
-                            recipe.title
-                                .toLowerCase()
-                                .includes(normalizedSearch) ||
-                            (recipe.tags &&
-                                recipe.tags.some((tag) =>
-                                    tag.toLowerCase().includes(normalizedSearch)
-                                )) ||
-                            (recipe.ingredients &&
-                                recipe.ingredients.some((ing) =>
-                                    ing.name
-                                        .toLowerCase()
-                                        .includes(normalizedSearch)
-                                ))
-                    );
-                }
+            // If there's a search query, filter the recipes client-side
+            if (searchQuery) {
+                const normalizedSearch = searchQuery.toLowerCase().trim();
+                fetchedRecipes = fetchedRecipes.filter(
+                    (recipe) =>
+                        recipe.title.toLowerCase().includes(normalizedSearch) ||
+                        (recipe.tags &&
+                            recipe.tags.some((tag) =>
+                                tag.toLowerCase().includes(normalizedSearch)
+                            )) ||
+                        (recipe.ingredients &&
+                            recipe.ingredients.some((ing) =>
+                                ing.name
+                                    .toLowerCase()
+                                    .includes(normalizedSearch)
+                            ))
+                );
             }
 
             setRecipes(fetchedRecipes);
@@ -939,7 +388,7 @@ const CatalogPage: FC = () => {
             setCollections((prev) => [...prev, newCollection]);
 
             // Create a new empty collection with default name and emoji in the backend
-            const createdCollection = await RecipeService.createCollection(
+            const createdCollection = await CollectionService.createCollection(
                 user.id,
                 'New Collection',
                 '🥘'
@@ -979,7 +428,10 @@ const CatalogPage: FC = () => {
             );
 
             // Update in the backend
-            await RecipeService.updateCollection(collectionId, { name, emoji });
+            await CollectionService.updateCollection(collectionId, {
+                name,
+                emoji,
+            });
 
             // No need to reload all collections since we've already updated our local state
         } catch (err) {
@@ -994,35 +446,44 @@ const CatalogPage: FC = () => {
         if (!user) return;
 
         try {
-            // Mark the collection as being removed first to trigger exit animation
+            // Mark this collection as being removed (for animation)
             setCollectionsBeingRemoved((prev) => [...prev, collectionId]);
 
-            // If the deleted collection was selected, switch to "All Recipes" view
-            if (selectedCollection === collectionId) {
-                setSelectedCollection(ALL_RECIPES_ID);
-                navigate('/', { replace: false });
-            }
+            // Set a small timeout to allow the animation to complete
+            setTimeout(async () => {
+                try {
+                    // Remove from the backend
+                    await CollectionService.deleteCollection(collectionId);
 
-            // Delete in the backend
-            await RecipeService.deleteCollection(collectionId);
+                    // Update the selected collection if the one being deleted is selected
+                    if (selectedCollection === collectionId) {
+                        setSelectedCollection(ALL_RECIPES_ID);
+                        navigate('/', { replace: true });
+                        await loadRecipesByCollection(ALL_RECIPES_ID);
+                    }
 
-            // Wait for animation to complete before updating state
-            setTimeout(() => {
-                setCollections((prev) =>
-                    prev.filter((c) => c.id !== collectionId)
-                );
-                setCollectionsBeingRemoved((prev) =>
-                    prev.filter((id) => id !== collectionId)
-                );
-            }, 300); // Match Collapse exit animation duration
+                    // Update our local state
+                    setCollections((prev) =>
+                        prev.filter((c) => c.id !== collectionId)
+                    );
+                } catch (error) {
+                    console.error(
+                        'Error deleting collection from backend:',
+                        error
+                    );
+                } finally {
+                    // Remove from the being-removed state
+                    setCollectionsBeingRemoved((prev) =>
+                        prev.filter((id) => id !== collectionId)
+                    );
+                }
+            }, 300); // Match this with your animation duration
         } catch (err) {
-            console.error('Error deleting collection:', err);
-            // Remove from being deleted state
+            console.error('Error starting collection deletion:', err);
+            // Remove from the being-removed state
             setCollectionsBeingRemoved((prev) =>
                 prev.filter((id) => id !== collectionId)
             );
-            // Reload collections on error to ensure UI is in sync with backend
-            await loadCollections();
         }
     };
 
@@ -1103,7 +564,7 @@ const CatalogPage: FC = () => {
                     console.log(
                         `Backend Call: Add recipe ${recipeId} to collection ${targetCollectionId}`
                     );
-                    await RecipeService.addRecipeToCollection(
+                    await CollectionService.addRecipeToCollection(
                         recipeId,
                         targetCollectionId
                     );
@@ -1116,7 +577,7 @@ const CatalogPage: FC = () => {
                     console.log(
                         `Backend Call: Remove recipe ${recipeId} from collection ${sourceCollectionId}`
                     );
-                    await RecipeService.removeRecipeFromCollection(
+                    await CollectionService.removeRecipeFromCollection(
                         recipeId,
                         sourceCollectionId
                     );
@@ -1211,7 +672,7 @@ const CatalogPage: FC = () => {
 
                 // Get all current recipe positions in this collection
                 const positionData =
-                    await RecipeService.getRecipePositionsInCollection(
+                    await CollectionService.getRecipePositionsInCollection(
                         selectedCollection
                     );
 
@@ -1262,7 +723,7 @@ const CatalogPage: FC = () => {
                 setRecipes(newRecipes);
 
                 // Update the position in the database
-                await RecipeService.updateRecipePositionInCollection(
+                await CollectionService.updateRecipePositionInCollection(
                     draggedId,
                     selectedCollection,
                     newPosition
@@ -1280,6 +741,76 @@ const CatalogPage: FC = () => {
         },
         [user, selectedCollection, recipes] // Dependencies
     );
+
+    // Add handler functions for collection sharing
+    const handleOpenCollectionShareDialog = () => {
+        setCollectionShareDialogOpen(true);
+    };
+
+    const handleCloseCollectionShareDialog = () => {
+        setCollectionShareDialogOpen(false);
+    };
+
+    // Mock shared users for UI testing (would come from API in real implementation)
+    const mockCollectionSharedUsers = [
+        {
+            id: '1',
+            email: 'family@example.com',
+            access: 'edit' as const,
+        },
+        {
+            id: '2',
+            email: user?.email || 'current.user@example.com',
+            avatarUrl: user?.user_metadata?.avatar_url,
+            access: 'view' as const,
+            isCurrentUser: true,
+        },
+    ];
+
+    // Update the renderShareButton function to handle the CollectionItem structure correctly
+    const renderShareButton = () => {
+        // Only show share button when viewing a non-All collection that the user owns
+        const collection = collections.find((c) => c.id === selectedCollection);
+
+        // Since CollectionItem doesn't have user_id, we might need another check
+        // For now, let's assume any non-All collection can be shared if the user is logged in
+        if (selectedCollection !== ALL_RECIPES_ID && collection && user) {
+            return (
+                <Button
+                    variant="outlined"
+                    startIcon={
+                        <SendIcon sx={{ transform: 'rotate(-45deg)' }} />
+                    }
+                    onClick={handleOpenCollectionShareDialog}
+                    sx={{
+                        height: { xs: 38, sm: 42 },
+                        ml: 1,
+                        borderColor: 'divider',
+                        color: 'text.primary',
+                        fontSize: {
+                            xs: '0.875rem',
+                            sm: '0.9375rem',
+                        },
+                        fontFamily: "'Inter', sans-serif",
+                        textTransform: 'none',
+                        '&:hover': {
+                            borderColor: 'primary.main',
+                            bgcolor: 'rgba(44, 62, 80, 0.04)',
+                        },
+                    }}
+                >
+                    {/* Only show text on screens larger than xs */}
+                    <Box
+                        component="span"
+                        sx={{ display: { xs: 'none', sm: 'inline' } }}
+                    >
+                        Share
+                    </Box>
+                </Button>
+            );
+        }
+        return null;
+    };
 
     return (
         <AppLayout
@@ -1310,12 +841,18 @@ const CatalogPage: FC = () => {
                             color: 'primary.main',
                             letterSpacing: '-0.5px',
                             fontFamily: "'Kalam', cursive",
+                            // Add these properties to handle overflow with ellipsis
+                            maxWidth: { xs: '180px', sm: '300px', md: '100%' },
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                         }}
                     >
                         {getSelectedCollection().name}
                     </Typography>
                 </Box>
             }
+            actionButton={renderShareButton()}
         >
             <Box
                 sx={{
@@ -1423,176 +960,43 @@ const CatalogPage: FC = () => {
                             zIndex: 1,
                         }}
                     >
-                        {initialLoading ? (
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    minHeight: '300px',
-                                    width: '100%',
-                                }}
-                            >
-                                <CircularProgress color="primary" />
-                            </Box>
-                        ) : error ? (
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    minHeight: '300px',
-                                    width: '100%',
-                                    p: 3,
-                                }}
-                            >
-                                <Typography
-                                    color="error"
-                                    align="center"
-                                    gutterBottom
-                                >
-                                    {error}
-                                </Typography>
-                                <Typography
-                                    variant="body2"
-                                    align="center"
-                                    color="text.secondary"
-                                    sx={{ mt: 1 }}
-                                >
-                                    Try refreshing the page or check your
-                                    internet connection.
-                                </Typography>
-                            </Box>
-                        ) : visibleRecipes.length > 0 ? (
-                            <Fade in={!initialLoading} timeout={300}>
-                                <Grid
-                                    container
-                                    spacing={{ xs: 2, sm: 3 }}
-                                    columns={{ xs: 1, sm: 2, md: 3, lg: 4 }}
-                                >
-                                    {visibleRecipes.map((recipe, index) => {
-                                        // Check if this is the last recipe element for infinite scroll
-                                        const isLastElement =
-                                            index === visibleRecipes.length - 1;
-
-                                        return (
-                                            <DraggableRecipeCard
-                                                key={
-                                                    recipe.id ||
-                                                    `recipe-${index}`
-                                                }
-                                                recipe={recipe}
-                                                isLastElement={isLastElement}
-                                                lastRecipeElementRef={
-                                                    lastRecipeElementRef
-                                                }
-                                                handleRecipeClick={
-                                                    handleRecipeClick
-                                                }
-                                                determineMatchType={
-                                                    determineMatchType
-                                                }
-                                                searchQuery={searchQuery}
-                                                selectedCollection={
-                                                    selectedCollection
-                                                }
-                                                theme={theme} // Pass theme
-                                                recipePosition={index * 1000} // Use index * 1000 for spacing
-                                                onRecipeReorder={
-                                                    selectedCollection !==
-                                                    ALL_RECIPES_ID
-                                                        ? handleRecipeReordering
-                                                        : undefined
-                                                }
-                                                isFirstItem={index === 0}
-                                                isLastItem={
-                                                    index === recipes.length - 1
-                                                }
-                                            />
-                                        );
-                                    })}
-                                </Grid>
-                            </Fade>
-                        ) : (
-                            <Fade in={!initialLoading} timeout={300}>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        minHeight: '300px',
-                                        width: '100%',
-                                        p: 3,
-                                    }}
-                                >
-                                    <EmptyRecipeBook
-                                        sx={{
-                                            width: '120px',
-                                            height: '120px',
-                                            color: 'text.secondary',
-                                            opacity: 0.5,
-                                            mb: 2,
-                                        }}
-                                    />
-                                    {searchQuery ? (
-                                        <>
-                                            <Typography
-                                                variant="h6"
-                                                align="center"
-                                                gutterBottom
-                                            >
-                                                No recipes found
-                                            </Typography>
-                                            <Typography
-                                                variant="body2"
-                                                align="center"
-                                                color="text.secondary"
-                                            >
-                                                Try adjusting your search query
-                                                or adding new recipes.
-                                            </Typography>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Typography
-                                                variant="h6"
-                                                align="center"
-                                                gutterBottom
-                                            >
-                                                Your recipe book is empty
-                                            </Typography>
-                                            <Typography
-                                                variant="body2"
-                                                align="center"
-                                                color="text.secondary"
-                                            >
-                                                Start adding recipes by clicking
-                                                the + button in the top right.
-                                            </Typography>
-                                        </>
-                                    )}
-                                </Box>
-                            </Fade>
-                        )}
-
-                        {/* Loading indicator for infinite scroll */}
-                        {loadingMore && (
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    width: '100%',
-                                    p: 3,
-                                }}
-                            >
-                                <CircularProgress size={24} color="primary" />
-                            </Box>
-                        )}
+                        <RecipeGrid
+                            visibleRecipes={visibleRecipes}
+                            initialLoading={initialLoading}
+                            searchLoading={searchLoading}
+                            loadingMore={loadingMore}
+                            error={error}
+                            searchQuery={searchQuery}
+                            selectedCollection={selectedCollection}
+                            lastRecipeElementRef={lastRecipeElementRef}
+                            handleRecipeClick={handleRecipeClick}
+                            determineMatchType={determineMatchType}
+                            handleRecipeReordering={
+                                selectedCollection !== ALL_RECIPES_ID
+                                    ? handleRecipeReordering
+                                    : undefined
+                            }
+                        />
                     </Box>
                 </Box>
             </Box>
+
+            {/* Collection Share Dialog */}
+            <ShareDialog
+                open={collectionShareDialogOpen}
+                onClose={handleCloseCollectionShareDialog}
+                title="Share Collection"
+                itemType="collection"
+                itemTitle={
+                    collections.find((c) => c.id === selectedCollection)
+                        ?.name || 'Collection'
+                }
+                sharedUsers={mockCollectionSharedUsers}
+                ownerEmail={user?.email || 'owner@example.com'}
+                ownerAvatarUrl={user?.user_metadata?.avatar_url}
+                ownerId={user?.id}
+                currentUserId={user?.id}
+            />
         </AppLayout>
     );
 };

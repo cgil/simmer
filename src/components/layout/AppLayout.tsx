@@ -208,7 +208,7 @@ const AppLayout: FC<AppLayoutProps> = ({
                         <Box
                             sx={{
                                 display: 'flex',
-                                gap: 2,
+                                gap: { xs: 0, sm: 1 },
                                 alignItems: 'center',
                             }}
                         >
@@ -256,9 +256,7 @@ const AppLayout: FC<AppLayoutProps> = ({
                                 </Button>
                             )}
 
-                            {/* Display the action button if provided */}
-                            {actionButton}
-
+                            {/* Display the New Recipe button if requested */}
                             {user && showAddButton && (
                                 <Button
                                     variant="contained"
@@ -289,6 +287,17 @@ const AppLayout: FC<AppLayoutProps> = ({
                                         borderBottomColor: 'divider',
                                         boxShadow: 'none',
                                         transition: 'all 0.2s ease',
+                                        maxWidth: {
+                                            xs: '100px',
+                                            sm: '150px',
+                                            md: '200px',
+                                        },
+                                        '& .MuiButton-startIcon': {
+                                            mr: { xs: 0.5, sm: 1 },
+                                        },
+                                        '& .MuiButton-endIcon': {
+                                            ml: { xs: 0.5, sm: 1 },
+                                        },
                                         '&:hover': {
                                             bgcolor: 'secondary.light',
                                             transform: 'translateY(-1px)',
@@ -302,9 +311,26 @@ const AppLayout: FC<AppLayoutProps> = ({
                                         },
                                     }}
                                 >
-                                    {isMobile ? '' : 'New Recipe'}
+                                    {isMobile ? (
+                                        ''
+                                    ) : (
+                                        <Box
+                                            component="span"
+                                            sx={{
+                                                display: 'block',
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                            }}
+                                        >
+                                            New Recipe
+                                        </Box>
+                                    )}
                                 </Button>
                             )}
+
+                            {/* Display the action button if provided */}
+                            {actionButton}
 
                             {/* User Account Menu for authenticated users */}
                             {user ? (

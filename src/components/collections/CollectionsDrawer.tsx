@@ -8,28 +8,17 @@ import {
     ListItemIcon,
     ListItemText,
     IconButton,
-    Typography,
-    Button,
     useTheme,
-    Tooltip,
     alpha,
-    Zoom,
-    Fade,
     TextField,
-    Paper,
-    Slide,
     Portal,
     Grow,
     Popover,
-    Skeleton,
     Collapse,
     useMediaQuery,
     Backdrop,
     Theme,
 } from '@mui/material';
-import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
-import MenuOpenRoundedIcon from '@mui/icons-material/MenuOpenRounded';
-import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
@@ -40,6 +29,12 @@ import Picker from '@emoji-mart/react';
 // Import DnD hooks and types
 import { useDrop, ConnectDropTarget } from 'react-dnd';
 import { ItemTypes, RecipeDragItem } from '../../types/dnd';
+
+// Import extracted components
+import CollectionsDrawerHeader from './CollectionsDrawerHeader';
+import CollectionsDrawerFooter from './CollectionsDrawerFooter';
+import CollectionListSkeleton from './CollectionListSkeleton';
+import CollectionListItemDeleteConfirm from './CollectionListItemDeleteConfirm';
 
 // Move the interface up so we can use it in props
 interface CollectionItem {
@@ -300,7 +295,7 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                 open={isSmallScreen ? isOpen : undefined}
                 onClose={isSmallScreen ? handleToggleDrawer : undefined}
                 ModalProps={{
-                    keepMounted: true, // Better performance on mobile
+                    keepMounted: isSmallScreen, // Only keep mounted for temporary drawer on small screens
                 }}
                 sx={{
                     width: isOpen ? width : collapsedWidth,
@@ -341,69 +336,13 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                         sx: { zIndex: theme.zIndex.drawer },
                     },
                 }}
-                // Don't keep elements in DOM when hidden on small screens
-                keepMounted={!isSmallScreen}
             >
-                {/* Fixed header with expand/collapse button */}
-                <Box
-                    sx={{
-                        position: 'sticky',
-                        top: 0,
-                        zIndex: 1,
-                        bgcolor: alpha(theme.palette.paper.main, 0.9),
-                        backdropFilter: 'blur(8px)',
-                        p: 2,
-                        pr: isOpen ? 1 : 2,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: isOpen ? 'space-between' : 'center',
-                        height: { xs: 57, sm: 65 }, // Match header height
-                    }}
-                >
-                    {isOpen && (
-                        <Typography
-                            variant="h6"
-                            sx={{
-                                fontFamily: "'Kalam', cursive",
-                                color: 'primary.main',
-                                pl: 1,
-                                fontSize: '1.3rem',
-                                fontWeight: 700,
-                                letterSpacing: '-0.01em',
-                            }}
-                        >
-                            Collections
-                        </Typography>
-                    )}
-                    <Tooltip title="">
-                        <IconButton
-                            onClick={handleToggleDrawer}
-                            color="primary"
-                            aria-label={
-                                isOpen
-                                    ? 'collapse collections'
-                                    : 'expand collections'
-                            }
-                            aria-expanded={isOpen}
-                            aria-controls="collections-drawer"
-                            sx={{
-                                '&:hover': {
-                                    bgcolor: alpha(
-                                        theme.palette.primary.main,
-                                        0.08
-                                    ),
-                                    borderRadius: 2,
-                                },
-                            }}
-                        >
-                            {isOpen ? (
-                                <MenuOpenRoundedIcon />
-                            ) : (
-                                <MenuRoundedIcon />
-                            )}
-                        </IconButton>
-                    </Tooltip>
-                </Box>
+                {/* Use CollectionsDrawerHeader instead of the Box */}
+                <CollectionsDrawerHeader
+                    isOpen={isOpen}
+                    handleToggleDrawer={handleToggleDrawer}
+                    theme={theme}
+                />
 
                 {/* Scrollable collections list */}
                 <Box
@@ -413,114 +352,12 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                     }}
                 >
                     {isLoading ? (
-                        <List sx={{ px: isOpen ? 1 : 0.75, pt: 1 }}>
-                            {[0, 1, 2, 3, 4].map((index) => (
-                                <ListItem
-                                    key={index}
-                                    disablePadding
-                                    sx={{ mb: 0.5 }}
-                                >
-                                    <Box
-                                        sx={{
-                                            width: '100%',
-                                            position: 'relative',
-                                        }}
-                                    >
-                                        <Paper
-                                            elevation={0}
-                                            sx={{
-                                                width: '100%',
-                                                height: COLLECTION_ITEM_HEIGHT,
-                                                borderRadius: 2,
-                                                overflow: 'hidden',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: isOpen
-                                                    ? 'flex-start'
-                                                    : 'center',
-                                                bgcolor: alpha(
-                                                    theme.palette.primary.light,
-                                                    0.04
-                                                ),
-                                            }}
-                                        >
-                                            {isOpen ? (
-                                                <Box
-                                                    sx={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        width: '100%',
-                                                        px: 2,
-                                                    }}
-                                                >
-                                                    <Skeleton
-                                                        variant="circular"
-                                                        width={24}
-                                                        height={24}
-                                                        animation="pulse"
-                                                        sx={{
-                                                            mr: 2,
-                                                            bgcolor: alpha(
-                                                                theme.palette
-                                                                    .primary
-                                                                    .light,
-                                                                0.1
-                                                            ),
-                                                        }}
-                                                    />
-                                                    <Box sx={{ width: '100%' }}>
-                                                        <Skeleton
-                                                            variant="text"
-                                                            width="60%"
-                                                            height={20}
-                                                            animation="wave"
-                                                            sx={{
-                                                                bgcolor: alpha(
-                                                                    theme
-                                                                        .palette
-                                                                        .primary
-                                                                        .light,
-                                                                    0.1
-                                                                ),
-                                                            }}
-                                                        />
-                                                        <Skeleton
-                                                            variant="text"
-                                                            width="40%"
-                                                            height={16}
-                                                            animation="wave"
-                                                            sx={{
-                                                                bgcolor: alpha(
-                                                                    theme
-                                                                        .palette
-                                                                        .primary
-                                                                        .light,
-                                                                    0.07
-                                                                ),
-                                                            }}
-                                                        />
-                                                    </Box>
-                                                </Box>
-                                            ) : (
-                                                <Skeleton
-                                                    variant="circular"
-                                                    width={32}
-                                                    height={32}
-                                                    animation="pulse"
-                                                    sx={{
-                                                        bgcolor: alpha(
-                                                            theme.palette
-                                                                .primary.light,
-                                                            0.1
-                                                        ),
-                                                    }}
-                                                />
-                                            )}
-                                        </Paper>
-                                    </Box>
-                                </ListItem>
-                            ))}
-                        </List>
+                        /* Replace with CollectionListSkeleton */
+                        <CollectionListSkeleton
+                            isOpen={isOpen}
+                            itemHeight={COLLECTION_ITEM_HEIGHT}
+                            theme={theme}
+                        />
                     ) : (
                         <List sx={{ px: isOpen ? 1 : 0.75, pt: 1 }}>
                             {sortedCollections.map((collection) => (
@@ -559,226 +396,13 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                     )}
                 </Box>
 
-                {/* Fixed footer with "New Collection" button */}
-                <Box
-                    sx={{
-                        position: 'sticky',
-                        bottom: 0,
-                        borderTop: '1px solid',
-                        borderColor: alpha(theme.palette.primary.main, 0.08),
-                        p: isOpen ? 1.5 : 1,
-                        bgcolor: alpha(theme.palette.paper.main, 0.9),
-                        backdropFilter: 'blur(8px)',
-                        zIndex: 1,
-                        height: '60px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: theme.transitions.create(['padding'], {
-                            easing: theme.transitions.easing.easeInOut,
-                            duration: theme.transitions.duration.standard,
-                        }),
-                    }}
-                >
-                    <Box
-                        sx={{
-                            width: '100%',
-                            height: '36px',
-                            position: 'relative',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            opacity: 0.8,
-                        }}
-                    >
-                        {isLoading ? (
-                            <>
-                                {/* Skeleton for open drawer */}
-                                <Fade
-                                    in={isOpen}
-                                    timeout={{ enter: 400, exit: 200 }}
-                                    style={{
-                                        position: 'absolute',
-                                        width: '100%',
-                                        transitionDelay: isOpen
-                                            ? '100ms'
-                                            : '0ms',
-                                    }}
-                                    unmountOnExit
-                                >
-                                    <Paper
-                                        elevation={0}
-                                        sx={{
-                                            width: '100%',
-                                            height: '36px',
-                                            borderRadius: 2,
-                                            border: '1px dashed',
-                                            borderColor: alpha(
-                                                theme.palette.primary.light,
-                                                0.3
-                                            ),
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            pl: 1.5,
-                                            bgcolor: alpha(
-                                                theme.palette.primary.light,
-                                                0.04
-                                            ),
-                                        }}
-                                    >
-                                        <Skeleton
-                                            variant="circular"
-                                            width={20}
-                                            height={20}
-                                            animation="pulse"
-                                            sx={{
-                                                mr: 1,
-                                                bgcolor: alpha(
-                                                    theme.palette.primary.light,
-                                                    0.1
-                                                ),
-                                            }}
-                                        />
-                                        <Skeleton
-                                            variant="text"
-                                            width="60%"
-                                            height={20}
-                                            animation="wave"
-                                            sx={{
-                                                bgcolor: alpha(
-                                                    theme.palette.primary.light,
-                                                    0.1
-                                                ),
-                                            }}
-                                        />
-                                    </Paper>
-                                </Fade>
-
-                                {/* Skeleton for collapsed drawer */}
-                                <Zoom
-                                    in={!isOpen}
-                                    timeout={{ enter: 300, exit: 200 }}
-                                    style={{
-                                        transitionDelay: !isOpen
-                                            ? '75ms'
-                                            : '0ms',
-                                    }}
-                                    unmountOnExit
-                                >
-                                    <Skeleton
-                                        variant="circular"
-                                        width={36}
-                                        height={36}
-                                        animation="pulse"
-                                        sx={{
-                                            bgcolor: alpha(
-                                                theme.palette.primary.light,
-                                                0.1
-                                            ),
-                                            border: '1px dashed',
-                                            borderColor: alpha(
-                                                theme.palette.primary.light,
-                                                0.3
-                                            ),
-                                        }}
-                                    />
-                                </Zoom>
-                            </>
-                        ) : (
-                            <>
-                                <Fade
-                                    in={isOpen}
-                                    timeout={{ enter: 400, exit: 200 }}
-                                    style={{
-                                        position: 'absolute',
-                                        width: '100%',
-                                        transitionDelay: isOpen
-                                            ? '100ms'
-                                            : '0ms',
-                                    }}
-                                    unmountOnExit
-                                >
-                                    <Button
-                                        variant="outlined"
-                                        color="primary"
-                                        startIcon={
-                                            <AddRoundedIcon fontSize="small" />
-                                        }
-                                        fullWidth
-                                        sx={{
-                                            borderRadius: 2,
-                                            textTransform: 'none',
-                                            fontWeight: 600,
-                                            height: '36px',
-                                            py: 0.5,
-                                            border: '1px dashed',
-                                            borderColor: 'primary.light',
-                                            boxShadow: 'none',
-                                            whiteSpace: 'nowrap',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            fontSize: '0.9rem',
-                                            '&:hover': {
-                                                border: '1px dashed',
-                                                borderColor: 'primary.dark',
-                                                bgcolor: alpha(
-                                                    theme.palette.primary.main,
-                                                    0.04
-                                                ),
-                                            },
-                                            '& .MuiButton-startIcon': {
-                                                marginRight: 0.5,
-                                                transform: 'scale(0.9)',
-                                            },
-                                        }}
-                                        onClick={onCreateCollection}
-                                    >
-                                        New Collection
-                                    </Button>
-                                </Fade>
-
-                                <Zoom
-                                    in={!isOpen}
-                                    timeout={{ enter: 300, exit: 200 }}
-                                    style={{
-                                        transitionDelay: !isOpen
-                                            ? '75ms'
-                                            : '0ms',
-                                    }}
-                                    unmountOnExit
-                                >
-                                    <Tooltip title="">
-                                        <IconButton
-                                            color="primary"
-                                            size="medium"
-                                            sx={{
-                                                width: '36px',
-                                                height: '36px',
-                                                border: '1px dashed',
-                                                borderColor: 'primary.light',
-                                                padding: 0.75,
-                                                '&:hover': {
-                                                    bgcolor: alpha(
-                                                        theme.palette.primary
-                                                            .main,
-                                                        0.04
-                                                    ),
-                                                    borderColor: 'primary.dark',
-                                                },
-                                                '& .MuiSvgIcon-root': {
-                                                    fontSize: '1.25rem',
-                                                },
-                                            }}
-                                            onClick={onCreateCollection}
-                                        >
-                                            <AddRoundedIcon fontSize="inherit" />
-                                        </IconButton>
-                                    </Tooltip>
-                                </Zoom>
-                            </>
-                        )}
-                    </Box>
-                </Box>
+                {/* Replace with CollectionsDrawerFooter */}
+                <CollectionsDrawerFooter
+                    isOpen={isOpen}
+                    isLoading={isLoading}
+                    onCreateCollection={onCreateCollection}
+                    theme={theme}
+                />
 
                 {/* Emoji picker popover */}
                 <Popover
@@ -1052,133 +676,14 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                             : 'none',
                     }}
                 >
-                    {/* Delete confirmation slide-in panel */}
-                    <Slide
-                        direction="left"
-                        in={deletingCollection === collection.id}
-                        timeout={300}
-                        mountOnEnter
-                        unmountOnExit
-                        container={collectionItemRef.current}
-                    >
-                        <Box
-                            sx={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                zIndex: 5,
-                                display: 'flex',
-                                alignItems: 'center',
-                                pr: 0,
-                            }}
-                        >
-                            <Paper
-                                elevation={2}
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    width: '100%',
-                                    height: COLLECTION_ITEM_HEIGHT,
-                                    p: 1,
-                                    backgroundColor: '#ffebee',
-                                    border: '1px solid',
-                                    borderColor: '#ef9a9a',
-                                    borderRadius: 2,
-                                    animation: 'pulse 1.5s ease-in-out',
-                                    '@keyframes pulse': {
-                                        '0%': {
-                                            boxShadow:
-                                                '0 0 0 0 rgba(239, 154, 154, 0.4)',
-                                        },
-                                        '70%': {
-                                            boxShadow:
-                                                '0 0 0 6px rgba(239, 154, 154, 0)',
-                                        },
-                                        '100%': {
-                                            boxShadow:
-                                                '0 0 0 0 rgba(239, 154, 154, 0)',
-                                        },
-                                    },
-                                }}
-                            >
-                                <Typography
-                                    variant="body2"
-                                    sx={{
-                                        pl: 1,
-                                        color: '#d32f2f',
-                                        fontWeight: 500,
-                                    }}
-                                >
-                                    Delete collection & recipes?
-                                </Typography>
-                                <Box sx={{ display: 'flex', gap: 0 }}>
-                                    <Zoom
-                                        in={true}
-                                        timeout={200}
-                                        style={{ transitionDelay: '150ms' }}
-                                    >
-                                        <IconButton
-                                            size="small"
-                                            onClick={() =>
-                                                onDeleteCollection(
-                                                    collection.id
-                                                )
-                                            }
-                                            sx={{
-                                                color: alpha(
-                                                    theme.palette.primary.light,
-                                                    0.8
-                                                ),
-                                                transition:
-                                                    'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                '&:hover': {
-                                                    bgcolor: alpha(
-                                                        theme.palette.primary
-                                                            .light,
-                                                        0.05
-                                                    ),
-                                                    transform: 'scale(1.1)',
-                                                },
-                                            }}
-                                        >
-                                            <CheckRoundedIcon fontSize="small" />
-                                        </IconButton>
-                                    </Zoom>
-                                    <Zoom
-                                        in={true}
-                                        timeout={200}
-                                        style={{ transitionDelay: '250ms' }}
-                                    >
-                                        <IconButton
-                                            size="small"
-                                            onClick={onCancelDelete}
-                                            sx={{
-                                                color: alpha(
-                                                    theme.palette.primary.light,
-                                                    0.8
-                                                ),
-                                                transition:
-                                                    'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                '&:hover': {
-                                                    bgcolor: alpha(
-                                                        theme.palette.primary
-                                                            .light,
-                                                        0.05
-                                                    ),
-                                                    transform: 'scale(1.1)',
-                                                },
-                                            }}
-                                        >
-                                            <CloseRoundedIcon fontSize="small" />
-                                        </IconButton>
-                                    </Zoom>
-                                </Box>
-                            </Paper>
-                        </Box>
-                    </Slide>
+                    <CollectionListItemDeleteConfirm
+                        collectionId={collection.id}
+                        deletingCollection={deletingCollection}
+                        onDeleteCollection={onDeleteCollection}
+                        onCancelDelete={onCancelDelete}
+                        containerRef={collectionItemRef}
+                        itemHeight={COLLECTION_ITEM_HEIGHT}
+                    />
 
                     {editingCollection === collection.id ? (
                         <Box
