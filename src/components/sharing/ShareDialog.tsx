@@ -780,7 +780,7 @@ const ShareDialog: FC<ShareDialogProps> = memo(
         // Handle changing visibility - DON'T SET isInviteLoading here to prevent form flicker
         const handleVisibilityChange = useCallback(
             async (
-                event: React.MouseEvent<HTMLElement> | null,
+                _event: React.MouseEvent<HTMLElement> | null,
                 newVisibility: string
             ) => {
                 // Only act if there's a real change and we have a handler
