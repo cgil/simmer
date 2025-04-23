@@ -10,6 +10,8 @@ export interface Collection {
     created_at: string;
     updated_at: string;
     recipe_count?: number; // For UI display, not stored in DB
+    is_shared?: boolean; // Flag to indicate if this is a shared collection
+    access_level?: "view" | "edit"; // Access level for shared collections
 }
 
 export interface RecipeCollection {
@@ -32,4 +34,6 @@ export interface CollectionItem {
     count: number;
     icon?: React.ReactNode;
     emoji?: string;
+    is_shared?: boolean; // Flag to indicate if this is a shared collection
+    access_level?: "view" | "edit"; // Access level for shared collections
 }

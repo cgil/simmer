@@ -33,8 +33,8 @@ import TimeEstimate from './components/TimeEstimate';
 import { RecipeService } from '../../services/RecipeService';
 import { useAuth } from '../../context/AuthContext';
 import { Recipe } from '../../types/recipe';
-import ShareDialog from '../../components/sharing/ShareDialog';
 import ShareMenuItem from '../../components/sharing/ShareMenuItem';
+import ShareDialogContainer from '../../components/sharing/ShareDialogContainer';
 
 const RecipePage: FC = () => {
     const { id } = useParams();
@@ -49,10 +49,14 @@ const RecipePage: FC = () => {
 
     const [recipe, setRecipe] = useState<Recipe | null>(initialRecipe || null);
     const [loading, setLoading] = useState(!initialRecipe);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(
+        location.state?.error || null
+    );
     const [servings, setServings] = useState<number>(
         initialRecipe?.servings || 2
     );
+    // State to track edit permission
+    const [canEdit, setCanEdit] = useState<boolean>(false);
 
     // State for menu and dialogs
     const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -101,6 +105,34 @@ const RecipePage: FC = () => {
         fetchRecipe();
     }, [id, initialRecipe, user?.id]);
 
+    // Check for edit permission when recipe is loaded or user changes
+    useEffect(() => {
+        const checkEditPermission = async () => {
+            if (!recipe || !recipe.id || !user) {
+                setCanEdit(false);
+                return;
+            }
+
+            try {
+                // Check if user is owner (for backward compatibility)
+                if (recipe.user_id === user.id) {
+                    setCanEdit(true);
+                    return;
+                }
+
+                // Check edit permission via RPC function
+                const hasEditPermission =
+                    await RecipeService.checkEditPermission(recipe.id);
+                setCanEdit(hasEditPermission);
+            } catch (err) {
+                console.error('Error checking edit permission:', err);
+                setCanEdit(false);
+            }
+        };
+
+        checkEditPermission();
+    }, [recipe, user]);
+
     // When edit button is clicked, navigate to edit page with recipe data
     const handleEditClick = () => {
         if (recipe) {
@@ -131,7 +163,7 @@ const RecipePage: FC = () => {
 
         setIsDeleting(true);
         try {
-            await RecipeService.deleteRecipe(recipe.id, user.id);
+            await RecipeService.deleteRecipe(recipe.id);
             setDeleteDialogOpen(false);
 
             // Navigate back to collection or home after successful deletion
@@ -162,28 +194,6 @@ const RecipePage: FC = () => {
     const handleShareDialogClose = () => {
         setShareDialogOpen(false);
     };
-
-    // Mock shared users for UI testing (would come from API in real implementation)
-    const mockSharedUsers = [
-        {
-            id: '1',
-            email: 'friend@example.com',
-            access: 'view' as const,
-        },
-        {
-            id: '2',
-            email: 'colleague@example.com',
-            avatarUrl: 'https://i.pravatar.cc/150?img=3',
-            access: 'edit' as const,
-        },
-        {
-            id: '3',
-            email: user?.email || 'current.user@example.com',
-            avatarUrl: user?.user_metadata?.avatar_url,
-            access: 'edit' as const,
-            isCurrentUser: true,
-        },
-    ];
 
     if (loading) {
         return (
@@ -234,7 +244,7 @@ const RecipePage: FC = () => {
 
     // Create the action button with the three-dot menu
     const actionButton =
-        user && recipe && user.id === recipe.user_id ? (
+        user && recipe && (recipe.user_id === user.id || canEdit) ? (
             <>
                 <IconButton
                     onClick={handleOpenMenu}
@@ -262,24 +272,37 @@ const RecipePage: FC = () => {
                         },
                     }}
                 >
-                    <ShareMenuItem
-                        icon={SendIcon}
-                        label="Share Recipe"
-                        onClick={handleShareClick}
-                        iconSx={{ transform: 'rotate(-45deg)' }}
-                    />
-                    <ShareMenuItem
-                        icon={EditIcon}
-                        label="Edit Recipe"
-                        onClick={handleEditClick}
-                    />
-                    <Divider sx={{ my: 0.5 }} />
-                    <ShareMenuItem
-                        icon={DeleteIcon}
-                        label="Delete Recipe"
-                        onClick={handleDeleteClick}
-                        color={theme.palette.error.contrastText}
-                    />
+                    {/* Only show sharing option if user is the owner */}
+                    {recipe.user_id === user.id && (
+                        <ShareMenuItem
+                            icon={SendIcon}
+                            label="Share Recipe"
+                            onClick={handleShareClick}
+                            iconSx={{ transform: 'rotate(-45deg)' }}
+                        />
+                    )}
+
+                    {/* Only show edit option if user has edit permission */}
+                    {canEdit && (
+                        <ShareMenuItem
+                            icon={EditIcon}
+                            label="Edit Recipe"
+                            onClick={handleEditClick}
+                        />
+                    )}
+
+                    {/* Only show delete option if user is the owner */}
+                    {recipe.user_id === user.id && (
+                        <>
+                            <Divider sx={{ my: 0.5 }} />
+                            <ShareMenuItem
+                                icon={DeleteIcon}
+                                label="Delete Recipe"
+                                onClick={handleDeleteClick}
+                                color={theme.palette.error.contrastText}
+                            />
+                        </>
+                    )}
                 </Menu>
 
                 {/* Delete confirmation dialog */}
@@ -719,17 +742,13 @@ const RecipePage: FC = () => {
             </Box>
 
             {/* Share Dialog */}
-            <ShareDialog
+            <ShareDialogContainer
                 open={shareDialogOpen}
                 onClose={handleShareDialogClose}
                 title="Share Recipe"
                 itemType="recipe"
+                itemId={recipe.id || ''}
                 itemTitle={recipe.title}
-                sharedUsers={mockSharedUsers}
-                ownerEmail={user?.email || 'owner@example.com'}
-                ownerAvatarUrl={user?.user_metadata?.avatar_url}
-                ownerId={user?.id}
-                currentUserId={user?.id}
             />
         </AppLayout>
     );

@@ -15,24 +15,57 @@ export class CollectionService {
      */
     static async getCollections(userId: string): Promise<Collection[]> {
         try {
-            // First get all collections
-            const { data: collections, error } = await supabase
+            // First get collections owned by the user
+            const { data: ownedCollections, error } = await supabase
                 .from("collections")
                 .select("*")
                 .eq("user_id", userId)
                 .order("name");
 
             if (error) {
-                console.error("Error fetching collections:", error);
+                console.error("Error fetching owned collections:", error);
                 throw error;
             }
 
-            if (!collections || collections.length === 0) {
+            // Then get collections that have been shared with the user
+            const { data: sharedCollectionsData, error: sharedError } =
+                await supabase
+                    .from("shared_collections")
+                    .select(`
+                    collection_id,
+                    access_level,
+                    collections:collection_id (*)
+                `)
+                    .eq("shared_with_user_id", userId);
+
+            if (sharedError) {
+                console.error(
+                    "Error fetching shared collections:",
+                    sharedError,
+                );
+                throw sharedError;
+            }
+
+            // Extract collection data from the joined result
+            const sharedCollections = sharedCollectionsData?.map((item) => ({
+                ...item.collections,
+                // Add a flag to indicate this is a shared collection and its access level
+                is_shared: true,
+                access_level: item.access_level,
+            })) || [];
+
+            // Combine owned and shared collections
+            const allCollections = [
+                ...(ownedCollections || []),
+                ...sharedCollections,
+            ];
+
+            if (!allCollections || allCollections.length === 0) {
                 return [];
             }
 
-            // Then get recipe counts for each collection using count aggregation
-            const collectionIds = collections.map((c) => c.id);
+            // Get all collection IDs for recipe counts
+            const collectionIds = allCollections.map((c) => c.id);
 
             // Use raw SQL for counting to avoid type issues
             const { data: counts, error: countError } = await supabase
@@ -56,7 +89,7 @@ export class CollectionService {
             }
 
             // Return collections with counts
-            return collections.map((collection) => ({
+            return allCollections.map((collection) => ({
                 ...collection,
                 recipe_count: countsMap.get(collection.id) || 0,
             }));
@@ -73,19 +106,40 @@ export class CollectionService {
      */
     static async getCollectionItems(userId: string): Promise<CollectionItem[]> {
         try {
-            // Get all collections with counts
+            // Get all collections with counts (both owned and shared)
             const collections = await this.getCollections(userId);
 
             // Get total recipe count for "All Recipes"
-            const { count: totalCount, error: countError } = await supabase
+            // This should include recipes owned by user AND shared recipes
+            const { count: ownedCount, error: ownedCountError } = await supabase
                 .from("recipes")
                 .select("id", { count: "exact", head: true })
                 .eq("user_id", userId);
 
-            if (countError) {
-                console.error("Error fetching total recipe count:", countError);
-                throw countError;
+            if (ownedCountError) {
+                console.error(
+                    "Error fetching total owned recipe count:",
+                    ownedCountError,
+                );
+                throw ownedCountError;
             }
+
+            // Get count of shared recipes
+            const { count: sharedCount, error: sharedError } = await supabase
+                .from("shared_recipes")
+                .select("recipe_id", { count: "exact", head: true })
+                .eq("shared_with_user_id", userId);
+
+            if (sharedError) {
+                console.error(
+                    "Error fetching shared recipe count:",
+                    sharedError,
+                );
+                throw sharedError;
+            }
+
+            // Combine counts for "All Recipes"
+            const totalCount = (ownedCount || 0) + (sharedCount || 0);
 
             // Create collection items array with "All Recipes" at the beginning
             const allRecipesItem: CollectionItem = {
@@ -101,6 +155,8 @@ export class CollectionService {
                 name: collection.name,
                 count: collection.recipe_count || 0,
                 emoji: collection.emoji || undefined,
+                is_shared: collection.is_shared || false,
+                access_level: collection.access_level,
             }));
 
             // Return with "All Recipes" first, then alphabetically sorted collections
@@ -163,6 +219,17 @@ export class CollectionService {
             throw new Error("Collection name cannot be empty");
         }
 
+        // Check if user has edit permission for this collection
+        const hasPermission = await this.checkEditPermission(collectionId);
+        if (!hasPermission) {
+            console.log(
+                "User does not have edit permission for this collection",
+            );
+            throw new Error(
+                `You don't have permission to update this collection.`,
+            );
+        }
+
         const updateData: { name?: string; emoji?: string | null } = {};
 
         if (updates.name) {
@@ -209,6 +276,17 @@ export class CollectionService {
      * @returns True if successful
      */
     static async deleteCollection(collectionId: string): Promise<boolean> {
+        // Check if user has edit permission for this collection
+        const hasPermission = await this.checkEditPermission(collectionId);
+        if (!hasPermission) {
+            console.log(
+                "User does not have edit permission for this collection",
+            );
+            throw new Error(
+                `You don't have permission to delete this collection.`,
+            );
+        }
+
         const { error } = await supabase
             .from("collections")
             .delete()
@@ -233,6 +311,17 @@ export class CollectionService {
         collectionId: string,
     ): Promise<boolean> {
         try {
+            // Check if user has edit permission for this collection
+            const hasPermission = await this.checkEditPermission(collectionId);
+            if (!hasPermission) {
+                console.log(
+                    "User does not have edit permission for this collection",
+                );
+                throw new Error(
+                    `You don't have permission to modify this collection.`,
+                );
+            }
+
             // First, find the maximum position value in the collection
             const { data: positionData, error: positionError } = await supabase
                 .from("recipe_collections")
@@ -288,18 +377,34 @@ export class CollectionService {
         recipeId: string,
         collectionId: string,
     ): Promise<boolean> {
-        const { error } = await supabase
-            .from("recipe_collections")
-            .delete()
-            .eq("recipe_id", recipeId)
-            .eq("collection_id", collectionId);
+        try {
+            // Check if user has edit permission for this collection
+            const hasPermission = await this.checkEditPermission(collectionId);
+            if (!hasPermission) {
+                console.log(
+                    "User does not have edit permission for this collection",
+                );
+                throw new Error(
+                    `You don't have permission to modify this collection.`,
+                );
+            }
 
-        if (error) {
-            console.error("Error removing recipe from collection:", error);
+            const { error } = await supabase
+                .from("recipe_collections")
+                .delete()
+                .eq("recipe_id", recipeId)
+                .eq("collection_id", collectionId);
+
+            if (error) {
+                console.error("Error removing recipe from collection:", error);
+                throw error;
+            }
+
+            return true;
+        } catch (error) {
+            console.error("Error in removeRecipeFromCollection:", error);
             throw error;
         }
-
-        return true;
     }
 
     /**
@@ -313,7 +418,37 @@ export class CollectionService {
         collectionId: string,
     ): Promise<Recipe[]> {
         try {
-            // First, get recipe IDs with their positions in the collection
+            // First, check if user has access to this collection
+            // either as owner or through sharing
+            const isOwner = await this.isCollectionOwner(userId, collectionId);
+            let hasAccess = isOwner;
+
+            if (!hasAccess) {
+                // Check if user has access through sharing
+                const { data: shareData, error: shareError } = await supabase
+                    .from("shared_collections")
+                    .select()
+                    .eq("collection_id", collectionId)
+                    .eq("shared_with_user_id", userId)
+                    .maybeSingle();
+
+                if (shareError) {
+                    console.error(
+                        "Error checking collection access:",
+                        shareError,
+                    );
+                    throw shareError;
+                }
+
+                hasAccess = !!shareData;
+            }
+
+            if (!hasAccess) {
+                console.error("User does not have access to this collection");
+                return [];
+            }
+
+            // Now get the recipe IDs with their positions in the collection
             const { data: recipeData, error: recipeDataError } = await supabase
                 .from("recipe_collections")
                 .select("recipe_id, position")
@@ -337,7 +472,8 @@ export class CollectionService {
             );
 
             // Get the full recipe data for these IDs
-            const { data: recipes, error } = await supabase
+            // For a shared collection, we need to get recipes that may not be owned by this user
+            let recipesQuery = supabase
                 .from("recipes")
                 .select(`
                     *,
@@ -348,8 +484,15 @@ export class CollectionService {
                         recipe_instruction_steps (id, text, timing_min, timing_max, timing_units, position)
                     )
                 `)
-                .eq("user_id", userId)
                 .in("id", ids);
+
+            // If user is owner, just filter by their ID
+            // If user is viewing a shared collection, don't filter by user_id
+            if (isOwner) {
+                recipesQuery = recipesQuery.eq("user_id", userId);
+            }
+
+            const { data: recipes, error } = await recipesQuery;
 
             if (error) {
                 console.error("Error fetching recipes by collection:", error);
@@ -374,6 +517,67 @@ export class CollectionService {
         } catch (error) {
             console.error("Error in getRecipesByCollection:", error);
             throw error;
+        }
+    }
+
+    /**
+     * Helper method to check if a user is the owner of a collection
+     * @param userId - The ID of the user
+     * @param collectionId - The ID of the collection
+     * @returns True if the user owns the collection
+     */
+    static async isCollectionOwner(
+        userId: string,
+        collectionId: string,
+    ): Promise<boolean> {
+        try {
+            const { data, error } = await supabase
+                .from("collections")
+                .select("id")
+                .eq("id", collectionId)
+                .eq("user_id", userId)
+                .maybeSingle();
+
+            if (error) {
+                console.error("Error checking collection ownership:", error);
+                return false;
+            }
+
+            return !!data;
+        } catch (error) {
+            console.error("Error in isCollectionOwner:", error);
+            return false;
+        }
+    }
+
+    /**
+     * Check if the current authenticated user has edit permission for a collection
+     * @param collectionId - The ID of the collection to check
+     * @returns A boolean indicating whether the user can edit the collection
+     */
+    static async checkEditPermission(collectionId: string): Promise<boolean> {
+        try {
+            // Call the Supabase function that checks edit permission
+            const { data, error } = await supabase.rpc(
+                "check_collection_edit_permission",
+                { collection_id_to_check: collectionId },
+            );
+
+            if (error) {
+                console.error(
+                    "Error checking collection edit permission:",
+                    error,
+                );
+                return false;
+            }
+
+            return !!data; // Convert to boolean
+        } catch (error) {
+            console.error(
+                "Error in checkEditPermission for collection:",
+                error,
+            );
+            return false;
         }
     }
 
@@ -426,7 +630,6 @@ export class CollectionService {
 
     /**
      * Update the position of a recipe within a collection
-     * This supports drag-and-drop reordering of recipes
      * @param recipeId - The ID of the recipe to reposition
      * @param collectionId - The ID of the collection
      * @param newPosition - The new position value
@@ -438,34 +641,49 @@ export class CollectionService {
         newPosition: number,
     ): Promise<boolean> {
         try {
-            // First, get the current recipe_collections record
-            const { data: existingRecord, error: fetchError } = await supabase
-                .from("recipe_collections")
-                .select("id, position")
-                .eq("recipe_id", recipeId)
-                .eq("collection_id", collectionId)
-                .single();
-
-            if (fetchError) {
-                console.error(
-                    "Error fetching recipe collection record:",
-                    fetchError,
+            // Check if user has edit permission for this collection
+            const hasPermission = await this.checkEditPermission(collectionId);
+            if (!hasPermission) {
+                console.log(
+                    "User does not have edit permission for this collection",
                 );
-                throw fetchError;
+                throw new Error(
+                    `You don't have permission to modify this collection.`,
+                );
             }
 
-            if (!existingRecord) {
-                throw new Error("Recipe not found in this collection");
+            // Verify the recipe is in the collection
+            const { data: existingEntry, error: checkError } = await supabase
+                .from("recipe_collections")
+                .select("*")
+                .eq("recipe_id", recipeId)
+                .eq("collection_id", collectionId)
+                .maybeSingle();
+
+            if (checkError) {
+                console.error(
+                    "Error checking recipe in collection:",
+                    checkError,
+                );
+                throw checkError;
+            }
+
+            if (!existingEntry) {
+                throw new Error("Recipe is not in this collection");
             }
 
             // Update the position
             const { error: updateError } = await supabase
                 .from("recipe_collections")
                 .update({ position: newPosition })
-                .eq("id", existingRecord.id);
+                .eq("recipe_id", recipeId)
+                .eq("collection_id", collectionId);
 
             if (updateError) {
-                console.error("Error updating recipe position:", updateError);
+                console.error(
+                    "Error updating recipe position in collection:",
+                    updateError,
+                );
                 throw updateError;
             }
 

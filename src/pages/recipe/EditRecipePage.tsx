@@ -16,6 +16,7 @@ import {
     Select,
     FormControl,
     SelectChangeEvent,
+    Tooltip,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
@@ -98,6 +99,10 @@ const EditRecipePage: FC = () => {
     const [availableCollections, setAvailableCollections] = useState<
         CollectionItem[]
     >([]);
+    const [canEdit, setCanEdit] = useState<boolean>(false);
+    const [checkingPermission, setCheckingPermission] = useState<boolean>(true);
+    // Track if current user is recipe owner
+    const [isOwner, setIsOwner] = useState<boolean>(false);
 
     // Check if the device is mobile
     useEffect(() => {
@@ -170,13 +175,19 @@ const EditRecipePage: FC = () => {
             if (!user || !recipe) return;
 
             try {
-                // Get available collections for dropdown
-                const collections = await CollectionService.getCollectionItems(
-                    user.id
-                );
-                setAvailableCollections(collections);
+                // Get available collections for dropdown (only needed for owners)
+                if (recipe.user_id === user.id) {
+                    const collections =
+                        await CollectionService.getCollectionItems(user.id);
+                    setAvailableCollections(collections);
+                } else {
+                    // For non-owners, set an empty list of available collections
+                    // They'll only see the current collections but can't change them
+                    setAvailableCollections([]);
+                }
 
                 // Get collections for this recipe if it's an existing recipe
+                // This is needed for both owners and editors
                 if (recipe.id && recipe.id !== 'new') {
                     const recipeCollections =
                         await CollectionService.getCollectionsForRecipe(
@@ -185,6 +196,14 @@ const EditRecipePage: FC = () => {
                     const collectionIds = recipeCollections.map((c) => c.id);
                     setSelectedCollections(collectionIds);
                     setInitialCollectionIds(collectionIds);
+
+                    // For non-owners, set the first collection as selected for display purposes
+                    if (
+                        recipe.user_id !== user.id &&
+                        recipeCollections.length > 0
+                    ) {
+                        setSelectedCollection(recipeCollections[0].id);
+                    }
                 }
             } catch (err) {
                 console.error('Error loading collections:', err);
@@ -192,7 +211,7 @@ const EditRecipePage: FC = () => {
         };
 
         loadCollections();
-    }, [user, recipe.id]);
+    }, [user, recipe.id, recipe.user_id]);
 
     // Track collection changes
     useEffect(() => {
@@ -259,7 +278,75 @@ const EditRecipePage: FC = () => {
         }
     };
 
-    if (!recipe) {
+    // Check for edit permission when component mounts
+    useEffect(() => {
+        const checkEditPermission = async () => {
+            if (!user || !recipe || !recipe.id || recipe.id === 'new') {
+                // For new recipes or if no user or recipe, we don't need to check
+                setCanEdit(true);
+                setIsOwner(true); // New recipes are owned by the current user
+                setCheckingPermission(false);
+                return;
+            }
+
+            try {
+                // Check if user is owner
+                if (recipe.user_id === user.id) {
+                    setCanEdit(true);
+                    setIsOwner(true);
+                    setCheckingPermission(false);
+                    return;
+                }
+
+                // User is not the owner, but may have edit permission
+                setIsOwner(false);
+
+                // Check edit permission using RPC
+                const hasEditPermission =
+                    await RecipeService.checkEditPermission(recipe.id);
+                setCanEdit(hasEditPermission);
+
+                // If no edit permission, redirect to view page
+                if (!hasEditPermission) {
+                    navigate(`/recipe/${recipe.id}`, {
+                        state: {
+                            error: 'You do not have permission to edit this recipe',
+                        },
+                    });
+                }
+            } catch (err) {
+                console.error('Error checking edit permission:', err);
+                navigate(`/recipe/${recipe.id}`, {
+                    state: { error: 'Could not verify edit permissions' },
+                });
+            } finally {
+                setCheckingPermission(false);
+            }
+        };
+
+        checkEditPermission();
+    }, [recipe, user, navigate]);
+
+    if (checkingPermission) {
+        return (
+            <AppLayout>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        height: '50vh',
+                    }}
+                >
+                    <Typography variant="h6" sx={{ mb: 2 }}>
+                        Checking edit permissions...
+                    </Typography>
+                </Box>
+            </AppLayout>
+        );
+    }
+
+    if (!recipe || !canEdit) {
         navigate('/');
         return null;
     }
@@ -267,17 +354,6 @@ const EditRecipePage: FC = () => {
     const handleSave = async () => {
         if (!user) {
             setSaveError('You must be logged in to save recipes');
-            return;
-        }
-
-        // Check if the recipe belongs to the current user
-        if (
-            recipe.id &&
-            recipe.id !== 'new' &&
-            recipe.user_id &&
-            recipe.user_id !== user.id
-        ) {
-            setSaveError('You do not have permission to edit this recipe');
             return;
         }
 
@@ -383,8 +459,8 @@ const EditRecipePage: FC = () => {
             // Handle collection assignment based on user selection
             if (savedRecipe.id) {
                 try {
-                    // Only save collections if they have changed
-                    if (isCollectionsChanged) {
+                    // Only save collections if they have changed AND user is owner
+                    if (isCollectionsChanged && isOwner) {
                         await saveCollections(savedRecipe.id);
                     }
                 } catch (collectionError) {
@@ -666,6 +742,9 @@ const EditRecipePage: FC = () => {
 
     // Handle collection selection
     const handleCollectionChange = (event: SelectChangeEvent<string>) => {
+        // Only allow owners to change collections
+        if (!isOwner) return;
+
         setSelectedCollection(event.target.value);
     };
 
@@ -785,44 +864,43 @@ const EditRecipePage: FC = () => {
                         }}
                         size="small"
                     >
-                        <Select
-                            value={selectedCollection}
-                            onChange={handleCollectionChange}
-                            displayEmpty
-                            inputProps={{ 'aria-label': 'Select collection' }}
-                            sx={{
-                                height: 42,
-                                fontFamily: "'Inter', sans-serif",
-                                '& .MuiSelect-select': {
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1,
-                                },
-                            }}
+                        <Tooltip
+                            title={
+                                !isOwner
+                                    ? 'Only the recipe owner can change which collection this recipe belongs to'
+                                    : ''
+                            }
+                            placement="top"
+                            arrow
                         >
-                            <MenuItem
-                                key={ALL_RECIPES_ID}
-                                value={ALL_RECIPES_ID}
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1,
-                                    fontFamily: "'Inter', sans-serif",
-                                }}
-                            >
-                                <span style={{ fontSize: '1.2rem' }}>📚</span>
-                                All Recipes
-                            </MenuItem>
-                            {availableCollections
-                                .filter(
-                                    (collection) =>
-                                        collection.id !== ALL_RECIPES_ID
-                                )
-                                .sort((a, b) => a.name.localeCompare(b.name))
-                                .map((collection) => (
+                            <div>
+                                {' '}
+                                {/* Wrapper div required for Tooltip to work with disabled elements */}
+                                <Select
+                                    value={selectedCollection}
+                                    onChange={handleCollectionChange}
+                                    displayEmpty
+                                    inputProps={{
+                                        'aria-label': 'Select collection',
+                                    }}
+                                    disabled={!isOwner}
+                                    sx={{
+                                        height: 42,
+                                        fontFamily: "'Inter', sans-serif",
+                                        '& .MuiSelect-select': {
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1,
+                                        },
+                                        ...(!isOwner && {
+                                            opacity: 0.7,
+                                            cursor: 'not-allowed',
+                                        }),
+                                    }}
+                                >
                                     <MenuItem
-                                        key={collection.id}
-                                        value={collection.id}
+                                        key={ALL_RECIPES_ID}
+                                        value={ALL_RECIPES_ID}
                                         sx={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -830,17 +908,46 @@ const EditRecipePage: FC = () => {
                                             fontFamily: "'Inter', sans-serif",
                                         }}
                                     >
-                                        {collection.emoji && (
-                                            <span
-                                                style={{ fontSize: '1.2rem' }}
-                                            >
-                                                {collection.emoji}
-                                            </span>
-                                        )}
-                                        {collection.name}
+                                        <span style={{ fontSize: '1.2rem' }}>
+                                            📚
+                                        </span>
+                                        All Recipes
                                     </MenuItem>
-                                ))}
-                        </Select>
+                                    {availableCollections
+                                        .filter(
+                                            (collection) =>
+                                                collection.id !== ALL_RECIPES_ID
+                                        )
+                                        .sort((a, b) =>
+                                            a.name.localeCompare(b.name)
+                                        )
+                                        .map((collection) => (
+                                            <MenuItem
+                                                key={collection.id}
+                                                value={collection.id}
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 1,
+                                                    fontFamily:
+                                                        "'Inter', sans-serif",
+                                                }}
+                                            >
+                                                {collection.emoji && (
+                                                    <span
+                                                        style={{
+                                                            fontSize: '1.2rem',
+                                                        }}
+                                                    >
+                                                        {collection.emoji}
+                                                    </span>
+                                                )}
+                                                {collection.name}
+                                            </MenuItem>
+                                        ))}
+                                </Select>
+                            </div>
+                        </Tooltip>
                     </FormControl>
                 </Box>
 

@@ -20,7 +20,7 @@ import {
 
 // Sharing components
 import SendIcon from '@mui/icons-material/Send';
-import ShareDialog from '../../components/sharing/ShareDialog';
+import ShareDialogContainer from '../../components/sharing/ShareDialogContainer';
 
 // Import our new components
 import RecipeGrid from '../../features/catalog/components/RecipeGrid';
@@ -751,30 +751,22 @@ const CatalogPage: FC = () => {
         setCollectionShareDialogOpen(false);
     };
 
-    // Mock shared users for UI testing (would come from API in real implementation)
-    const mockCollectionSharedUsers = [
-        {
-            id: '1',
-            email: 'family@example.com',
-            access: 'edit' as const,
-        },
-        {
-            id: '2',
-            email: user?.email || 'current.user@example.com',
-            avatarUrl: user?.user_metadata?.avatar_url,
-            access: 'view' as const,
-            isCurrentUser: true,
-        },
-    ];
-
     // Update the renderShareButton function to handle the CollectionItem structure correctly
     const renderShareButton = () => {
         // Only show share button when viewing a non-All collection that the user owns
         const collection = collections.find((c) => c.id === selectedCollection);
 
-        // Since CollectionItem doesn't have user_id, we might need another check
-        // For now, let's assume any non-All collection can be shared if the user is logged in
-        if (selectedCollection !== ALL_RECIPES_ID && collection && user) {
+        // Only show the share button if:
+        // 1. It's not the All Recipes view
+        // 2. The collection exists
+        // 3. The user is logged in
+        // 4. The collection is NOT shared with the user (is_shared is falsy)
+        if (
+            selectedCollection !== ALL_RECIPES_ID &&
+            collection &&
+            user &&
+            !collection.is_shared
+        ) {
             return (
                 <Button
                     variant="outlined"
@@ -982,20 +974,16 @@ const CatalogPage: FC = () => {
             </Box>
 
             {/* Collection Share Dialog */}
-            <ShareDialog
+            <ShareDialogContainer
                 open={collectionShareDialogOpen}
                 onClose={handleCloseCollectionShareDialog}
                 title="Share Collection"
                 itemType="collection"
+                itemId={selectedCollection}
                 itemTitle={
                     collections.find((c) => c.id === selectedCollection)
                         ?.name || 'Collection'
                 }
-                sharedUsers={mockCollectionSharedUsers}
-                ownerEmail={user?.email || 'owner@example.com'}
-                ownerAvatarUrl={user?.user_metadata?.avatar_url}
-                ownerId={user?.id}
-                currentUserId={user?.id}
             />
         </AppLayout>
     );

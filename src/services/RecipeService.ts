@@ -105,6 +105,21 @@ export class RecipeService {
             recipeId = ensureUuid(recipeId);
         }
 
+        // For existing recipes, check if user has edit permission
+        if (!isNewRecipe) {
+            const hasPermission = await this.checkEditPermission(recipeId);
+
+            if (!hasPermission) {
+                console.log(
+                    "User does not have edit permission for this recipe",
+                );
+                throw new Error(
+                    `You don't have permission to update this recipe.`,
+                );
+            }
+            console.log(`User has edit permission for recipe ${recipeId}`);
+        }
+
         // Update the recipe object with the validated/new UUID
         recipe = {
             ...recipe,
@@ -212,46 +227,12 @@ export class RecipeService {
         }
 
         try {
-            let savedRecipeId;
+            const existingRecipe = !!recipeId;
 
-            // STEP 1: Insert or update the base recipe
-            if (isNewRecipe) {
-                console.log(`Creating new recipe: "${recipe.title}"`);
+            // Variable to track the saved recipe ID
+            let savedRecipeId: string | undefined = undefined;
 
-                // Create a new recipe - explicitly setting user_id for ownership
-                const { data: newRecipe, error: createError } = await supabase
-                    .from("recipes")
-                    .insert({
-                        title: recipe.title || "Untitled Recipe",
-                        description: recipe.description || "",
-                        user_id: userId, // Set explicit ownership
-                        prep_time: recipe.time_estimate?.prep || 0,
-                        cook_time: recipe.time_estimate?.cook || 0,
-                        total_time: recipe.time_estimate?.total ||
-                            (recipe.time_estimate?.prep || 0) +
-                                (recipe.time_estimate?.cook || 0),
-                        servings: recipe.servings || 2,
-                        tags: recipe.tags || [],
-                        notes: recipe.notes || [],
-                        is_public: true, // Set is_public to true by default
-                    })
-                    .select("id")
-                    .single();
-
-                if (createError) {
-                    console.error("Error creating recipe:", createError);
-                    throw createError;
-                }
-
-                if (!newRecipe?.id) {
-                    throw new Error("Failed to create recipe - no ID returned");
-                }
-
-                savedRecipeId = newRecipe.id;
-                console.log(
-                    `Successfully created recipe with ID: ${savedRecipeId}`,
-                );
-            } else {
+            if (existingRecipe) {
                 console.log(
                     `Updating existing recipe: "${recipe.title}" with ID: ${recipeId}`,
                 );
@@ -316,42 +297,42 @@ export class RecipeService {
 
                         // Skip to step 2 - no need to clear existing data as we just created a new recipe
                         isNewRecipe = true;
-                    } else if (existingRecipe.user_id !== userId) {
-                        throw new Error(
-                            `You don't have permission to update this recipe. Recipe belongs to user ${existingRecipe.user_id}, but you are ${userId}`,
-                        );
                     } else {
-                        // Update the recipe now that we've verified ownership
-                        const { error: updateError } = await supabase
-                            .from("recipes")
-                            .update({
-                                title: recipe.title || "Untitled Recipe",
-                                description: recipe.description || "",
-                                prep_time: recipe.time_estimate?.prep || 0,
-                                cook_time: recipe.time_estimate?.cook || 0,
-                                total_time: recipe.time_estimate?.total ||
-                                    (recipe.time_estimate?.prep || 0) +
-                                        (recipe.time_estimate?.cook || 0),
-                                servings: recipe.servings || 2,
-                                tags: recipe.tags || [],
-                                notes: recipe.notes || [],
-                            })
-                            .eq("id", recipeId)
-                            .eq("user_id", userId); // Double-check ownership in the update query
-
-                        if (updateError) {
-                            console.error(
-                                "Error updating recipe:",
-                                updateError,
-                            );
-                            throw updateError;
-                        }
-
+                        // Permission already checked at the beginning of the function
+                        // No need to check again
                         savedRecipeId = recipeId;
-                        console.log(
-                            `Successfully updated recipe with ID: ${savedRecipeId}`,
-                        );
                     }
+
+                    // Update the recipe now that we've verified ownership or edit permission
+                    const { error: updateError } = await supabase
+                        .from("recipes")
+                        .update({
+                            title: recipe.title || "Untitled Recipe",
+                            description: recipe.description || "",
+                            prep_time: recipe.time_estimate?.prep || 0,
+                            cook_time: recipe.time_estimate?.cook || 0,
+                            total_time: recipe.time_estimate?.total ||
+                                (recipe.time_estimate?.prep || 0) +
+                                    (recipe.time_estimate?.cook || 0),
+                            servings: recipe.servings || 2,
+                            tags: recipe.tags || [],
+                            notes: recipe.notes || [],
+                        })
+                        .eq("id", recipeId);
+                    // No user_id check needed - permission was verified earlier
+
+                    if (updateError) {
+                        console.error(
+                            "Error updating recipe:",
+                            updateError,
+                        );
+                        throw updateError;
+                    }
+
+                    savedRecipeId = recipeId;
+                    console.log(
+                        `Successfully updated recipe with ID: ${savedRecipeId}`,
+                    );
                 } catch (error) {
                     // If there was an error during the ownership check, but it's due to the recipe not existing
                     // (which would be a 406 Not Acceptable error from Supabase REST API),
@@ -614,33 +595,84 @@ export class RecipeService {
     }
 
     /**
-     * Get all recipes for a user
+     * Get all recipes for a user, including recipes they own and recipes shared with them.
      */
     static async getRecipes(userId: string): Promise<Recipe[]> {
-        const { data: recipes, error } = await supabase
-            .from("recipes")
-            .select(`
-                *,
-                recipe_images (id, url, position),
-                recipe_ingredients (id, name, quantity, unit, notes, position),
-                recipe_instruction_sections (
-                    id, section_title, position,
-                    recipe_instruction_steps (id, text, timing_min, timing_max, timing_units, position)
+        try {
+            // 1. Get IDs of recipes owned by the user
+            const { data: ownedRecipeIdsData, error: ownedError } =
+                await supabase
+                    .from("recipes")
+                    .select("id")
+                    .eq("user_id", userId);
+
+            if (ownedError) {
+                console.error("Error fetching owned recipe IDs:", ownedError);
+                throw ownedError;
+            }
+            const ownedRecipeIds = ownedRecipeIdsData?.map((r) => r.id) || [];
+
+            // 2. Get IDs of recipes shared with the user
+            const { data: sharedRecipeIdsData, error: sharedError } =
+                await supabase
+                    .from("shared_recipes")
+                    .select("recipe_id")
+                    .eq("shared_with_user_id", userId);
+
+            if (sharedError) {
+                console.error("Error fetching shared recipe IDs:", sharedError);
+                throw sharedError;
+            }
+            const sharedRecipeIds = sharedRecipeIdsData?.map((s) =>
+                s.recipe_id
+            ) || [];
+
+            // 3. Combine IDs and remove duplicates
+            const allRecipeIds = [
+                ...new Set([...ownedRecipeIds, ...sharedRecipeIds]),
+            ];
+
+            if (allRecipeIds.length === 0) {
+                return []; // No recipes owned or shared
+            }
+
+            // 4. Fetch full details for all accessible recipes
+            const { data: recipes, error: fetchError } = await supabase
+                .from("recipes")
+                .select(`
+                    *,
+                    recipe_images (id, url, position),
+                    recipe_ingredients (id, name, quantity, unit, notes, position),
+                    recipe_instruction_sections (
+                        id, section_title, position,
+                        recipe_instruction_steps (id, text, timing_min, timing_max, timing_units, position)
+                    )
+                `)
+                .in("id", allRecipeIds)
+                .order("position", { foreignTable: "recipe_ingredients" })
+                .order("position", {
+                    foreignTable: "recipe_instruction_sections",
+                })
+                .order("position", {
+                    foreignTable:
+                        "recipe_instruction_sections.recipe_instruction_steps",
+                })
+                .order("title"); // Order the final combined list by title
+
+            if (fetchError) {
+                console.error("Error fetching recipe details:", fetchError);
+                throw fetchError;
+            }
+
+            return recipes
+                ? recipes.map((recipe) =>
+                    this.mapDbRecipeToRecipe(recipe as RecipeWithRelations)
                 )
-            `)
-            .eq("user_id", userId)
-            .order("title");
-
-        if (error) {
-            console.error("Error fetching recipes:", error);
-            throw error;
+                : [];
+        } catch (error) {
+            console.error("Error in getRecipes:", error);
+            throw error; // Re-throw the error after logging
         }
-
-        return recipes
-            ? recipes.map((recipe) =>
-                this.mapDbRecipeToRecipe(recipe as RecipeWithRelations)
-            )
-            : [];
     }
 
     /**
@@ -669,12 +701,10 @@ export class RecipeService {
                 )
                 .eq("id", recipeId);
 
-            // Add user filter or public filter based on whether userId is provided
-            if (userId) {
-                // If userId is provided, get recipe owned by that user OR public recipes
-                query = query.or(`user_id.eq.${userId},is_public.eq.true`);
-            } else {
-                // If no userId, only return public recipes
+            // If userId is NOT provided (anonymous access), filter for public recipes only.
+            // If userId IS provided, RLS policies will handle access automatically
+            // (checking ownership, shares, and public status).
+            if (!userId) {
                 query = query.eq("is_public", true);
             }
 
@@ -691,10 +721,19 @@ export class RecipeService {
                 .maybeSingle();
 
             if (error) {
+                // Handle specific RLS violation error (though maybeSingle handles not found)
+                if (error.code === "42501") { // permission denied
+                    console.warn(
+                        `RLS denied access to recipe ${recipeId} for user ${
+                            userId || "anonymous"
+                        }`,
+                    );
+                    return null;
+                }
                 throw error;
             }
 
-            // Recipe not found
+            // Recipe not found or access denied by RLS
             if (!dbRecipe) {
                 return null;
             }
@@ -714,9 +753,20 @@ export class RecipeService {
      */
     static async deleteRecipe(
         recipeId: string,
-        userId: string,
     ): Promise<boolean> {
         try {
+            // Check if user has edit permission instead of just checking ownership
+            const hasPermission = await this.checkEditPermission(recipeId);
+
+            if (!hasPermission) {
+                console.log(
+                    "User does not have edit permission for this recipe",
+                );
+                throw new Error(
+                    `You don't have permission to delete this recipe.`,
+                );
+            }
+
             // First, explicitly clean up collection relationships
             // This is redundant with the CASCADE DELETE in the DB schema, but ensures
             // we handle any edge cases or database inconsistencies
@@ -734,12 +784,12 @@ export class RecipeService {
                 // The CASCADE DELETE should still handle it
             }
 
-            // Then delete the recipe itself
+            // Then delete the recipe itself - no need to check user_id anymore
+            // as we've already verified permissions
             const { error } = await supabase
                 .from("recipes")
                 .delete()
-                .eq("id", recipeId)
-                .eq("user_id", userId);
+                .eq("id", recipeId);
 
             if (error) {
                 console.error("Error deleting recipe:", error);
@@ -964,36 +1014,43 @@ export class RecipeService {
         }
 
         try {
-            // Verify ownership before updating
+            // Check if user has edit permission instead of just checking ownership
+            const hasPermission = await this.checkEditPermission(recipeId);
+
+            if (!hasPermission) {
+                console.log(
+                    "User does not have edit permission for this recipe",
+                );
+                throw new Error(
+                    `You don't have permission to update this recipe.`,
+                );
+            }
+
+            // Verify the recipe exists
             const { data: existingRecipe, error: getError } = await supabase
                 .from("recipes")
-                .select("id, user_id")
+                .select("id")
                 .eq("id", recipeId)
                 .maybeSingle();
 
             if (getError) {
                 console.error(
-                    "Error retrieving recipe for ownership verification:",
+                    "Error retrieving recipe:",
                     getError,
                 );
                 throw getError;
             }
 
-            // Check if recipe exists and user has permission
+            // Check if recipe exists
             if (!existingRecipe) {
                 throw new Error(`Recipe with ID ${recipeId} not found`);
-            } else if (existingRecipe.user_id !== userId) {
-                throw new Error(
-                    `You don't have permission to update this recipe. Recipe belongs to user ${existingRecipe.user_id}, but you are ${userId}`,
-                );
             }
 
             // Update the recipe's public status
             const { error: updateError } = await supabase
                 .from("recipes")
                 .update({ is_public: isPublic })
-                .eq("id", recipeId)
-                .eq("user_id", userId); // Double-check ownership in the update query
+                .eq("id", recipeId);
 
             if (updateError) {
                 console.error(
@@ -1003,10 +1060,38 @@ export class RecipeService {
                 throw updateError;
             }
 
+            console.log(
+                `Successfully updated recipe ${recipeId} to isPublic=${isPublic}`,
+            );
             return true;
         } catch (error) {
             console.error("Error in updateRecipePublicStatus:", error);
             throw error;
+        }
+    }
+
+    /**
+     * Check if the current authenticated user has edit permission for a recipe
+     * @param recipeId - The ID of the recipe to check
+     * @returns A boolean indicating whether the user can edit the recipe
+     */
+    static async checkEditPermission(recipeId: string): Promise<boolean> {
+        try {
+            // Call the RPC function to check edit permission
+            const { data, error } = await supabase.rpc(
+                "check_recipe_edit_permission",
+                { recipe_id_to_check: recipeId },
+            );
+
+            if (error) {
+                console.error("Error checking edit permission:", error);
+                return false;
+            }
+
+            return !!data; // Convert to boolean
+        } catch (error) {
+            console.error("Error in checkEditPermission:", error);
+            return false;
         }
     }
 }

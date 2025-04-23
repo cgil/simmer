@@ -18,11 +18,15 @@ import {
     useMediaQuery,
     Backdrop,
     Theme,
+    Tooltip,
+    styled,
 } from '@mui/material';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import EditIcon from '@mui/icons-material/Edit';
 // Import emoji mart components
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -43,6 +47,8 @@ interface CollectionItem {
     count: number;
     icon?: ReactNode;
     emoji?: string; // Support for emoji icons
+    is_shared?: boolean;
+    access_level?: string;
 }
 
 interface CollectionsDrawerProps {
@@ -255,25 +261,66 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
         setDeletingCollection(null);
     };
 
-    // Determine what to display as the icon
+    // Add a utility function to get appropriate icon for the collection
     const getCollectionIcon = (collection: CollectionItem) => {
         if (collection.id === editingCollection) {
             // For the collection being edited
             if (selectedEmoji)
                 return (
-                    <span style={{ fontSize: '1.4rem' }}>{selectedEmoji}</span>
+                    <Box
+                        component="span"
+                        sx={{
+                            fontSize: {
+                                xs: '1.25rem',
+                                sm: '1.5rem',
+                            },
+                            lineHeight: 1,
+                        }}
+                    >
+                        {selectedEmoji}
+                    </Box>
                 );
             return selectedIcon || collection.icon;
-        } else {
-            // For regular collections
-            if (collection.emoji)
-                return (
-                    <span style={{ fontSize: '1.4rem' }}>
-                        {collection.emoji}
-                    </span>
-                );
+        }
+
+        // Use emoji if available
+        if (collection.emoji) {
+            return (
+                <Box
+                    component="span"
+                    sx={{
+                        fontSize: {
+                            xs: '1.25rem',
+                            sm: '1.5rem',
+                        },
+                        lineHeight: 1,
+                    }}
+                >
+                    {collection.emoji}
+                </Box>
+            );
+        }
+
+        // Fall back to default icon if provided
+        if (collection.icon) {
             return collection.icon;
         }
+
+        // Default to a simple document icon as text
+        return (
+            <Box
+                component="span"
+                sx={{
+                    fontSize: {
+                        xs: '1.25rem',
+                        sm: '1.5rem',
+                    },
+                    lineHeight: 1,
+                }}
+            >
+                📄
+            </Box>
+        );
     };
 
     return (
@@ -330,11 +377,11 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                         zIndex: theme.zIndex.modal,
                     }),
                 }}
-                // Fix for accessibility - hide content properly from screen readers when closed on small screens
-                slotProps={{
-                    backdrop: {
-                        sx: { zIndex: theme.zIndex.drawer },
-                    },
+                // Fix for accessibility - hide content properly from screen readers
+                components={{
+                    Backdrop: styled('div')({
+                        zIndex: theme.zIndex.drawer,
+                    }),
                 }}
             >
                 {/* Use CollectionsDrawerHeader instead of the Box */}
@@ -806,10 +853,52 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                             </ListItemIcon>
                             {isOpen && (
                                 <ListItemText
-                                    primary={collection.name}
-                                    secondary={formatRecipeCount(
-                                        collection.count
-                                    )}
+                                    primary={
+                                        collection.is_shared ? (
+                                            <Tooltip
+                                                title={`Shared collection (${
+                                                    collection.access_level ===
+                                                    'edit'
+                                                        ? 'Can edit'
+                                                        : 'View only'
+                                                })`}
+                                                placement="right"
+                                            >
+                                                <Box
+                                                    sx={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                    }}
+                                                >
+                                                    {collection.name}
+                                                    {collection.access_level ===
+                                                    'edit' ? (
+                                                        <EditIcon
+                                                            fontSize="small"
+                                                            sx={{
+                                                                ml: 1,
+                                                                color: 'primary.main',
+                                                                fontSize:
+                                                                    '0.875rem',
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <VisibilityIcon
+                                                            fontSize="small"
+                                                            sx={{
+                                                                ml: 1,
+                                                                color: 'text.secondary',
+                                                                fontSize:
+                                                                    '0.875rem',
+                                                            }}
+                                                        />
+                                                    )}
+                                                </Box>
+                                            </Tooltip>
+                                        ) : (
+                                            collection.name
+                                        )
+                                    }
                                     primaryTypographyProps={{
                                         noWrap: true,
                                         sx: {
@@ -825,34 +914,24 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                                                     : 'text.primary',
                                         },
                                     }}
-                                    secondaryTypographyProps={{
-                                        noWrap: true,
-                                        sx: {
-                                            fontSize: '0.75rem',
-                                            color:
-                                                selectedCollection ===
-                                                collection.id
-                                                    ? alpha(
-                                                          theme.palette.primary
-                                                              .main,
-                                                          0.7
-                                                      )
-                                                    : 'text.secondary',
-                                        },
-                                    }}
+                                    secondary={formatRecipeCount(
+                                        collection.count
+                                    )}
                                 />
                             )}
                         </ListItemButton>
                     )}
                 </Box>
 
-                {/* Edit/Delete controls - Keep existing Portal logic */}
+                {/* Edit/Delete controls - Hide edit/delete buttons for shared collections with view-only access */}
                 {isOpen &&
                     hoveredCollection === collection.id &&
                     !editingCollection &&
                     !deletingCollection &&
                     buttonPositions[collection.id] &&
-                    collection.id !== ALL_RECIPES_ID && ( // Don't show edit button for "All Recipes"
+                    collection.id !== ALL_RECIPES_ID &&
+                    (!collection.is_shared ||
+                        collection.access_level === 'edit') && ( // Don't show controls for shared collections with view-only access
                         <Portal>
                             <Grow
                                 in={true}
