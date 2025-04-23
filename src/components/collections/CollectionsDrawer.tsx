@@ -868,15 +868,30 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                                                     sx={{
                                                         display: 'flex',
                                                         alignItems: 'center',
+                                                        justifyContent:
+                                                            'space-between',
+                                                        width: '100%',
+                                                        overflow: 'hidden',
                                                     }}
                                                 >
-                                                    {collection.name}
+                                                    <Box
+                                                        sx={{
+                                                            overflow: 'hidden',
+                                                            textOverflow:
+                                                                'ellipsis',
+                                                            whiteSpace:
+                                                                'nowrap',
+                                                        }}
+                                                    >
+                                                        {collection.name}
+                                                    </Box>
                                                     {collection.access_level ===
                                                     'edit' ? (
                                                         <EditIcon
                                                             fontSize="small"
                                                             sx={{
                                                                 ml: 1,
+                                                                flexShrink: 0,
                                                                 color: 'primary.main',
                                                                 fontSize:
                                                                     '0.875rem',
@@ -887,6 +902,7 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                                                             fontSize="small"
                                                             sx={{
                                                                 ml: 1,
+                                                                flexShrink: 0,
                                                                 color: 'text.secondary',
                                                                 fontSize:
                                                                     '0.875rem',
@@ -896,7 +912,15 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                                                 </Box>
                                             </Tooltip>
                                         ) : (
-                                            collection.name
+                                            <Box
+                                                sx={{
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap',
+                                                }}
+                                            >
+                                                {collection.name}
+                                            </Box>
                                         )
                                     }
                                     primaryTypographyProps={{

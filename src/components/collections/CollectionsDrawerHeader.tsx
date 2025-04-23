@@ -53,7 +53,7 @@ const CollectionsDrawerHeader: FC<CollectionsDrawerHeaderProps> = React.memo(
                         Collections
                     </Typography>
                 )}
-                <Tooltip title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}>
+                <Tooltip title="">
                     <IconButton
                         onClick={handleToggleDrawer}
                         color="primary"
