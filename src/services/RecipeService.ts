@@ -52,6 +52,10 @@ type RecipeWithRelations = Database["public"]["Tables"]["recipes"]["Row"] & {
                     "Row"
                 ][];
         })[];
+    // Add properties related to sharing
+    shared_with_me?: boolean;
+    access_level?: "viewer" | "editor" | "owner";
+    is_shared?: boolean;
 };
 
 /**
@@ -616,7 +620,7 @@ export class RecipeService {
             const { data: sharedRecipeIdsData, error: sharedError } =
                 await supabase
                     .from("shared_recipes")
-                    .select("recipe_id")
+                    .select("recipe_id, access_level")
                     .eq("shared_with_user_id", userId);
 
             if (sharedError) {
@@ -626,6 +630,26 @@ export class RecipeService {
             const sharedRecipeIds = sharedRecipeIdsData?.map((s) =>
                 s.recipe_id
             ) || [];
+
+            // Create a map of recipe IDs to their access levels
+            const accessLevelMap = new Map<string, "viewer" | "editor">();
+            sharedRecipeIdsData?.forEach((s) => {
+                if (s.recipe_id && s.access_level) {
+                    // Normalize access levels from "view"/"edit" to "viewer"/"editor"
+                    let normalizedAccessLevel: "viewer" | "editor" = "viewer";
+                    if (
+                        s.access_level === "edit" || s.access_level === "editor"
+                    ) {
+                        normalizedAccessLevel = "editor";
+                    } else if (
+                        s.access_level === "view" || s.access_level === "viewer"
+                    ) {
+                        normalizedAccessLevel = "viewer";
+                    }
+
+                    accessLevelMap.set(s.recipe_id, normalizedAccessLevel);
+                }
+            });
 
             // 3. Combine IDs and remove duplicates
             const allRecipeIds = [
@@ -664,8 +688,27 @@ export class RecipeService {
                 throw fetchError;
             }
 
-            return recipes
-                ? recipes.map((recipe) =>
+            // 5. Process recipes to add sharing information
+            const processedRecipes = recipes?.map((recipe) => {
+                const isOwned = ownedRecipeIds.includes(recipe.id);
+                const isShared = sharedRecipeIds.includes(recipe.id);
+
+                // Add sharing-related properties
+                return {
+                    ...recipe,
+                    // Add is_shared flag if this recipe is shared with others
+                    is_shared: recipe.is_shared || false,
+                    // Add shared_with_me flag if the user is not the owner
+                    shared_with_me: !isOwned && isShared,
+                    // Add access_level based on the map or 'owner' if user owns it
+                    access_level: isOwned
+                        ? "owner" as const
+                        : accessLevelMap.get(recipe.id) || "viewer" as const,
+                };
+            });
+
+            return processedRecipes
+                ? processedRecipes.map((recipe) =>
                     this.mapDbRecipeToRecipe(recipe as RecipeWithRelations)
                 )
                 : [];
@@ -979,6 +1022,34 @@ export class RecipeService {
             total: dbRecipe.total_time || 0,
         };
 
+        // Determine if this recipe is shared with the current user
+        const shared_with_me = dbRecipe.shared_with_me === true;
+
+        // Set access level based on what's in the database
+        // The database RLS policies ensure we only see records we have access to
+        // and the access_level field is correctly populated for shared recipes
+        let access_level: "viewer" | "editor" | "owner" | undefined;
+
+        if (dbRecipe.access_level) {
+            // Normalize access level values by treating it as a string first
+            const accessLevelStr = dbRecipe.access_level as string;
+
+            if (accessLevelStr === "edit" || accessLevelStr === "editor") {
+                access_level = "editor";
+            } else if (
+                accessLevelStr === "view" || accessLevelStr === "viewer"
+            ) {
+                access_level = "viewer";
+            } else if (accessLevelStr === "owner") {
+                access_level = "owner";
+            }
+        } else if (shared_with_me) {
+            // For shared recipes without explicit access level, default to viewer
+            access_level = "viewer";
+        }
+        // If no access_level is specified and recipe isn't explicitly shared with the user,
+        // we can assume they're the owner (RLS policies ensure users only see recipes they own or are shared with them)
+
         // Construct and return the recipe
         return {
             id: dbRecipe.id,
@@ -993,6 +1064,9 @@ export class RecipeService {
             time_estimate: timeEstimate,
             user_id: dbRecipe.user_id || undefined, // Include user_id for ownership verification
             is_public: dbRecipe.is_public || false, // Include is_public flag
+            is_shared: dbRecipe.is_shared || false, // Include is_shared flag
+            shared_with_me, // Add shared_with_me flag
+            access_level, // Add access_level information
         };
     }
 

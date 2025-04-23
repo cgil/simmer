@@ -12,6 +12,8 @@ export interface Recipe {
     user_id?: string;
     is_public?: boolean;
     is_shared?: boolean;
+    shared_with_me?: boolean;
+    access_level?: "viewer" | "editor" | "owner";
 }
 
 export interface RecipeIdea {

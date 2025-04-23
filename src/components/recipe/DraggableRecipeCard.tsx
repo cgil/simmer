@@ -8,9 +8,12 @@ import {
     CardMedia,
     CardContent,
     Theme,
+    Tooltip,
 } from '@mui/material';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import CreateIcon from '@mui/icons-material/DriveFileRenameOutlineOutlined';
 import { formatTimeDisplay } from '../../utils/time';
 import { Recipe } from '../../types/recipe';
 import MatchCornerFold, { MatchType } from './MatchCornerFold';
@@ -19,6 +22,71 @@ import { useDrag, useDrop } from 'react-dnd';
 import { ItemTypes, RecipeDragItem } from '../../types/dnd';
 import { ALL_RECIPES_ID } from '../../types/collection';
 import { memo } from 'react';
+
+// Add a PermissionBadge component to show viewer/editor status
+interface PermissionBadgeProps {
+    accessLevel: string;
+    searchActive: boolean;
+    isShared: boolean;
+}
+
+const PermissionBadge: FC<PermissionBadgeProps> = ({
+    accessLevel,
+    searchActive,
+    isShared,
+}) => {
+    // Handle both formats: "editor"/"viewer" and "edit"/"view"
+    const isEditor = accessLevel === 'editor' || accessLevel === 'edit';
+    const tooltipText = `This recipe is shared with you (${
+        isEditor ? 'Editor' : 'Viewer'
+    })`;
+
+    return (
+        <Tooltip title={tooltipText} placement="top">
+            <Box
+                sx={{
+                    position: 'absolute',
+                    top: 8,
+                    // Adjust position based on whether there's a search match or share badge
+                    right: (() => {
+                        // Base position
+                        let position = 8;
+
+                        // Move right if there's a share badge
+                        if (isShared) position += 28;
+
+                        // Move right if there's a search match corner
+                        if (searchActive) position += 32;
+
+                        return position;
+                    })(),
+                    zIndex: 10,
+                    color: 'primary.main',
+                    opacity: 0.6,
+                    '&:hover': {
+                        opacity: 0.9,
+                    },
+                    transition:
+                        'opacity 0.2s ease-in-out, right 0.2s ease-in-out',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    backdropFilter: 'blur(2px)',
+                }}
+            >
+                {isEditor ? (
+                    <CreateIcon sx={{ fontSize: '0.875rem' }} />
+                ) : (
+                    <MenuBookIcon sx={{ fontSize: '0.875rem' }} />
+                )}
+            </Box>
+        </Tooltip>
+    );
+};
 
 export interface DraggableRecipeCardProps {
     recipe: Recipe;
@@ -553,6 +621,17 @@ const DraggableRecipeCard: FC<DraggableRecipeCardProps> = ({
                     {recipe.is_shared && (
                         <ShareBadge tooltipText="This recipe is shared" />
                     )}
+
+                    {/* Add Permission Badge for recipes shared with the user */}
+                    {recipe.shared_with_me &&
+                        recipe.access_level &&
+                        recipe.access_level !== 'owner' && (
+                            <PermissionBadge
+                                accessLevel={recipe.access_level}
+                                searchActive={!!searchQuery}
+                                isShared={!!recipe.is_shared}
+                            />
+                        )}
                 </Card>
             </div>
         </Grid>

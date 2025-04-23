@@ -25,8 +25,8 @@ import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import EditIcon from '@mui/icons-material/Edit';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import CreateIcon from '@mui/icons-material/DriveFileRenameOutlineOutlined';
 // Import emoji mart components
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -48,7 +48,7 @@ interface CollectionItem {
     icon?: ReactNode;
     emoji?: string; // Support for emoji icons
     is_shared?: boolean;
-    access_level?: string;
+    access_level?: 'viewer' | 'editor' | 'owner' | 'view' | 'edit'; // Support both formats
 }
 
 interface CollectionsDrawerProps {
@@ -858,7 +858,9 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                                             <Tooltip
                                                 title={`Shared collection (${
                                                     collection.access_level ===
-                                                    'edit'
+                                                        'edit' ||
+                                                    collection.access_level ===
+                                                        'editor'
                                                         ? 'Can edit'
                                                         : 'View only'
                                                 })`}
@@ -886,8 +888,10 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                                                         {collection.name}
                                                     </Box>
                                                     {collection.access_level ===
-                                                    'edit' ? (
-                                                        <EditIcon
+                                                        'edit' ||
+                                                    collection.access_level ===
+                                                        'editor' ? (
+                                                        <CreateIcon
                                                             fontSize="small"
                                                             sx={{
                                                                 ml: 1,
@@ -895,10 +899,11 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                                                                 color: 'primary.main',
                                                                 fontSize:
                                                                     '0.875rem',
+                                                                opacity: 0.6,
                                                             }}
                                                         />
                                                     ) : (
-                                                        <VisibilityIcon
+                                                        <MenuBookIcon
                                                             fontSize="small"
                                                             sx={{
                                                                 ml: 1,
@@ -906,6 +911,7 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                                                                 color: 'text.secondary',
                                                                 fontSize:
                                                                     '0.875rem',
+                                                                opacity: 0.6,
                                                             }}
                                                         />
                                                     )}
@@ -955,7 +961,8 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                     buttonPositions[collection.id] &&
                     collection.id !== ALL_RECIPES_ID &&
                     (!collection.is_shared ||
-                        collection.access_level === 'edit') && ( // Don't show controls for shared collections with view-only access
+                        collection.access_level === 'edit' ||
+                        collection.access_level === 'editor') && (
                         <Portal>
                             <Grow
                                 in={true}
