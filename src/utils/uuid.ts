@@ -40,7 +40,8 @@ export const generateUuidV5 = (
  * @param id The string to check
  * @returns True if the string is a valid UUID format
  */
-export const isValidUuid = (id: string): boolean => {
+export const isValidUuid = (id?: string | null): boolean => {
+    if (!id) return false;
     return uuidValidate(id);
 };
 

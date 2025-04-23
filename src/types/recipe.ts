@@ -28,6 +28,7 @@ export interface Ingredient {
     quantity: number | null;
     unit: string | null;
     notes?: string | null;
+    position?: number;
 }
 
 interface StepTiming {
@@ -36,12 +37,16 @@ interface StepTiming {
     units: string;
 }
 
-interface Step {
+export interface Step {
+    id?: string;
+    position?: number;
     text: string;
     timing: StepTiming | null;
 }
 
 export interface InstructionSection {
+    id?: string;
+    position?: number;
     section_title: string;
     steps: Step[];
 }

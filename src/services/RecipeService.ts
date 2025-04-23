@@ -140,26 +140,30 @@ export class RecipeService {
 
         // For new recipes or imports, generate truly unique IDs for all ingredients
         // This prevents primary key violations when the same recipe is imported multiple times
-        const validatedIngredients = recipe.ingredients.map((ingredient) => {
-            if (isNewRecipe) {
-                // For new recipes, use deterministic UUIDs based on ingredient name + recipe seed
-                // This ensures consistent references within the recipe but unique IDs across recipes
-                return {
-                    ...ingredient,
-                    id: generateDeterministicUUID(ingredient.name, recipeSeed),
-                };
-            } else if (!isValidUuid(ingredient.id)) {
-                // For existing recipes, ensure valid UUIDs
-                console.warn(
-                    `Invalid UUID format for ingredient: ${ingredient.name} with ID: ${ingredient.id}`,
-                );
-                return {
-                    ...ingredient,
-                    id: ensureUuid(ingredient.id),
-                };
-            }
-            return ingredient;
-        });
+        const validatedIngredients = recipe.ingredients.map(
+            (ingredient, index) => {
+                if (isNewRecipe) {
+                    // For new/imported recipes, use deterministic UUIDs based on name, index, and recipe seed
+                    // This ensures uniqueness within the import even with duplicate names
+                    const uniqueInput = `${ingredient.name}::${index}`;
+                    return {
+                        ...ingredient,
+                        id: generateDeterministicUUID(uniqueInput, recipeSeed),
+                    };
+                } else if (!isValidUuid(ingredient.id)) {
+                    // For existing recipes with invalid IDs, ensure a valid (deterministic) UUID
+                    console.warn(
+                        `Invalid UUID format for ingredient: ${ingredient.name} with ID: ${ingredient.id}`,
+                    );
+                    return {
+                        ...ingredient,
+                        id: ensureUuid(ingredient.id),
+                    };
+                }
+                // If it's an existing recipe with a valid ID, return as is
+                return ingredient;
+            },
+        );
 
         // Create a mapping of any changed IDs
         const idMapping = new Map();

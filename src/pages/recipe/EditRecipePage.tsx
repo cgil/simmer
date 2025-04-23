@@ -1,5 +1,5 @@
 import { FC, useState, useRef, DragEvent, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     Box,
     Typography,
@@ -25,7 +25,13 @@ import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import FontAwesomeIcon from '../../components/icons/FontAwesomeIcon';
 import CarrotPlusIcon from '../../components/icons/CarrotPlusIcon';
 import AppLayout from '../../components/layout/AppLayout';
-import { Recipe, TimeEstimate } from '../../types/recipe';
+import {
+    Recipe,
+    TimeEstimate,
+    Ingredient,
+    InstructionSection,
+    Step,
+} from '../../types/recipe';
 import { CollectionItem, ALL_RECIPES_ID } from '../../types/collection';
 import TimeEstimateForm from './components/TimeEstimateForm';
 import ServingSizeForm from './components/ServingSizeForm';
@@ -46,7 +52,9 @@ const EditRecipePage: FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { user } = useAuth();
-    const recipe = location.state?.recipe as Recipe;
+    const { id: routeId } = useParams<{ id?: string }>();
+
+    const [recipe, setRecipe] = useState<Recipe | null>(null);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [activeStepIndex, setActiveStepIndex] = useState<
         [number, number] | null
@@ -54,32 +62,22 @@ const EditRecipePage: FC = () => {
     const [cursorPositions, setCursorPositions] = useState<
         Record<string, number>
     >({});
-    const [instructions, setInstructions] = useState(
-        recipe?.instructions
-            ? convertRecipeIngredientMentions(
-                  recipe.instructions,
-                  recipe?.ingredients || []
-              )
-            : []
+    const [instructions, setInstructions] = useState<Recipe['instructions']>(
+        []
     );
-    const [ingredients, setIngredients] = useState(recipe?.ingredients || []);
-    const [notes, setNotes] = useState(
-        recipe?.notes?.map((note) => ({
-            id: `note-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            text: note,
-        })) || []
-    );
+    const [ingredients, setIngredients] = useState<Recipe['ingredients']>([]);
+    const [notes, setNotes] = useState<{ id: string; text: string }[]>([]);
     const [timeEstimate, setTimeEstimate] = useState<TimeEstimate>({
-        prep: recipe?.time_estimate?.prep ?? 0,
-        cook: recipe?.time_estimate?.cook ?? 0,
-        rest: recipe?.time_estimate?.rest ?? 0,
-        total: recipe?.time_estimate?.total ?? 0,
+        prep: 0,
+        cook: 0,
+        rest: 0,
+        total: 0,
     });
-    const [tags, setTags] = useState<string[]>(recipe?.tags || []);
-    const [title, setTitle] = useState(recipe?.title || '');
-    const [description, setDescription] = useState(recipe?.description || '');
-    const [images, setImages] = useState<string[]>(recipe?.images || []);
-    const [servings, setServings] = useState<number>(recipe?.servings || 2);
+    const [tags, setTags] = useState<string[]>([]);
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [images, setImages] = useState<string[]>([]);
+    const [servings, setServings] = useState<number>(2);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const galleryInputRef = useRef<HTMLInputElement>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -101,10 +99,149 @@ const EditRecipePage: FC = () => {
     >([]);
     const [canEdit, setCanEdit] = useState<boolean>(false);
     const [checkingPermission, setCheckingPermission] = useState<boolean>(true);
-    // Track if current user is recipe owner
     const [isOwner, setIsOwner] = useState<boolean>(false);
 
-    // Check if the device is mobile
+    useEffect(() => {
+        const stateRecipe = location.state?.recipe as Recipe | undefined;
+
+        if (stateRecipe) {
+            console.log(
+                'Initializing recipe from location state:',
+                stateRecipe.id
+            );
+            const validatedIngredients = (stateRecipe.ingredients || []).map(
+                (ing) => ({
+                    ...ing,
+                    id: isValidUuid(ing.id) ? ing.id : generateUuidV4(),
+                })
+            );
+            setRecipe({ ...stateRecipe, ingredients: validatedIngredients });
+        } else if (routeId === 'new') {
+            console.log('Initializing new blank recipe template');
+            if (!user) {
+                console.warn('User not yet available for new recipe template.');
+            }
+            const newRecipeTemplate: Recipe = {
+                id: 'new',
+                title: '',
+                description: '',
+                ingredients: [],
+                instructions: [],
+                notes: [],
+                tags: [],
+                images: [],
+                servings: 2,
+                time_estimate: { prep: 0, cook: 0, rest: 0, total: 0 },
+                user_id: user?.id || '',
+                is_public: true,
+                is_shared: false,
+                shared_with_me: false,
+                access_level: undefined,
+            };
+            setRecipe(newRecipeTemplate);
+        } else if (routeId && isValidUuid(routeId)) {
+            console.log(
+                `Fetching recipe data for direct edit navigation: ${routeId}`
+            );
+            const fetchRecipeForEdit = async () => {
+                if (!user) {
+                    console.error(
+                        'User not available to fetch recipe for edit.'
+                    );
+                    navigate('/login', { state: { from: location } });
+                    return;
+                }
+                setCheckingPermission(true);
+                try {
+                    const fetchedRecipe = await RecipeService.getRecipeById(
+                        routeId,
+                        user.id
+                    );
+                    if (fetchedRecipe) {
+                        const hasPermission =
+                            await RecipeService.checkEditPermission(routeId);
+                        if (hasPermission) {
+                            setRecipe(fetchedRecipe);
+                        } else {
+                            console.warn(
+                                `User lacks permission to edit recipe ${routeId}. Redirecting.`
+                            );
+                            navigate(`/recipe/${routeId}`, {
+                                state: {
+                                    error: "You don't have permission to edit this recipe.",
+                                },
+                            });
+                        }
+                    } else {
+                        console.error(`Recipe not found for edit: ${routeId}`);
+                        navigate('/', {
+                            state: { error: 'Recipe not found.' },
+                        });
+                    }
+                } catch (err) {
+                    console.error(
+                        `Error fetching recipe ${routeId} for edit:`,
+                        err
+                    );
+                    navigate('/', {
+                        state: { error: 'Failed to load recipe for editing.' },
+                    });
+                }
+            };
+            fetchRecipeForEdit();
+        } else {
+            console.error(
+                'EditRecipePage loaded with invalid routeId or missing state:',
+                routeId
+            );
+            navigate('/');
+        }
+    }, [location.state, routeId, user, navigate]);
+
+    useEffect(() => {
+        if (recipe) {
+            console.log('Populating form state from recipe:', recipe.id);
+            setTitle(recipe.title || '');
+            setDescription(recipe.description || '');
+            setIngredients(recipe.ingredients || []);
+
+            setInstructions(
+                recipe.instructions && recipe.instructions.length > 0
+                    ? convertRecipeIngredientMentions(
+                          recipe.instructions,
+                          recipe.ingredients || []
+                      )
+                    : []
+            );
+            setNotes(
+                recipe.notes?.map((noteText, index) => ({
+                    id: `note-${recipe.id}-${index}-${generateUuidV4()}`,
+                    text: noteText,
+                })) || []
+            );
+            setTimeEstimate({
+                prep: recipe.time_estimate?.prep ?? 0,
+                cook: recipe.time_estimate?.cook ?? 0,
+                rest: recipe.time_estimate?.rest ?? 0,
+                total: recipe.time_estimate?.total ?? 0,
+            });
+            setTags(recipe.tags || []);
+            setImages(recipe.images || []);
+            setServings(recipe.servings || 2);
+
+            if (recipe.id === 'new') {
+                console.log(
+                    'Resetting collections for new recipe in form effect'
+                );
+                setSelectedCollections([]);
+                setInitialCollectionIds([]);
+                setSelectedCollection(ALL_RECIPES_ID);
+            } else {
+                setSelectedCollection(ALL_RECIPES_ID);
+            }
+        }
+    }, [recipe]);
+
     useEffect(() => {
         const checkMobile = () => {
             setIsMobileDevice(
@@ -112,151 +249,207 @@ const EditRecipePage: FC = () => {
                     window.innerWidth < 768
             );
         };
-
         checkMobile();
         window.addEventListener('resize', checkMobile);
-
-        return () => {
-            window.removeEventListener('resize', checkMobile);
-        };
+        return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    // Ensure all ingredients have valid UUIDs when component mounts
     useEffect(() => {
-        if (!recipe) return;
-
-        if (recipe.ingredients && recipe.ingredients.length > 0) {
-            // Create a mapping of invalid IDs to new UUIDs
-            const idMapping = new Map<string, string>();
-
-            // Check and update ingredients with valid UUIDs
-            const validatedIngredients = recipe.ingredients.map((ing) => {
-                if (!isValidUuid(ing.id)) {
-                    const newUuid = ensureUuid(ing.id);
-                    idMapping.set(ing.id, newUuid);
-                    return { ...ing, id: newUuid };
-                }
-                return ing;
-            });
-
-            // Only update if we had to change any IDs
-            if (idMapping.size > 0) {
-                setIngredients(validatedIngredients);
-
-                // Also update any references in instructions
-                if (recipe.instructions && recipe.instructions.length > 0) {
-                    const updatedInstructions = recipe.instructions.map(
-                        (section) => ({
-                            ...section,
-                            steps: section.steps.map((step) => ({
-                                ...step,
-                                text: step.text.replace(
-                                    /@\[([^\]]+)\]\(([^)]+)\)/g,
-                                    (match, display, id) => {
-                                        const newId = idMapping.get(id);
-                                        return newId
-                                            ? `@[${display}](${newId})`
-                                            : match;
-                                    }
-                                ),
-                            })),
-                        })
-                    );
-
-                    setInstructions(updatedInstructions);
-                }
+        const loadCollectionsData = async () => {
+            if (!user || !recipe) {
+                console.log(
+                    'Skipping collections fetch: no user or recipe state yet.'
+                );
+                setAvailableCollections([]);
+                setInitialCollectionIds([]);
+                setSelectedCollections([]);
+                return;
             }
-        }
-    }, [recipe]);
 
-    // Load collections when component mounts
-    useEffect(() => {
-        const loadCollections = async () => {
-            if (!user || !recipe) return;
+            let available: CollectionItem[] = [];
+            let associatedIds: string[] = [];
 
             try {
-                // Get available collections for dropdown (only needed for owners)
-                if (recipe.user_id === user.id) {
-                    const collections =
-                        await CollectionService.getCollectionItems(user.id);
-                    setAvailableCollections(collections);
-                } else {
-                    // For non-owners, set an empty list of available collections
-                    // They'll only see the current collections but can't change them
-                    setAvailableCollections([]);
-                }
+                console.log('Fetching available collections for dropdown...');
+                available = await CollectionService.getCollectionItems(user.id);
+                setAvailableCollections(available);
+                console.log('Available collections set:', available);
+            } catch (err) {
+                console.error('Error fetching available collections:', err);
+                setAvailableCollections([]);
+            }
 
-                // Get collections for this recipe if it's an existing recipe
-                // This is needed for both owners and editors
-                if (recipe.id && recipe.id !== 'new') {
+            if (recipe.id !== 'new' && isValidUuid(recipe.id)) {
+                try {
+                    console.log(
+                        `Fetching collections for existing recipe ID: ${recipe.id}`
+                    );
                     const recipeCollections =
                         await CollectionService.getCollectionsForRecipe(
-                            recipe.id
+                            recipe.id as string
                         );
-                    const collectionIds = recipeCollections.map((c) => c.id);
-                    setSelectedCollections(collectionIds);
-                    setInitialCollectionIds(collectionIds);
+                    associatedIds = recipeCollections.map((c) => c.id);
+                    console.log(
+                        `Associated collections for recipe ${recipe.id}:`,
+                        associatedIds
+                    );
+                } catch (err) {
+                    console.error(
+                        `Error loading collections for recipe ${recipe.id}:`,
+                        err
+                    );
+                    associatedIds = [];
+                }
+            } else {
+                associatedIds = [];
+            }
 
-                    // For non-owners, set the first collection as selected for display purposes
-                    if (
-                        recipe.user_id !== user.id &&
-                        recipeCollections.length > 0
-                    ) {
-                        setSelectedCollection(recipeCollections[0].id);
+            setInitialCollectionIds(associatedIds);
+            setSelectedCollections(associatedIds);
+
+            if (associatedIds.length > 0) {
+                setSelectedCollection(associatedIds[0]);
+            } else {
+                setSelectedCollection(ALL_RECIPES_ID);
+            }
+        };
+
+        loadCollectionsData();
+    }, [user, recipe]);
+
+    useEffect(() => {
+        const checkEditPermission = async () => {
+            if (!user || !recipe) {
+                console.log(
+                    'Skipping permission check: no user or recipe state yet.'
+                );
+                setCheckingPermission(true);
+                return;
+            }
+
+            console.log(`Checking permission for recipe ID: ${recipe.id}`);
+            setCheckingPermission(true); // Indicate check is starting
+
+            // Grant immediate edit permission for new recipes OR imported recipes (non-UUID IDs)
+            if (recipe.id === 'new' || !isValidUuid(recipe.id)) {
+                setCanEdit(true);
+                setIsOwner(true); // Treat as owner until first save
+                setCheckingPermission(false);
+                console.log(
+                    `Permission granted: New or Imported recipe (ID: ${recipe.id}).`
+                );
+                return; // Stop checks here for new/imported
+            }
+
+            // --- Proceed with checking permission only for existing recipes (valid UUID) ---
+            try {
+                const ownerCheck = recipe.user_id === user.id;
+                setIsOwner(ownerCheck);
+                if (ownerCheck) {
+                    setCanEdit(true);
+                    console.log('Permission granted: User is owner.');
+                } else {
+                    console.log(
+                        `User is not owner (${recipe.user_id} vs ${user.id}). Checking RPC...`
+                    );
+                    // Ensure we have a valid UUID before calling the service
+                    const recipeIdToCheck = recipe.id as string;
+                    const hasEditPermission =
+                        await RecipeService.checkEditPermission(
+                            recipeIdToCheck
+                        );
+                    setCanEdit(hasEditPermission);
+                    console.log(
+                        `Permission granted via RPC: ${hasEditPermission}`
+                    );
+                    if (!hasEditPermission) {
+                        console.warn(
+                            `User lacks permission to edit recipe ${recipeIdToCheck}. Redirecting.`
+                        );
+                        navigate(`/recipe/${recipeIdToCheck}`, {
+                            state: {
+                                error: "You don't have permission to edit this recipe.",
+                            },
+                        });
                     }
                 }
             } catch (err) {
-                console.error('Error loading collections:', err);
+                console.error(
+                    'Error checking edit permission for existing recipe:',
+                    err
+                );
+                setCanEdit(false);
+                setIsOwner(false);
+                // Use recipe.id safely here as it must be a valid UUID to reach this catch block
+                navigate(recipe.id ? `/recipe/${recipe.id}` : '/', {
+                    state: { error: 'Could not verify edit permissions' },
+                });
+            } finally {
+                setCheckingPermission(false); // Mark check as complete
             }
         };
 
-        loadCollections();
-    }, [user, recipe.id, recipe.user_id]);
+        checkEditPermission();
+    }, [recipe, user, navigate]); // Depends on recipe state and user
 
-    // Track collection changes
     useEffect(() => {
-        // Check if collections selection has changed from initial state
-        if (
-            initialCollectionIds.length === 0 &&
-            selectedCollections.length === 0
-        ) {
-            setIsCollectionsChanged(false);
-            return;
-        }
+        if (!recipe) return;
 
-        // Check if arrays have different lengths
-        if (initialCollectionIds.length !== selectedCollections.length) {
+        const initialSet = new Set(initialCollectionIds);
+        const selectedSet = new Set(selectedCollections);
+
+        if (initialSet.size !== selectedSet.size) {
             setIsCollectionsChanged(true);
             return;
         }
 
-        // Check if arrays have the same elements
-        const hasChanges =
-            !initialCollectionIds.every((id) =>
-                selectedCollections.includes(id)
-            ) ||
-            !selectedCollections.every((id) =>
-                initialCollectionIds.includes(id)
+        let changed = false;
+        for (const id of initialSet) {
+            if (!selectedSet.has(id)) {
+                changed = true;
+                break;
+            }
+        }
+        if (!changed) {
+            for (const id of selectedSet) {
+                if (!initialSet.has(id)) {
+                    changed = true;
+                    break;
+                }
+            }
+        }
+
+        setIsCollectionsChanged(changed);
+    }, [selectedCollections, initialCollectionIds, recipe]);
+
+    const saveCollections = async (recipeId: string) => {
+        if (!isValidUuid(recipeId)) {
+            console.error(
+                'Cannot save collections for invalid recipe ID:',
+                recipeId
+            );
+            return;
+        }
+        console.log(
+            `Attempting to save collections for recipe ${recipeId}. Target:`,
+            selectedCollections
+        );
+        try {
+            const currentDbCollections = (
+                await CollectionService.getCollectionsForRecipe(recipeId)
+            ).map((c) => c.id);
+            const currentDbSet = new Set(currentDbCollections);
+            const targetSet = new Set(selectedCollections);
+
+            console.log(
+                `DB collections: ${currentDbCollections}. Target collections: ${selectedCollections}`
             );
 
-        setIsCollectionsChanged(hasChanges);
-    }, [selectedCollections, initialCollectionIds]);
-
-    // Save collections function
-    const saveCollections = async (recipeId: string) => {
-        if (!selectedCollections) return;
-
-        try {
-            // Get current collections for this recipe
-            const currentCollections = initialCollectionIds
-                ? [...initialCollectionIds]
-                : (
-                      await CollectionService.getCollectionsForRecipe(recipeId)
-                  ).map((c) => c.id);
-
-            // Remove from collections it's no longer part of
-            for (const collectionId of currentCollections) {
-                if (!selectedCollections.includes(collectionId)) {
+            for (const collectionId of currentDbCollections) {
+                if (!targetSet.has(collectionId)) {
+                    console.log(
+                        `Removing recipe ${recipeId} from collection ${collectionId}`
+                    );
                     await CollectionService.removeRecipeFromCollection(
                         recipeId,
                         collectionId
@@ -264,70 +457,36 @@ const EditRecipePage: FC = () => {
                 }
             }
 
-            // Add to new collections
             for (const collectionId of selectedCollections) {
-                if (!currentCollections.includes(collectionId)) {
+                if (!currentDbSet.has(collectionId)) {
+                    console.log(
+                        `Adding recipe ${recipeId} to collection ${collectionId}`
+                    );
                     await CollectionService.addRecipeToCollection(
                         recipeId,
                         collectionId
                     );
                 }
             }
+            setInitialCollectionIds([...selectedCollections]);
+            setIsCollectionsChanged(false);
+            console.log(
+                `Collections saved successfully for recipe ${recipeId}.`
+            );
         } catch (err) {
-            console.error('Error updating collections:', err);
+            console.error(
+                `Error updating collections for recipe ${recipeId}:`,
+                err
+            );
+            setSaveError(
+                'Failed to update recipe collections. Please try again.'
+            );
         }
     };
 
-    // Check for edit permission when component mounts
-    useEffect(() => {
-        const checkEditPermission = async () => {
-            if (!user || !recipe || !recipe.id || recipe.id === 'new') {
-                // For new recipes or if no user or recipe, we don't need to check
-                setCanEdit(true);
-                setIsOwner(true); // New recipes are owned by the current user
-                setCheckingPermission(false);
-                return;
-            }
+    const isLoading = checkingPermission || !recipe;
 
-            try {
-                // Check if user is owner
-                if (recipe.user_id === user.id) {
-                    setCanEdit(true);
-                    setIsOwner(true);
-                    setCheckingPermission(false);
-                    return;
-                }
-
-                // User is not the owner, but may have edit permission
-                setIsOwner(false);
-
-                // Check edit permission using RPC
-                const hasEditPermission =
-                    await RecipeService.checkEditPermission(recipe.id);
-                setCanEdit(hasEditPermission);
-
-                // If no edit permission, redirect to view page
-                if (!hasEditPermission) {
-                    navigate(`/recipe/${recipe.id}`, {
-                        state: {
-                            error: 'You do not have permission to edit this recipe',
-                        },
-                    });
-                }
-            } catch (err) {
-                console.error('Error checking edit permission:', err);
-                navigate(`/recipe/${recipe.id}`, {
-                    state: { error: 'Could not verify edit permissions' },
-                });
-            } finally {
-                setCheckingPermission(false);
-            }
-        };
-
-        checkEditPermission();
-    }, [recipe, user, navigate]);
-
-    if (checkingPermission) {
+    if (isLoading) {
         return (
             <AppLayout>
                 <Box
@@ -339,7 +498,13 @@ const EditRecipePage: FC = () => {
                     }}
                 >
                     <Typography variant="h6" sx={{ mb: 2 }}>
-                        Checking edit permissions...
+                        {checkingPermission && !recipe
+                            ? 'Loading recipe...'
+                            : checkingPermission
+                            ? 'Checking permissions...'
+                            : !recipe
+                            ? 'Initializing...'
+                            : 'Loading...'}
                     </Typography>
                 </Box>
             </AppLayout>
@@ -347,7 +512,6 @@ const EditRecipePage: FC = () => {
     }
 
     if (!recipe || !canEdit) {
-        navigate('/');
         return null;
     }
 
@@ -356,21 +520,26 @@ const EditRecipePage: FC = () => {
             setSaveError('You must be logged in to save recipes');
             return;
         }
+        if (!recipe) {
+            setSaveError('Recipe data is not loaded.');
+            return;
+        }
 
         setIsSaving(true);
         setSaveError(null);
+        console.log('Saving recipe with ID:', recipe.id);
 
         try {
-            // Ensure all ingredients have proper UUID IDs before saving and filter out empty ingredients
             const processedIngredients = ingredients
-                // Filter out ingredients without a name
                 .filter(
                     (ingredient) =>
                         ingredient.name && ingredient.name.trim() !== ''
                 )
                 .map((ingredient) => {
-                    // Use our UUID utility to ensure valid UUIDs
                     if (!isValidUuid(ingredient.id)) {
+                        console.warn(
+                            `Correcting invalid ingredient ID ${ingredient.id} for ${ingredient.name} on save.`
+                        );
                         return {
                             ...ingredient,
                             id: ensureUuid(ingredient.id),
@@ -379,32 +548,26 @@ const EditRecipePage: FC = () => {
                     return ingredient;
                 });
 
-            // Create a mapping from old IDs to new UUIDs for reference updates
-            const idMapping = new Map();
-            // Only map the ingredients that have valid names and are included in processedIngredients
-            processedIngredients.forEach((processedIngredient) => {
-                // Find the original ingredient with the same ID
-                const originalIngredient = ingredients.find(
-                    (ing) =>
-                        ing.id === processedIngredient.id ||
-                        (processedIngredient.id === ensureUuid(ing.id) &&
-                            ing.id !== processedIngredient.id)
+            const idMapping = new Map<string, string>();
+            ingredients.forEach((originalIngredient) => {
+                const processed = processedIngredients.find(
+                    (p) =>
+                        (isValidUuid(originalIngredient.id) &&
+                            p.id === originalIngredient.id) ||
+                        (!isValidUuid(originalIngredient.id) &&
+                            p.id === ensureUuid(originalIngredient.id))
                 );
-
-                if (
-                    originalIngredient &&
-                    originalIngredient.id !== processedIngredient.id
-                ) {
-                    idMapping.set(
-                        originalIngredient.id,
-                        processedIngredient.id
-                    );
+                if (processed && processed.id !== originalIngredient.id) {
+                    idMapping.set(originalIngredient.id, processed.id);
                 }
             });
 
-            // Update instructions to use the new UUIDs if any were changed
             let processedInstructions = instructions;
             if (idMapping.size > 0) {
+                console.log(
+                    'Updating instruction mentions with new ingredient IDs:',
+                    idMapping
+                );
                 processedInstructions = instructions.map((section) => ({
                     ...section,
                     steps: section.steps.map((step) => ({
@@ -422,16 +585,14 @@ const EditRecipePage: FC = () => {
                 }));
             }
 
-            // Validate recipe ID - ensure it's a UUID for database operations
-            let recipeId = recipe.id;
-            if (recipeId && recipeId !== 'new' && !isValidUuid(recipeId)) {
-                recipeId = ensureUuid(recipeId);
-            }
+            // Determine if saving a new recipe based on state
+            // A recipe is new if its ID is 'new' OR if it's not a valid UUID (imported case)
+            const isSavingNewRecipe =
+                recipe.id === 'new' || !isValidUuid(recipe.id);
 
-            // Now create the updated recipe with processed ingredients and instructions
-            const updatedRecipe: Recipe = {
+            const updatedRecipeData: Recipe = {
                 ...recipe,
-                id: recipeId,
+                id: recipe.id,
                 title,
                 description,
                 ingredients: processedIngredients,
@@ -441,65 +602,73 @@ const EditRecipePage: FC = () => {
                 tags,
                 images,
                 servings,
+                user_id: recipe.user_id || user.id,
+                is_public: recipe.is_public ?? true,
             };
 
-            // Check if this is an imported recipe
-            // Recipes from URL imports don't have a user_id yet or are being saved for the first time
-            const isImportedRecipe =
-                !recipe.user_id || location.state?.isImported;
-
-            // Save the recipe, passing the current user ID for ownership verification
-            // For imported recipes, use forceNew=true
-            const savedRecipe = await RecipeService.saveRecipe(
-                updatedRecipe,
+            const savedRecipeResult = await RecipeService.saveRecipe(
+                updatedRecipeData,
                 user.id,
-                isImportedRecipe // Force imported recipes to be treated as new
+                isSavingNewRecipe
             );
 
-            // Handle collection assignment based on user selection
-            if (savedRecipe.id) {
+            console.log(
+                'Recipe saved successfully, result ID:',
+                savedRecipeResult.id
+            );
+
+            setRecipe(savedRecipeResult);
+
+            if (savedRecipeResult.id && isValidUuid(savedRecipeResult.id)) {
                 try {
-                    // Only save collections if they have changed AND user is owner
-                    if (isCollectionsChanged && isOwner) {
-                        await saveCollections(savedRecipe.id);
+                    if (isCollectionsChanged) {
+                        console.log(
+                            'Saving collection changes for recipe:',
+                            savedRecipeResult.id
+                        );
+                        await saveCollections(savedRecipeResult.id);
+                    } else {
+                        console.log('No collection changes to save.');
                     }
                 } catch (collectionError) {
                     console.error(
-                        'Error managing recipe collections:',
+                        'Error managing recipe collections post-save:',
                         collectionError
                     );
-                    // Continue with navigation even if collection management fails
                 }
+            } else {
+                console.error(
+                    'Save operation did not return a valid UUID:',
+                    savedRecipeResult.id
+                );
+                setSaveError(
+                    'Failed to save recipe (invalid ID returned). Please try again.'
+                );
+                setIsSaving(false);
+                return;
             }
 
-            // Navigate to the saved recipe page
-            navigate(`/recipe/${savedRecipe.id}`);
+            console.log(
+                `Navigating to saved recipe: /recipe/${savedRecipeResult.id}`
+            );
+            navigate(`/recipe/${savedRecipeResult.id}`, {
+                replace: isSavingNewRecipe,
+                state: { recipe: savedRecipeResult },
+            });
         } catch (error: unknown) {
-            console.error('Error saving recipe:', error);
-
-            // Extract a more user-friendly error message if possible
+            console.error('Error during handleSave:', error);
             let errorMessage = 'Failed to save recipe. Please try again.';
-
-            // Type guard to check if error is an object with message property
-            if (error && typeof error === 'object') {
-                const err = error as { message?: string; code?: string };
-
-                if (err.message) {
-                    if (
-                        err.message.includes('permission') ||
-                        err.message.includes("don't have")
-                    ) {
-                        errorMessage = err.message; // Use the permission error directly
-                    } else if (err.code === '42501') {
-                        errorMessage =
-                            'You do not have permission to modify this recipe.';
-                    } else if (err.message.includes('RLS')) {
-                        errorMessage =
-                            'Permission denied: You cannot modify this recipe.';
-                    }
+            if (error instanceof Error) {
+                if (error.message.includes('permission')) {
+                    errorMessage = error.message;
+                } else if (
+                    (error as { code?: string }).code === '42501' ||
+                    error.message.includes('RLS')
+                ) {
+                    errorMessage =
+                        'Permission denied: You cannot modify this recipe.';
                 }
             }
-
             setSaveError(errorMessage);
             setIsSaving(false);
         }
@@ -510,11 +679,14 @@ const EditRecipePage: FC = () => {
             const [sectionIndex, stepIndex] = activeStepIndex;
             const newInstructions = [...instructions];
             const currentStep = newInstructions[sectionIndex].steps[stepIndex];
-            const textToInsert = `@[${ingredient.name}](${ingredient.id})`;
+            const ingredientId = isValidUuid(ingredient.id)
+                ? ingredient.id
+                : ensureUuid(ingredient.id);
+            const textToInsert = `@[${ingredient.name}](${ingredientId})`;
 
             const stepId = `${sectionIndex}-${stepIndex}`;
             const cursorPos =
-                cursorPositions[stepId] || currentStep.text.length;
+                cursorPositions[stepId] ?? currentStep.text.length;
 
             const newText =
                 currentStep.text.substring(0, cursorPos) +
@@ -523,8 +695,8 @@ const EditRecipePage: FC = () => {
                 currentStep.text.substring(cursorPos);
 
             newInstructions[sectionIndex].steps[stepIndex] = {
+                ...currentStep,
                 text: newText,
-                timing: currentStep.timing,
             };
 
             setInstructions(newInstructions);
@@ -533,27 +705,31 @@ const EditRecipePage: FC = () => {
     };
 
     const handleAddIngredient = () => {
-        setIngredients([
-            ...ingredients,
-            {
-                id: generateUuidV4(), // Use UUID v4 for new ingredients
-                name: '',
-                quantity: null,
-                unit: null,
-                notes: '',
-            },
-        ]);
+        const newIngredient: Ingredient = {
+            id: generateUuidV4(),
+            name: '',
+            quantity: null,
+            unit: null,
+            notes: '',
+            position: (ingredients.length + 1) * 1000,
+        };
+        setIngredients([...ingredients, newIngredient]);
     };
 
     const handleAddStep = (sectionIndex: number) => {
         const newInstructions = [...instructions];
-        newInstructions[sectionIndex].steps.push({
+        if (!newInstructions[sectionIndex]) return;
+
+        const newStep: Step = {
+            id: generateUuidV4(),
             text: '',
             timing: null,
-        });
+            position: (newInstructions[sectionIndex].steps.length + 1) * 1000,
+        };
+
+        newInstructions[sectionIndex].steps.push(newStep);
         setInstructions(newInstructions);
 
-        // Set focus to the new step
         setTimeout(() => {
             const newStepIndex = newInstructions[sectionIndex].steps.length - 1;
             setActiveStepIndex([sectionIndex, newStepIndex]);
@@ -561,20 +737,21 @@ const EditRecipePage: FC = () => {
     };
 
     const handleAddSection = () => {
-        setInstructions([
-            ...instructions,
-            {
-                section_title: 'New Section',
-                steps: [
-                    {
-                        text: '',
-                        timing: null,
-                    },
-                ],
-            },
-        ]);
+        const newSection: InstructionSection = {
+            id: generateUuidV4(),
+            section_title: 'New Section',
+            position: (instructions.length + 1) * 1000,
+            steps: [
+                {
+                    id: generateUuidV4(),
+                    text: '',
+                    timing: null,
+                    position: 1000,
+                },
+            ],
+        };
+        setInstructions([...instructions, newSection]);
 
-        // Set focus to the new step
         setTimeout(() => {
             const newSectionIndex = instructions.length;
             setActiveStepIndex([newSectionIndex, 0]);
@@ -585,24 +762,22 @@ const EditRecipePage: FC = () => {
         setNotes([
             ...notes,
             {
-                id: `note-${Date.now()}-${Math.random()
-                    .toString(36)
-                    .substr(2, 9)}`,
+                id: generateUuidV4(),
                 text: '',
             },
         ]);
     };
 
     const handleDeleteNote = (noteId: string) => {
-        const newNotes = notes.filter((note) => note.id !== noteId);
-        setNotes(newNotes);
+        setNotes(notes.filter((note) => note.id !== noteId));
     };
 
     const handleNoteChange = (noteId: string, value: string) => {
-        const newNotes = notes.map((note) =>
-            note.id === noteId ? { ...note, text: value } : note
+        setNotes(
+            notes.map((note) =>
+                note.id === noteId ? { ...note, text: value } : note
+            )
         );
-        setNotes(newNotes);
     };
 
     const handleDeleteIngredient = (ingredientId: string) => {
@@ -610,17 +785,20 @@ const EditRecipePage: FC = () => {
     };
 
     const handleDeleteSection = (sectionIndex: number) => {
-        const newInstructions = [...instructions];
-        newInstructions.splice(sectionIndex, 1);
+        const newInstructions = instructions.filter(
+            (_, idx) => idx !== sectionIndex
+        );
         setInstructions(newInstructions);
     };
 
     const handleDeleteStep = (sectionIndex: number, stepIndex: number) => {
         const newInstructions = [...instructions];
-        newInstructions[sectionIndex].steps.splice(stepIndex, 1);
-        if (newInstructions[sectionIndex].steps.length === 0) {
-            newInstructions.splice(sectionIndex, 1);
-        }
+        if (!newInstructions[sectionIndex]) return;
+
+        newInstructions[sectionIndex].steps = newInstructions[
+            sectionIndex
+        ].steps.filter((_, idx) => idx !== stepIndex);
+
         setInstructions(newInstructions);
     };
 
@@ -634,10 +812,8 @@ const EditRecipePage: FC = () => {
 
     const handleImageUpload = (files: FileList | null) => {
         if (!files) return;
-
         Array.from(files).forEach((file) => {
             if (!file.type.startsWith('image/')) return;
-
             const reader = new FileReader();
             reader.onload = (e) => {
                 const result = e.target?.result;
@@ -654,13 +830,11 @@ const EditRecipePage: FC = () => {
         e.stopPropagation();
         setIsDragging(true);
     };
-
     const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
         setIsDragging(false);
     };
-
     const handleDrop = (e: DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
@@ -674,9 +848,10 @@ const EditRecipePage: FC = () => {
         value: string
     ) => {
         const newInstructions = [...instructions];
+        if (!newInstructions[sectionIndex]?.steps[stepIndex]) return;
         newInstructions[sectionIndex].steps[stepIndex] = {
+            ...newInstructions[sectionIndex].steps[stepIndex],
             text: value,
-            timing: newInstructions[sectionIndex].steps[stepIndex].timing,
         };
         setInstructions(newInstructions);
     };
@@ -686,6 +861,7 @@ const EditRecipePage: FC = () => {
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
     ) => {
         const newInstructions = [...instructions];
+        if (!newInstructions[sectionIndex]) return;
         newInstructions[sectionIndex].section_title = e.target.value;
         setInstructions(newInstructions);
     };
@@ -701,18 +877,16 @@ const EditRecipePage: FC = () => {
         }));
     };
 
-    // Add onChange handlers for ingredient fields
     const handleIngredientNameChange = (index: number, value: string) => {
         const newIngredients = [...ingredients];
-        newIngredients[index] = {
-            ...newIngredients[index],
-            name: value,
-        };
+        if (!newIngredients[index]) return;
+        newIngredients[index] = { ...newIngredients[index], name: value };
         setIngredients(newIngredients);
     };
 
     const handleIngredientQuantityChange = (index: number, value: string) => {
         const newIngredients = [...ingredients];
+        if (!newIngredients[index]) return;
         newIngredients[index] = {
             ...newIngredients[index],
             quantity: value === '' ? null : parseFloat(value),
@@ -722,6 +896,7 @@ const EditRecipePage: FC = () => {
 
     const handleIngredientUnitChange = (index: number, value: string) => {
         const newIngredients = [...ingredients];
+        if (!newIngredients[index]) return;
         newIngredients[index] = {
             ...newIngredients[index],
             unit: value === '' ? null : value,
@@ -729,23 +904,24 @@ const EditRecipePage: FC = () => {
         setIngredients(newIngredients);
     };
 
-    // Function to handle click on the add image box
     const handleAddImageClick = async () => {
         if (isMobileDevice) {
-            // On mobile, use the gallery input that provides access to both gallery and camera
             galleryInputRef.current?.click();
         } else {
-            // On desktop, use regular file input for drag and drop
             fileInputRef.current?.click();
         }
     };
 
-    // Handle collection selection
     const handleCollectionChange = (event: SelectChangeEvent<string>) => {
-        // Only allow owners to change collections
         if (!isOwner) return;
+        const newCollectionId = event.target.value;
+        setSelectedCollection(newCollectionId);
 
-        setSelectedCollection(event.target.value);
+        if (newCollectionId === ALL_RECIPES_ID) {
+            setSelectedCollections([]);
+        } else {
+            setSelectedCollections([newCollectionId]);
+        }
     };
 
     const headerContent = (
@@ -759,8 +935,11 @@ const EditRecipePage: FC = () => {
         >
             <Box
                 onClick={() => {
-                    // Navigate to the returnTo path or home if not available
-                    const returnTo = location.state?.returnTo || '/';
+                    const returnTo =
+                        location.state?.returnTo ||
+                        (recipe?.id && recipe.id !== 'new'
+                            ? `/recipe/${recipe.id}`
+                            : '/');
                     navigate(returnTo);
                 }}
                 sx={{
@@ -769,9 +948,7 @@ const EditRecipePage: FC = () => {
                     gap: 2,
                     cursor: 'pointer',
                     color: 'text.primary',
-                    '&:hover': {
-                        color: 'primary.main',
-                    },
+                    '&:hover': { color: 'primary.main' },
                 }}
             >
                 <ArrowBackIcon sx={{ fontSize: 24 }} />
@@ -791,12 +968,8 @@ const EditRecipePage: FC = () => {
                 variant="contained"
                 startIcon={isSaving ? null : <SaveIcon />}
                 onClick={handleSave}
-                disabled={isSaving}
-                sx={{
-                    height: 42,
-                    px: 3,
-                    minWidth: 140,
-                }}
+                disabled={isSaving || isLoading}
+                sx={{ height: 42, px: 3, minWidth: 140 }}
             >
                 {isSaving ? 'Saving...' : 'Save Recipe'}
             </Button>
@@ -831,10 +1004,7 @@ const EditRecipePage: FC = () => {
                         bottom: 0,
                         opacity: 0.8,
                         pointerEvents: 'none',
-                        backgroundImage: `
-                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.05) 0.5px, transparent 0.5px),
-                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.03) 1px, transparent 1px)
-                        `,
+                        backgroundImage: `radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.05) 0.5px, transparent 0.5px), radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.03) 1px, transparent 1px)`,
                         backgroundSize: '6px 6px, 14px 14px',
                         backgroundPosition: '0 0',
                         mixBlendMode: 'multiply',
@@ -842,12 +1012,11 @@ const EditRecipePage: FC = () => {
                     },
                 }}
             >
-                {/* Collections dropdown positioned at the top right */}
                 <Box
                     sx={{
                         display: 'flex',
                         justifyContent: 'flex-end',
-                        mb: 0,
+                        mb: 2,
                         position: 'relative',
                         zIndex: 2,
                     }}
@@ -857,9 +1026,7 @@ const EditRecipePage: FC = () => {
                             minWidth: 220,
                             '& .MuiOutlinedInput-root': {
                                 bgcolor: 'background.paper',
-                                '&:hover': {
-                                    bgcolor: 'background.paper',
-                                },
+                                '&:hover': { bgcolor: 'background.paper' },
                             },
                         }}
                         size="small"
@@ -874,8 +1041,6 @@ const EditRecipePage: FC = () => {
                             arrow
                         >
                             <div>
-                                {' '}
-                                {/* Wrapper div required for Tooltip to work with disabled elements */}
                                 <Select
                                     value={selectedCollection}
                                     onChange={handleCollectionChange}
@@ -883,7 +1048,7 @@ const EditRecipePage: FC = () => {
                                     inputProps={{
                                         'aria-label': 'Select collection',
                                     }}
-                                    disabled={!isOwner}
+                                    disabled={!isOwner || isLoading}
                                     sx={{
                                         height: 42,
                                         fontFamily: "'Inter', sans-serif",
@@ -910,7 +1075,7 @@ const EditRecipePage: FC = () => {
                                     >
                                         <span style={{ fontSize: '1.2rem' }}>
                                             📚
-                                        </span>
+                                        </span>{' '}
                                         All Recipes
                                     </MenuItem>
                                     {availableCollections
@@ -951,7 +1116,6 @@ const EditRecipePage: FC = () => {
                     </FormControl>
                 </Box>
 
-                {/* Add error banner at the top of the container */}
                 <Collapse in={!!saveError}>
                     <Alert
                         severity="error"
@@ -985,7 +1149,6 @@ const EditRecipePage: FC = () => {
                     }}
                 >
                     <Grid container spacing={4}>
-                        {/* Title Section */}
                         <Grid item xs={12}>
                             <Box
                                 sx={{
@@ -993,11 +1156,7 @@ const EditRecipePage: FC = () => {
                                     bgcolor: 'background.paper',
                                     p: { xs: 2, sm: 3 },
                                     borderRadius: 1,
-                                    boxShadow: `
-                                    0 1px 2px rgba(0,0,0,0.03),
-                                    0 4px 20px rgba(0,0,0,0.06),
-                                    inset 0 0 0 1px rgba(255,255,255,0.9)
-                                `,
+                                    boxShadow: `0 1px 2px rgba(0,0,0,0.03), 0 4px 20px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(255,255,255,0.9)`,
                                     '&::before': {
                                         content: '""',
                                         position: 'absolute',
@@ -1073,7 +1232,6 @@ const EditRecipePage: FC = () => {
                             </Box>
                         </Grid>
 
-                        {/* Images Section */}
                         <Grid item xs={12}>
                             <Box
                                 sx={{
@@ -1081,29 +1239,7 @@ const EditRecipePage: FC = () => {
                                     bgcolor: 'background.paper',
                                     p: { xs: 2, sm: 3 },
                                     borderRadius: 1,
-                                    boxShadow: `
-                                    0 1px 2px rgba(0,0,0,0.03),
-                                    0 4px 20px rgba(0,0,0,0.06),
-                                    inset 0 0 0 1px rgba(255,255,255,0.9)
-                                `,
-                                    '&::before': {
-                                        content: '""',
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: '100%',
-                                        background: 'rgba(255,255,255,0.5)',
-                                        backdropFilter: 'blur(4px)',
-                                        borderRadius: 1,
-                                        zIndex: 0,
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                    },
-                                    '& > *': {
-                                        position: 'relative',
-                                        zIndex: 1,
-                                    },
+                                    boxShadow: `0 1px 2px rgba(0,0,0,0.03), 0 4px 20px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(255,255,255,0.9)`,
                                 }}
                             >
                                 <Typography
@@ -1119,10 +1255,8 @@ const EditRecipePage: FC = () => {
                                         fontFamily: "'Kalam', cursive",
                                     }}
                                 >
-                                    <ImageIcon />
-                                    Recipe Images
+                                    <ImageIcon /> Recipe Images
                                 </Typography>
-
                                 <Box
                                     sx={{
                                         display: 'grid',
@@ -1152,18 +1286,7 @@ const EditRecipePage: FC = () => {
                                                 justifyContent: 'center',
                                                 zIndex: 2,
                                             }}
-                                        >
-                                            <Typography
-                                                variant="h6"
-                                                sx={{
-                                                    color: 'primary.contrastText',
-                                                    fontFamily:
-                                                        "'Kalam', cursive",
-                                                }}
-                                            >
-                                                Drop images here
-                                            </Typography>
-                                        </Box>
+                                        ></Box>
                                     )}
                                     {images.map((imageUrl, index) => (
                                         <Box
@@ -1236,16 +1359,14 @@ const EditRecipePage: FC = () => {
                                                     <ArrowBackIcon fontSize="small" />
                                                 </IconButton>
                                                 <IconButton
-                                                    onClick={() => {
-                                                        const newImages = [
-                                                            ...images,
-                                                        ];
-                                                        newImages.splice(
-                                                            index,
-                                                            1
-                                                        );
-                                                        setImages(newImages);
-                                                    }}
+                                                    onClick={() =>
+                                                        setImages(
+                                                            images.filter(
+                                                                (_, i) =>
+                                                                    i !== index
+                                                            )
+                                                        )
+                                                    }
                                                     size="small"
                                                     sx={{
                                                         color: 'white',
@@ -1364,7 +1485,6 @@ const EditRecipePage: FC = () => {
                             </Box>
                         </Grid>
 
-                        {/* Time Estimate and Tags Section */}
                         <Grid item xs={12} md={6}>
                             <Stack spacing={3}>
                                 <ServingSizeForm
@@ -1381,7 +1501,6 @@ const EditRecipePage: FC = () => {
                             <TagInput tags={tags} onChange={setTags} />
                         </Grid>
 
-                        {/* Ingredients Section */}
                         <Grid item xs={12} md={6}>
                             <Box
                                 sx={{
@@ -1389,29 +1508,7 @@ const EditRecipePage: FC = () => {
                                     bgcolor: 'background.paper',
                                     p: { xs: 2, sm: 3 },
                                     borderRadius: 1,
-                                    boxShadow: `
-                                    0 1px 2px rgba(0,0,0,0.03),
-                                    0 4px 20px rgba(0,0,0,0.06),
-                                    inset 0 0 0 1px rgba(255,255,255,0.9)
-                                `,
-                                    '&::before': {
-                                        content: '""',
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: '100%',
-                                        background: 'rgba(255,255,255,0.5)',
-                                        backdropFilter: 'blur(4px)',
-                                        borderRadius: 1,
-                                        zIndex: 0,
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                    },
-                                    '& > *': {
-                                        position: 'relative',
-                                        zIndex: 1,
-                                    },
+                                    boxShadow: `0 1px 2px rgba(0,0,0,0.03), 0 4px 20px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(255,255,255,0.9)`,
                                 }}
                             >
                                 <Typography
@@ -1433,12 +1530,9 @@ const EditRecipePage: FC = () => {
                                                 gap: 2,
                                                 alignItems: 'flex-start',
                                                 position: 'relative',
-                                                '&:hover': {
-                                                    '& .delete-button': {
-                                                        opacity: 1,
-                                                        transform:
-                                                            'translateX(0)',
-                                                    },
+                                                '&:hover .delete-button': {
+                                                    opacity: 1,
+                                                    transform: 'translateX(0)',
                                                 },
                                             }}
                                         >
@@ -1446,9 +1540,7 @@ const EditRecipePage: FC = () => {
                                                 size="small"
                                                 placeholder="amount"
                                                 value={
-                                                    ingredient.quantity === null
-                                                        ? ''
-                                                        : ingredient.quantity
+                                                    ingredient.quantity ?? ''
                                                 }
                                                 onChange={(e) =>
                                                     handleIngredientQuantityChange(
@@ -1473,9 +1565,7 @@ const EditRecipePage: FC = () => {
                                                                 marginLeft: 1,
                                                             },
                                                         '&:hover::-webkit-inner-spin-button':
-                                                            {
-                                                                opacity: 1,
-                                                            },
+                                                            { opacity: 1 },
                                                     },
                                                     '& .MuiInputBase-input::placeholder':
                                                         {
@@ -1581,7 +1671,6 @@ const EditRecipePage: FC = () => {
                             </Box>
                         </Grid>
 
-                        {/* Instructions Section */}
                         <Grid item xs={12} md={6}>
                             <Box
                                 sx={{
@@ -1589,29 +1678,7 @@ const EditRecipePage: FC = () => {
                                     bgcolor: 'background.paper',
                                     p: { xs: 2, sm: 3 },
                                     borderRadius: 1,
-                                    boxShadow: `
-                                    0 1px 2px rgba(0,0,0,0.03),
-                                    0 4px 20px rgba(0,0,0,0.06),
-                                    inset 0 0 0 1px rgba(255,255,255,0.9)
-                                `,
-                                    '&::before': {
-                                        content: '""',
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: '100%',
-                                        background: 'rgba(255,255,255,0.5)',
-                                        backdropFilter: 'blur(4px)',
-                                        borderRadius: 1,
-                                        zIndex: 0,
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                    },
-                                    '& > *': {
-                                        position: 'relative',
-                                        zIndex: 1,
-                                    },
+                                    boxShadow: `0 1px 2px rgba(0,0,0,0.03), 0 4px 20px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(255,255,255,0.9)`,
                                 }}
                             >
                                 <Typography
@@ -1628,7 +1695,10 @@ const EditRecipePage: FC = () => {
                                     {instructions.map(
                                         (section, sectionIndex) => (
                                             <Box
-                                                key={`section-${sectionIndex}-${section.section_title}`}
+                                                key={
+                                                    section.id ||
+                                                    `section-${sectionIndex}`
+                                                }
                                                 sx={{
                                                     position: 'relative',
                                                     '&:hover .delete-section': {
@@ -1717,7 +1787,10 @@ const EditRecipePage: FC = () => {
                                                     {section.steps.map(
                                                         (step, stepIndex) => (
                                                             <Box
-                                                                key={stepIndex}
+                                                                key={
+                                                                    step.id ||
+                                                                    `step-${sectionIndex}-${stepIndex}`
+                                                                }
                                                                 sx={{
                                                                     display:
                                                                         'flex',
@@ -1911,7 +1984,6 @@ const EditRecipePage: FC = () => {
                             </Box>
                         </Grid>
 
-                        {/* Notes Section */}
                         <Grid item xs={12}>
                             <Box
                                 sx={{
@@ -1919,29 +1991,7 @@ const EditRecipePage: FC = () => {
                                     bgcolor: 'background.paper',
                                     p: { xs: 2, sm: 3 },
                                     borderRadius: 1,
-                                    boxShadow: `
-                                    0 1px 2px rgba(0,0,0,0.03),
-                                    0 4px 20px rgba(0,0,0,0.06),
-                                    inset 0 0 0 1px rgba(255,255,255,0.9)
-                                `,
-                                    '&::before': {
-                                        content: '""',
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: '100%',
-                                        background: 'rgba(255,255,255,0.5)',
-                                        backdropFilter: 'blur(4px)',
-                                        borderRadius: 1,
-                                        zIndex: 0,
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                    },
-                                    '& > *': {
-                                        position: 'relative',
-                                        zIndex: 1,
-                                    },
+                                    boxShadow: `0 1px 2px rgba(0,0,0,0.03), 0 4px 20px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(255,255,255,0.9)`,
                                 }}
                             >
                                 <Typography
@@ -2008,11 +2058,6 @@ const EditRecipePage: FC = () => {
                                                             'translateX(-10px) rotate(-8deg)',
                                                         bgcolor: 'paper.dark',
                                                     },
-                                                    '& svg': {
-                                                        color: 'error.main',
-                                                        transition:
-                                                            'color 0.2s',
-                                                    },
                                                 }}
                                             >
                                                 <FontAwesomeIcon
@@ -2037,6 +2082,7 @@ const EditRecipePage: FC = () => {
                     </Grid>
                 </Box>
             </Box>
+
             <Menu
                 anchorEl={anchorEl}
                 open={Boolean(anchorEl)}
@@ -2047,53 +2093,48 @@ const EditRecipePage: FC = () => {
                         width: 'auto',
                         minWidth: 200,
                         maxWidth: 400,
-                        border: '1px solid rgba(0, 0, 0, 0.23)',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
                     },
                 }}
             >
-                {recipe.ingredients.map((ingredient) => (
-                    <MenuItem
-                        key={ingredient.id}
-                        onClick={() => handleIngredientClick(ingredient)}
-                        sx={{
-                            display: 'flex',
-                            width: '100%',
-                            '&:hover': {
-                                bgcolor: 'primary.lighter',
-                            },
-                        }}
-                    >
-                        <Typography
-                            noWrap
+                {ingredients
+                    .filter((ing) => ing.name?.trim())
+                    .map((ingredient) => (
+                        <MenuItem
+                            key={ingredient.id}
+                            onClick={() => handleIngredientClick(ingredient)}
                             sx={{
-                                flexGrow: 1,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
+                                display: 'flex',
+                                width: '100%',
+                                '&:hover': { bgcolor: 'primary.lighter' },
                             }}
                         >
-                            {ingredient.name}
-                        </Typography>
-                        {ingredient.quantity !== null &&
-                            ingredient.quantity !== undefined && (
-                                <Typography
-                                    component="span"
-                                    variant="body2"
-                                    color="text.secondary"
-                                    sx={{
-                                        ml: 1,
-                                        flexShrink: 0,
-                                    }}
-                                >
-                                    ({ingredient.quantity}
-                                    {ingredient.unit
-                                        ? ' ' + ingredient.unit
-                                        : ''}
-                                    )
-                                </Typography>
-                            )}
-                    </MenuItem>
-                ))}
+                            <Typography
+                                noWrap
+                                sx={{
+                                    flexGrow: 1,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                }}
+                            >
+                                {ingredient.name}
+                            </Typography>
+                            {ingredient.quantity !== null &&
+                                ingredient.quantity !== undefined && (
+                                    <Typography
+                                        component="span"
+                                        variant="body2"
+                                        color="text.secondary"
+                                        sx={{ ml: 1, flexShrink: 0 }}
+                                    >
+                                        ({ingredient.quantity}
+                                        {ingredient.unit
+                                            ? ' ' + ingredient.unit
+                                            : ''}
+                                        )
+                                    </Typography>
+                                )}
+                        </MenuItem>
+                    ))}
             </Menu>
         </AppLayout>
     );
