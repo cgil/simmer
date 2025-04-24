@@ -272,6 +272,15 @@ const RecipePage: FC = () => {
                         },
                     }}
                 >
+                    {/* Only show edit option if user has edit permission */}
+                    {canEdit && (
+                        <ShareMenuItem
+                            icon={EditIcon}
+                            label="Edit Recipe"
+                            onClick={handleEditClick}
+                        />
+                    )}
+
                     {/* Only show sharing option if user is the owner */}
                     {recipe.user_id === user.id && (
                         <ShareMenuItem
@@ -279,15 +288,6 @@ const RecipePage: FC = () => {
                             label="Share Recipe"
                             onClick={handleShareClick}
                             iconSx={{ transform: 'rotate(-45deg)' }}
-                        />
-                    )}
-
-                    {/* Only show edit option if user has edit permission */}
-                    {canEdit && (
-                        <ShareMenuItem
-                            icon={EditIcon}
-                            label="Edit Recipe"
-                            onClick={handleEditClick}
                         />
                     )}
 
