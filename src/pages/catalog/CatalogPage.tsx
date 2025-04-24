@@ -10,6 +10,7 @@ import SearchBar from '../../components/search-bar/SearchBar';
 import { useDebounce } from '../../hooks';
 import { MatchType } from '../../components/recipe/MatchCornerFold';
 import CollectionsDrawer from '../../components/collections/CollectionsDrawer';
+import logger from '../../utils/logger';
 
 // Import from collection.ts including the new constant
 import {
@@ -208,7 +209,7 @@ const CatalogPage: FC = () => {
                 }
             }
         } catch (err) {
-            console.error('Error loading collections:', err);
+            logger.error('Error loading collections:', err);
             setCollections([]);
         } finally {
             setCollectionsLoading(false);
@@ -260,7 +261,7 @@ const CatalogPage: FC = () => {
             setHasMore(fetchedRecipes.length > RECIPES_PER_PAGE);
             setPage(1);
         } catch (err) {
-            console.error('Error loading recipes by collection:', err);
+            logger.error('Error loading recipes by collection:', err);
             setError('Failed to load recipes. Please try again.');
         } finally {
             setInitialLoading(false);
@@ -278,7 +279,7 @@ const CatalogPage: FC = () => {
             await loadRecipesByCollection(selectedCollection);
             initialLoadCompleted.current = true;
         } catch (err) {
-            console.error('Error loading initial recipes:', err);
+            logger.error('Error loading initial recipes:', err);
             setError('Failed to load recipes. Please try again.');
         } finally {
             setInitialLoading(false);
@@ -296,7 +297,7 @@ const CatalogPage: FC = () => {
             // Using the same loadRecipesByCollection function for consistency
             await loadRecipesByCollection(selectedCollection);
         } catch (err) {
-            console.error('Error searching recipes:', err);
+            logger.error('Error searching recipes:', err);
             setError('Failed to search recipes. Please try again.');
         } finally {
             setSearchLoading(false);
@@ -325,7 +326,7 @@ const CatalogPage: FC = () => {
                 setPage(nextPage);
             }
         } catch (err) {
-            console.error('Error loading more recipes:', err);
+            logger.error('Error loading more recipes:', err);
             setError('Failed to load more recipes. Please try again.');
         } finally {
             setLoadingMore(false);
@@ -401,7 +402,7 @@ const CatalogPage: FC = () => {
                 )
             );
         } catch (err) {
-            console.error('Error creating collection:', err);
+            logger.error('Error creating collection:', err);
             // Revert optimistic update on error
             setCollections((prev) =>
                 prev.filter((c) => !c.id.startsWith('temp-'))
@@ -435,7 +436,7 @@ const CatalogPage: FC = () => {
 
             // No need to reload all collections since we've already updated our local state
         } catch (err) {
-            console.error('Error updating collection:', err);
+            logger.error('Error updating collection:', err);
             // Reload collections on error to ensure UI is in sync with backend
             await loadCollections();
         }
@@ -467,7 +468,7 @@ const CatalogPage: FC = () => {
                         prev.filter((c) => c.id !== collectionId)
                     );
                 } catch (error) {
-                    console.error(
+                    logger.error(
                         'Error deleting collection from backend:',
                         error
                     );
@@ -479,7 +480,7 @@ const CatalogPage: FC = () => {
                 }
             }, 300); // Match this with your animation duration
         } catch (err) {
-            console.error('Error starting collection deletion:', err);
+            logger.error('Error starting collection deletion:', err);
             // Remove from the being-removed state
             setCollectionsBeingRemoved((prev) =>
                 prev.filter((id) => id !== collectionId)
@@ -526,27 +527,18 @@ const CatalogPage: FC = () => {
             // Prevent dropping onto the same collection view (no action needed)
             // Note: Dropping onto "All Recipes" is handled by the drop target itself
             if (sourceCollectionId === targetCollectionId) {
-                console.log(
-                    'Recipe dropped onto the same collection view. No action needed.'
-                );
                 return;
             }
 
             // Find the recipe being dragged (from the currently loaded recipes)
             const recipe = recipes.find((r) => r.id === recipeId);
             if (!recipe) {
-                console.error(
-                    'Dragged recipe not found in current view state.'
-                );
+                logger.error('Dragged recipe not found in current view state.');
                 setError(
                     'An error occurred while moving the recipe. Please refresh and try again.'
                 );
                 return;
             }
-
-            console.log(
-                `Attempting to move recipe ${recipeId} from view ${sourceCollectionId} to target ${targetCollectionId}`
-            );
 
             // Store original states for potential rollback
             const originalCollections = [...collections];
@@ -561,9 +553,6 @@ const CatalogPage: FC = () => {
 
                 // 1. Add to Target Collection (if target is a specific collection)
                 if (targetCollectionId !== ALL_RECIPES_ID) {
-                    console.log(
-                        `Backend Call: Add recipe ${recipeId} to collection ${targetCollectionId}`
-                    );
                     await CollectionService.addRecipeToCollection(
                         recipeId,
                         targetCollectionId
@@ -574,9 +563,6 @@ const CatalogPage: FC = () => {
                 // 2. Remove from Source Collection (if source was a specific collection)
                 // This runs if dragging from a specific collection, regardless of target.
                 if (sourceCollectionId !== ALL_RECIPES_ID) {
-                    console.log(
-                        `Backend Call: Remove recipe ${recipeId} from collection ${sourceCollectionId}`
-                    );
                     await CollectionService.removeRecipeFromCollection(
                         recipeId,
                         sourceCollectionId
@@ -585,10 +571,6 @@ const CatalogPage: FC = () => {
                     // We only remove from the UI list if the recipe was dragged out of the *currently viewed* collection.
                     needsUIRemoval = true;
                 }
-
-                // --- Optimistic UI Updates ---
-
-                console.log('Applying optimistic UI updates...');
 
                 // 1. Update collection counts
                 setCollections((prev) =>
@@ -614,16 +596,12 @@ const CatalogPage: FC = () => {
 
                 // 2. Remove recipe from the currently displayed list if needed
                 if (needsUIRemoval) {
-                    console.log(
-                        `Optimistic UI: Removing recipe ${recipeId} from current view.`
-                    );
                     setRecipes((prev) => prev.filter((r) => r.id !== recipeId));
                 }
 
-                console.log('Optimistic UI updates applied successfully.');
                 // Optional: Add success feedback (e.g., Snackbar)
             } catch (err) {
-                console.error('Error moving recipe:', err);
+                logger.error('Error moving recipe:', err);
                 const targetName =
                     collections.find((c) => c.id === targetCollectionId)
                         ?.name || 'target collection';
@@ -644,7 +622,7 @@ const CatalogPage: FC = () => {
         async (draggedId: string, targetId: string, newIndex: number) => {
             if (!user || selectedCollection === ALL_RECIPES_ID) return;
 
-            console.log(
+            logger.log(
                 `Reordering recipe ${draggedId} to position ${newIndex}`
             );
 
@@ -657,7 +635,7 @@ const CatalogPage: FC = () => {
                     (r) => r.id === draggedId
                 );
                 if (draggedRecipeIndex === -1) {
-                    console.error('Dragged recipe not found in list');
+                    logger.error('Dragged recipe not found in list');
                     return;
                 }
 
@@ -666,7 +644,7 @@ const CatalogPage: FC = () => {
                     (r) => r.id === targetId
                 );
                 if (targetRecipeIndex === -1) {
-                    console.error('Target recipe not found in list');
+                    logger.error('Target recipe not found in list');
                     return;
                 }
 
@@ -678,7 +656,7 @@ const CatalogPage: FC = () => {
 
                 // If we have no position data, or empty collection, bail out
                 if (!positionData.length) {
-                    console.error('No position data available for reordering');
+                    logger.error('No position data available for reordering');
                     return;
                 }
 
@@ -704,7 +682,7 @@ const CatalogPage: FC = () => {
                     );
 
                     if (!beforePositionItem || !targetPositionItem) {
-                        console.error('Cannot find position data for recipes');
+                        logger.error('Cannot find position data for recipes');
                         return;
                     }
 
@@ -729,11 +707,11 @@ const CatalogPage: FC = () => {
                     newPosition
                 );
 
-                console.log(
+                logger.log(
                     `Recipe ${draggedId} successfully reordered to position ${newPosition}`
                 );
             } catch (err) {
-                console.error('Error reordering recipe:', err);
+                logger.error('Error reordering recipe:', err);
                 // Rollback UI updates on error
                 setRecipes(originalRecipes);
                 setError('Failed to reorder recipe. Please try again.');

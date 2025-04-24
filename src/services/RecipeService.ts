@@ -3,6 +3,7 @@ import type { Recipe } from "../types/recipe";
 import type { Database } from "../types/database";
 import { convertRecipeInstructionReferences } from "../utils/ingredientMentions";
 import { ensureUuid, isValidUuid } from "../utils/uuid";
+import logger from "../utils/logger";
 
 // Helper function for generating UUIDs in the browser
 function generateUUID(): string {
@@ -100,10 +101,10 @@ export class RecipeService {
         if (isNewRecipe) {
             // Always generate a completely new UUID for new/imported recipes
             recipeId = generateUUID();
-            console.log(`Generated new UUID for recipe: ${recipeId}`);
+            logger.log(`Generated new UUID for recipe: ${recipeId}`);
         } else if (!isValidUuid(recipeId)) {
             // For existing recipes with non-UUID IDs, convert consistently
-            console.warn(
+            logger.warn(
                 `Converting non-UUID recipe ID '${recipeId}' to a proper UUID format`,
             );
             recipeId = ensureUuid(recipeId);
@@ -114,14 +115,14 @@ export class RecipeService {
             const hasPermission = await this.checkEditPermission(recipeId);
 
             if (!hasPermission) {
-                console.log(
+                logger.log(
                     "User does not have edit permission for this recipe",
                 );
                 throw new Error(
                     `You don't have permission to update this recipe.`,
                 );
             }
-            console.log(`User has edit permission for recipe ${recipeId}`);
+            logger.log(`User has edit permission for recipe ${recipeId}`);
         }
 
         // Update the recipe object with the validated/new UUID
@@ -136,7 +137,7 @@ export class RecipeService {
             ? `${recipeId}::${Date.now()}`
             : recipeId;
 
-        console.log(`Using recipe seed: ${recipeSeed} for ingredient IDs`);
+        logger.log(`Using recipe seed: ${recipeSeed} for ingredient IDs`);
 
         // For new recipes or imports, generate truly unique IDs for all ingredients
         // This prevents primary key violations when the same recipe is imported multiple times
@@ -152,7 +153,7 @@ export class RecipeService {
                     };
                 } else if (!isValidUuid(ingredient.id)) {
                     // For existing recipes with invalid IDs, ensure a valid (deterministic) UUID
-                    console.warn(
+                    logger.warn(
                         `Invalid UUID format for ingredient: ${ingredient.name} with ID: ${ingredient.id}`,
                     );
                     return {
@@ -241,7 +242,7 @@ export class RecipeService {
             let savedRecipeId: string | undefined = undefined;
 
             if (existingRecipe) {
-                console.log(
+                logger.log(
                     `Updating existing recipe: "${recipe.title}" with ID: ${recipeId}`,
                 );
 
@@ -255,7 +256,7 @@ export class RecipeService {
                             .maybeSingle(); // Use maybeSingle instead of single to prevent errors on zero rows
 
                     if (getError) {
-                        console.error(
+                        logger.error(
                             "Error retrieving recipe for ownership verification:",
                             getError,
                         );
@@ -264,7 +265,7 @@ export class RecipeService {
 
                     // Handle the case where the recipe doesn't exist or user doesn't have access
                     if (!existingRecipe) {
-                        console.log(
+                        logger.log(
                             `Recipe with ID ${recipeId} not found or not accessible - attempting to create a new one`,
                         );
 
@@ -291,7 +292,7 @@ export class RecipeService {
                                 .single();
 
                         if (createError) {
-                            console.error(
+                            logger.error(
                                 "Error creating recipe:",
                                 createError,
                             );
@@ -299,7 +300,7 @@ export class RecipeService {
                         }
 
                         savedRecipeId = newRecipe?.id || recipeId;
-                        console.log(
+                        logger.log(
                             `Created new recipe with ID: ${savedRecipeId}`,
                         );
 
@@ -330,7 +331,7 @@ export class RecipeService {
                     // No user_id check needed - permission was verified earlier
 
                     if (updateError) {
-                        console.error(
+                        logger.error(
                             "Error updating recipe:",
                             updateError,
                         );
@@ -338,7 +339,7 @@ export class RecipeService {
                     }
 
                     savedRecipeId = recipeId;
-                    console.log(
+                    logger.log(
                         `Successfully updated recipe with ID: ${savedRecipeId}`,
                     );
                 } catch (error) {
@@ -349,7 +350,7 @@ export class RecipeService {
                         error && typeof error === "object" && "code" in error &&
                         error.code === "PGRST116"
                     ) {
-                        console.log(
+                        logger.log(
                             `Recipe with ID ${recipeId} not found - creating a new one`,
                         );
 
@@ -376,7 +377,7 @@ export class RecipeService {
                                 .single();
 
                         if (createError) {
-                            console.error(
+                            logger.error(
                                 "Error creating recipe:",
                                 createError,
                             );
@@ -384,7 +385,7 @@ export class RecipeService {
                         }
 
                         savedRecipeId = newRecipe?.id || recipeId;
-                        console.log(
+                        logger.log(
                             `Created new recipe with ID: ${savedRecipeId}`,
                         );
 
@@ -399,7 +400,7 @@ export class RecipeService {
 
             // STEP 2: Clear out existing related data if updating
             if (!isNewRecipe) {
-                console.log(
+                logger.log(
                     `Clearing existing related data for recipe ${savedRecipeId}`,
                 );
 
@@ -412,7 +413,7 @@ export class RecipeService {
                     .eq("recipe_id", savedRecipeId);
 
                 if (clearSectionsError) {
-                    console.error(
+                    logger.error(
                         "Error clearing instruction sections:",
                         clearSectionsError,
                     );
@@ -426,7 +427,7 @@ export class RecipeService {
                     .eq("recipe_id", savedRecipeId);
 
                 if (clearIngredientsError) {
-                    console.error(
+                    logger.error(
                         "Error clearing ingredients:",
                         clearIngredientsError,
                     );
@@ -440,18 +441,18 @@ export class RecipeService {
                     .eq("recipe_id", savedRecipeId);
 
                 if (clearImagesError) {
-                    console.error("Error clearing images:", clearImagesError);
+                    logger.error("Error clearing images:", clearImagesError);
                     throw clearImagesError;
                 }
 
-                console.log("Successfully cleared existing recipe data");
+                logger.log("Successfully cleared existing recipe data");
             }
 
             // STEP 3: Insert related data
 
             // 3.1: Insert ingredients
             if (recipe.ingredients?.length > 0) {
-                console.log(
+                logger.log(
                     `Inserting ${recipe.ingredients.length} ingredients for recipe ${savedRecipeId}`,
                 );
 
@@ -475,22 +476,22 @@ export class RecipeService {
                     .insert(ingredientRecords);
 
                 if (ingredientsError) {
-                    console.error(
+                    logger.error(
                         "Error inserting ingredients:",
                         ingredientsError,
                     );
-                    console.error("First ingredient:", ingredientRecords[0]);
+                    logger.error("First ingredient:", ingredientRecords[0]);
                     throw ingredientsError;
                 }
 
-                console.log(
+                logger.log(
                     `Successfully inserted ${recipe.ingredients.length} ingredients`,
                 );
             }
 
             // 3.2: Insert images
             if (recipe.images?.length > 0) {
-                console.log(
+                logger.log(
                     `Inserting ${recipe.images.length} images for recipe ${savedRecipeId}`,
                 );
 
@@ -505,19 +506,19 @@ export class RecipeService {
                     .insert(imageRecords);
 
                 if (imagesError) {
-                    console.error("Error inserting images:", imagesError);
-                    console.error("First image record:", imageRecords[0]);
+                    logger.error("Error inserting images:", imagesError);
+                    logger.error("First image record:", imageRecords[0]);
                     throw imagesError;
                 }
 
-                console.log(
+                logger.log(
                     `Successfully inserted ${recipe.images.length} images`,
                 );
             }
 
             // 3.3: Insert instruction sections and their steps
             if (recipe.instructions?.length > 0) {
-                console.log(
+                logger.log(
                     `Inserting ${recipe.instructions.length} instruction sections`,
                 );
 
@@ -542,7 +543,7 @@ export class RecipeService {
                             .single();
 
                     if (sectionError) {
-                        console.error(
+                        logger.error(
                             "Error inserting instruction section:",
                             sectionError,
                         );
@@ -578,7 +579,7 @@ export class RecipeService {
                         .insert(stepRecords);
 
                     if (stepsError) {
-                        console.error(
+                        logger.error(
                             "Error inserting instruction steps:",
                             stepsError,
                         );
@@ -586,7 +587,7 @@ export class RecipeService {
                     }
                 }
 
-                console.log(
+                logger.log(
                     "Successfully inserted all instruction sections and steps",
                 );
             }
@@ -597,7 +598,7 @@ export class RecipeService {
                 id: savedRecipeId,
             };
         } catch (error) {
-            console.error("Error in saveRecipe:", error);
+            logger.error("Error in saveRecipe:", error);
             throw error;
         }
     }
@@ -615,7 +616,7 @@ export class RecipeService {
                     .eq("user_id", userId);
 
             if (ownedError) {
-                console.error("Error fetching owned recipe IDs:", ownedError);
+                logger.error("Error fetching owned recipe IDs:", ownedError);
                 throw ownedError;
             }
             const ownedRecipeIds = ownedRecipeIdsData?.map((r) => r.id) || [];
@@ -628,7 +629,7 @@ export class RecipeService {
                     .eq("shared_with_user_id", userId);
 
             if (sharedError) {
-                console.error("Error fetching shared recipe IDs:", sharedError);
+                logger.error("Error fetching shared recipe IDs:", sharedError);
                 throw sharedError;
             }
             const sharedRecipeIds = sharedRecipeIdsData?.map((s) =>
@@ -688,7 +689,7 @@ export class RecipeService {
                 .order("title"); // Order the final combined list by title
 
             if (fetchError) {
-                console.error("Error fetching recipe details:", fetchError);
+                logger.error("Error fetching recipe details:", fetchError);
                 throw fetchError;
             }
 
@@ -717,7 +718,7 @@ export class RecipeService {
                 )
                 : [];
         } catch (error) {
-            console.error("Error in getRecipes:", error);
+            logger.error("Error in getRecipes:", error);
             throw error; // Re-throw the error after logging
         }
     }
@@ -770,7 +771,7 @@ export class RecipeService {
             if (error) {
                 // Handle specific RLS violation error (though maybeSingle handles not found)
                 if (error.code === "42501") { // permission denied
-                    console.warn(
+                    logger.warn(
                         `RLS denied access to recipe ${recipeId} for user ${
                             userId || "anonymous"
                         }`,
@@ -790,7 +791,7 @@ export class RecipeService {
 
             return recipe;
         } catch (error) {
-            console.error("Error retrieving recipe:", error);
+            logger.error("Error retrieving recipe:", error);
             return null;
         }
     }
@@ -806,7 +807,7 @@ export class RecipeService {
             const hasPermission = await this.checkEditPermission(recipeId);
 
             if (!hasPermission) {
-                console.log(
+                logger.log(
                     "User does not have edit permission for this recipe",
                 );
                 throw new Error(
@@ -823,7 +824,7 @@ export class RecipeService {
                 .eq("recipe_id", recipeId);
 
             if (collectionError) {
-                console.warn(
+                logger.warn(
                     "Warning: Could not explicitly clean up recipe collections:",
                     collectionError,
                 );
@@ -839,13 +840,13 @@ export class RecipeService {
                 .eq("id", recipeId);
 
             if (error) {
-                console.error("Error deleting recipe:", error);
+                logger.error("Error deleting recipe:", error);
                 throw error;
             }
 
             return true;
         } catch (error) {
-            console.error("Error in deleteRecipe:", error);
+            logger.error("Error in deleteRecipe:", error);
             throw error;
         }
     }
@@ -881,7 +882,7 @@ export class RecipeService {
         const { data: recipes, error } = await query;
 
         if (error) {
-            console.error("Error fetching recipes:", error);
+            logger.error("Error fetching recipes:", error);
             throw error;
         }
 
@@ -1096,7 +1097,7 @@ export class RecipeService {
             const hasPermission = await this.checkEditPermission(recipeId);
 
             if (!hasPermission) {
-                console.log(
+                logger.log(
                     "User does not have edit permission for this recipe",
                 );
                 throw new Error(
@@ -1112,7 +1113,7 @@ export class RecipeService {
                 .maybeSingle();
 
             if (getError) {
-                console.error(
+                logger.error(
                     "Error retrieving recipe:",
                     getError,
                 );
@@ -1131,19 +1132,19 @@ export class RecipeService {
                 .eq("id", recipeId);
 
             if (updateError) {
-                console.error(
+                logger.error(
                     "Error updating recipe public status:",
                     updateError,
                 );
                 throw updateError;
             }
 
-            console.log(
+            logger.log(
                 `Successfully updated recipe ${recipeId} to isPublic=${isPublic}`,
             );
             return true;
         } catch (error) {
-            console.error("Error in updateRecipePublicStatus:", error);
+            logger.error("Error in updateRecipePublicStatus:", error);
             throw error;
         }
     }
@@ -1162,13 +1163,13 @@ export class RecipeService {
             );
 
             if (error) {
-                console.error("Error checking edit permission:", error);
+                logger.error("Error checking edit permission:", error);
                 return false;
             }
 
             return !!data; // Convert to boolean
         } catch (error) {
-            console.error("Error in checkEditPermission:", error);
+            logger.error("Error in checkEditPermission:", error);
             return false;
         }
     }

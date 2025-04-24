@@ -591,9 +591,6 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                 // Handle drop onto "All Recipes"
                 if (collection.id === ALL_RECIPES_ID) {
                     if (isItemFromSpecificCollection(item) && onDropRecipe) {
-                        console.log(
-                            `Dropped recipe ${item.recipeId} from ${item.sourceCollectionId} onto All Recipes`
-                        );
                         onDropRecipe(item.recipeId, ALL_RECIPES_ID);
                     }
                 }
@@ -602,9 +599,6 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                     item.sourceCollectionId !== collection.id &&
                     onDropRecipe
                 ) {
-                    console.log(
-                        `Dropped recipe ${item.recipeId} onto collection ${collection.id}`
-                    );
                     onDropRecipe(item.recipeId, collection.id);
                 }
             },

@@ -3,6 +3,7 @@ import type { Recipe } from "../types/recipe";
 import type { Collection, CollectionItem } from "../types/collection";
 import { ALL_RECIPES_ID } from "../types/collection";
 import { RecipeService } from "./RecipeService";
+import logger from "../utils/logger";
 
 /**
  * Service to handle all collection and recipe-collection operations
@@ -23,7 +24,7 @@ export class CollectionService {
                 .order("name");
 
             if (error) {
-                console.error("Error fetching owned collections:", error);
+                logger.error("Error fetching owned collections:", error);
                 throw error;
             }
 
@@ -39,7 +40,7 @@ export class CollectionService {
                     .eq("shared_with_user_id", userId);
 
             if (sharedError) {
-                console.error(
+                logger.error(
                     "Error fetching shared collections:",
                     sharedError,
                 );
@@ -74,7 +75,7 @@ export class CollectionService {
                 });
 
             if (countError) {
-                console.error("Error fetching collection counts:", countError);
+                logger.error("Error fetching collection counts:", countError);
                 throw countError;
             }
 
@@ -94,7 +95,7 @@ export class CollectionService {
                 recipe_count: countsMap.get(collection.id) || 0,
             }));
         } catch (error) {
-            console.error("Error in getCollections:", error);
+            logger.error("Error in getCollections:", error);
             throw error;
         }
     }
@@ -117,7 +118,7 @@ export class CollectionService {
                 .eq("user_id", userId);
 
             if (ownedCountError) {
-                console.error(
+                logger.error(
                     "Error fetching total owned recipe count:",
                     ownedCountError,
                 );
@@ -131,7 +132,7 @@ export class CollectionService {
                 .eq("shared_with_user_id", userId);
 
             if (sharedError) {
-                console.error(
+                logger.error(
                     "Error fetching shared recipe count:",
                     sharedError,
                 );
@@ -162,7 +163,7 @@ export class CollectionService {
             // Return with "All Recipes" first, then alphabetically sorted collections
             return [allRecipesItem, ...collectionItems];
         } catch (error) {
-            console.error("Error in getCollectionItems:", error);
+            logger.error("Error in getCollectionItems:", error);
             throw error;
         }
     }
@@ -194,7 +195,7 @@ export class CollectionService {
             .single();
 
         if (error) {
-            console.error("Error creating collection:", error);
+            logger.error("Error creating collection:", error);
             throw error;
         }
 
@@ -222,7 +223,7 @@ export class CollectionService {
         // Check if user has edit permission for this collection
         const hasPermission = await this.checkEditPermission(collectionId);
         if (!hasPermission) {
-            console.log(
+            logger.log(
                 "User does not have edit permission for this collection",
             );
             throw new Error(
@@ -249,7 +250,7 @@ export class CollectionService {
             .single();
 
         if (error) {
-            console.error("Error updating collection:", error);
+            logger.error("Error updating collection:", error);
             throw error;
         }
 
@@ -260,7 +261,7 @@ export class CollectionService {
             .eq("collection_id", collectionId);
 
         if (countError) {
-            console.error("Error getting collection recipe count:", countError);
+            logger.error("Error getting collection recipe count:", countError);
             throw countError;
         }
 
@@ -279,7 +280,7 @@ export class CollectionService {
         // Check if user has edit permission for this collection
         const hasPermission = await this.checkEditPermission(collectionId);
         if (!hasPermission) {
-            console.log(
+            logger.log(
                 "User does not have edit permission for this collection",
             );
             throw new Error(
@@ -293,7 +294,7 @@ export class CollectionService {
             .eq("id", collectionId);
 
         if (error) {
-            console.error("Error deleting collection:", error);
+            logger.error("Error deleting collection:", error);
             throw error;
         }
 
@@ -314,7 +315,7 @@ export class CollectionService {
             // Check if user has edit permission for this collection
             const hasPermission = await this.checkEditPermission(collectionId);
             if (!hasPermission) {
-                console.log(
+                logger.log(
                     "User does not have edit permission for this collection",
                 );
                 throw new Error(
@@ -331,7 +332,7 @@ export class CollectionService {
                 .limit(1);
 
             if (positionError) {
-                console.error("Error getting max position:", positionError);
+                logger.error("Error getting max position:", positionError);
                 throw positionError;
             }
 
@@ -353,16 +354,16 @@ export class CollectionService {
             if (error) {
                 // If error is duplicate, just return true
                 if (error.code === "23505") { // Unique violation
-                    console.log("Recipe already in collection");
+                    logger.log("Recipe already in collection");
                     return true;
                 }
-                console.error("Error adding recipe to collection:", error);
+                logger.error("Error adding recipe to collection:", error);
                 throw error;
             }
 
             return true;
         } catch (error) {
-            console.error("Error in addRecipeToCollection:", error);
+            logger.error("Error in addRecipeToCollection:", error);
             throw error;
         }
     }
@@ -381,7 +382,7 @@ export class CollectionService {
             // Check if user has edit permission for this collection
             const hasPermission = await this.checkEditPermission(collectionId);
             if (!hasPermission) {
-                console.log(
+                logger.log(
                     "User does not have edit permission for this collection",
                 );
                 throw new Error(
@@ -396,13 +397,13 @@ export class CollectionService {
                 .eq("collection_id", collectionId);
 
             if (error) {
-                console.error("Error removing recipe from collection:", error);
+                logger.error("Error removing recipe from collection:", error);
                 throw error;
             }
 
             return true;
         } catch (error) {
-            console.error("Error in removeRecipeFromCollection:", error);
+            logger.error("Error in removeRecipeFromCollection:", error);
             throw error;
         }
     }
@@ -433,7 +434,7 @@ export class CollectionService {
                     .maybeSingle();
 
                 if (shareError) {
-                    console.error(
+                    logger.error(
                         "Error checking collection access:",
                         shareError,
                     );
@@ -444,7 +445,7 @@ export class CollectionService {
             }
 
             if (!hasAccess) {
-                console.error("User does not have access to this collection");
+                logger.error("User does not have access to this collection");
                 return [];
             }
 
@@ -456,7 +457,7 @@ export class CollectionService {
                 .order("position"); // Order by position
 
             if (recipeDataError) {
-                console.error("Error fetching recipe data:", recipeDataError);
+                logger.error("Error fetching recipe data:", recipeDataError);
                 throw recipeDataError;
             }
 
@@ -495,7 +496,7 @@ export class CollectionService {
             const { data: recipes, error } = await recipesQuery;
 
             if (error) {
-                console.error("Error fetching recipes by collection:", error);
+                logger.error("Error fetching recipes by collection:", error);
                 throw error;
             }
 
@@ -515,7 +516,7 @@ export class CollectionService {
                 return posA - posB;
             });
         } catch (error) {
-            console.error("Error in getRecipesByCollection:", error);
+            logger.error("Error in getRecipesByCollection:", error);
             throw error;
         }
     }
@@ -539,13 +540,13 @@ export class CollectionService {
                 .maybeSingle();
 
             if (error) {
-                console.error("Error checking collection ownership:", error);
+                logger.error("Error checking collection ownership:", error);
                 return false;
             }
 
             return !!data;
         } catch (error) {
-            console.error("Error in isCollectionOwner:", error);
+            logger.error("Error in isCollectionOwner:", error);
             return false;
         }
     }
@@ -564,7 +565,7 @@ export class CollectionService {
             );
 
             if (error) {
-                console.error(
+                logger.error(
                     "Error checking collection edit permission:",
                     error,
                 );
@@ -573,7 +574,7 @@ export class CollectionService {
 
             return !!data; // Convert to boolean
         } catch (error) {
-            console.error(
+            logger.error(
                 "Error in checkEditPermission for collection:",
                 error,
             );
@@ -599,7 +600,7 @@ export class CollectionService {
                 .eq("recipe_id", recipeId);
 
             if (error) {
-                console.error("Error fetching collections for recipe:", error);
+                logger.error("Error fetching collections for recipe:", error);
                 throw error;
             }
 
@@ -623,7 +624,7 @@ export class CollectionService {
 
             return collections;
         } catch (error) {
-            console.error("Error in getCollectionsForRecipe:", error);
+            logger.error("Error in getCollectionsForRecipe:", error);
             throw error;
         }
     }
@@ -644,7 +645,7 @@ export class CollectionService {
             // Check if user has edit permission for this collection
             const hasPermission = await this.checkEditPermission(collectionId);
             if (!hasPermission) {
-                console.log(
+                logger.log(
                     "User does not have edit permission for this collection",
                 );
                 throw new Error(
@@ -661,7 +662,7 @@ export class CollectionService {
                 .maybeSingle();
 
             if (checkError) {
-                console.error(
+                logger.error(
                     "Error checking recipe in collection:",
                     checkError,
                 );
@@ -680,7 +681,7 @@ export class CollectionService {
                 .eq("collection_id", collectionId);
 
             if (updateError) {
-                console.error(
+                logger.error(
                     "Error updating recipe position in collection:",
                     updateError,
                 );
@@ -689,7 +690,7 @@ export class CollectionService {
 
             return true;
         } catch (error) {
-            console.error("Error in updateRecipePositionInCollection:", error);
+            logger.error("Error in updateRecipePositionInCollection:", error);
             throw error;
         }
     }
@@ -711,7 +712,7 @@ export class CollectionService {
                 .order("position");
 
             if (error) {
-                console.error("Error fetching recipe positions:", error);
+                logger.error("Error fetching recipe positions:", error);
                 throw error;
             }
 
@@ -720,7 +721,7 @@ export class CollectionService {
                 position: item.position,
             })) || [];
         } catch (error) {
-            console.error("Error in getRecipePositionsInCollection:", error);
+            logger.error("Error in getRecipePositionsInCollection:", error);
             throw error;
         }
     }

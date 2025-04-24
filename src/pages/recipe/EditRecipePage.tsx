@@ -105,10 +105,6 @@ const EditRecipePage: FC = () => {
         const stateRecipe = location.state?.recipe as Recipe | undefined;
 
         if (stateRecipe) {
-            console.log(
-                'Initializing recipe from location state:',
-                stateRecipe.id
-            );
             const validatedIngredients = (stateRecipe.ingredients || []).map(
                 (ing) => ({
                     ...ing,
@@ -117,7 +113,6 @@ const EditRecipePage: FC = () => {
             );
             setRecipe({ ...stateRecipe, ingredients: validatedIngredients });
         } else if (routeId === 'new') {
-            console.log('Initializing new blank recipe template');
             if (!user) {
                 console.warn('User not yet available for new recipe template.');
             }
@@ -140,9 +135,6 @@ const EditRecipePage: FC = () => {
             };
             setRecipe(newRecipeTemplate);
         } else if (routeId && isValidUuid(routeId)) {
-            console.log(
-                `Fetching recipe data for direct edit navigation: ${routeId}`
-            );
             const fetchRecipeForEdit = async () => {
                 if (!user) {
                     console.error(
@@ -200,7 +192,6 @@ const EditRecipePage: FC = () => {
 
     useEffect(() => {
         if (recipe) {
-            console.log('Populating form state from recipe:', recipe.id);
             setTitle(recipe.title || '');
             setDescription(recipe.description || '');
             setIngredients(recipe.ingredients || []);
@@ -230,9 +221,6 @@ const EditRecipePage: FC = () => {
             setServings(recipe.servings || 2);
 
             if (recipe.id === 'new') {
-                console.log(
-                    'Resetting collections for new recipe in form effect'
-                );
                 setSelectedCollections([]);
                 setInitialCollectionIds([]);
                 setSelectedCollection(ALL_RECIPES_ID);
@@ -257,9 +245,6 @@ const EditRecipePage: FC = () => {
     useEffect(() => {
         const loadCollectionsData = async () => {
             if (!user || !recipe) {
-                console.log(
-                    'Skipping collections fetch: no user or recipe state yet.'
-                );
                 setAvailableCollections([]);
                 setInitialCollectionIds([]);
                 setSelectedCollections([]);
@@ -270,10 +255,8 @@ const EditRecipePage: FC = () => {
             let associatedIds: string[] = [];
 
             try {
-                console.log('Fetching available collections for dropdown...');
                 available = await CollectionService.getCollectionItems(user.id);
                 setAvailableCollections(available);
-                console.log('Available collections set:', available);
             } catch (err) {
                 console.error('Error fetching available collections:', err);
                 setAvailableCollections([]);
@@ -281,18 +264,11 @@ const EditRecipePage: FC = () => {
 
             if (recipe.id !== 'new' && isValidUuid(recipe.id)) {
                 try {
-                    console.log(
-                        `Fetching collections for existing recipe ID: ${recipe.id}`
-                    );
                     const recipeCollections =
                         await CollectionService.getCollectionsForRecipe(
                             recipe.id as string
                         );
                     associatedIds = recipeCollections.map((c) => c.id);
-                    console.log(
-                        `Associated collections for recipe ${recipe.id}:`,
-                        associatedIds
-                    );
                 } catch (err) {
                     console.error(
                         `Error loading collections for recipe ${recipe.id}:`,
@@ -320,14 +296,10 @@ const EditRecipePage: FC = () => {
     useEffect(() => {
         const checkEditPermission = async () => {
             if (!user || !recipe) {
-                console.log(
-                    'Skipping permission check: no user or recipe state yet.'
-                );
                 setCheckingPermission(true);
                 return;
             }
 
-            console.log(`Checking permission for recipe ID: ${recipe.id}`);
             setCheckingPermission(true); // Indicate check is starting
 
             // Grant immediate edit permission for new recipes OR imported recipes (non-UUID IDs)
@@ -335,9 +307,6 @@ const EditRecipePage: FC = () => {
                 setCanEdit(true);
                 setIsOwner(true); // Treat as owner until first save
                 setCheckingPermission(false);
-                console.log(
-                    `Permission granted: New or Imported recipe (ID: ${recipe.id}).`
-                );
                 return; // Stop checks here for new/imported
             }
 
@@ -347,11 +316,7 @@ const EditRecipePage: FC = () => {
                 setIsOwner(ownerCheck);
                 if (ownerCheck) {
                     setCanEdit(true);
-                    console.log('Permission granted: User is owner.');
                 } else {
-                    console.log(
-                        `User is not owner (${recipe.user_id} vs ${user.id}). Checking RPC...`
-                    );
                     // Ensure we have a valid UUID before calling the service
                     const recipeIdToCheck = recipe.id as string;
                     const hasEditPermission =
@@ -359,9 +324,7 @@ const EditRecipePage: FC = () => {
                             recipeIdToCheck
                         );
                     setCanEdit(hasEditPermission);
-                    console.log(
-                        `Permission granted via RPC: ${hasEditPermission}`
-                    );
+
                     if (!hasEditPermission) {
                         console.warn(
                             `User lacks permission to edit recipe ${recipeIdToCheck}. Redirecting.`
@@ -430,10 +393,7 @@ const EditRecipePage: FC = () => {
             );
             return;
         }
-        console.log(
-            `Attempting to save collections for recipe ${recipeId}. Target:`,
-            selectedCollections
-        );
+
         try {
             const currentDbCollections = (
                 await CollectionService.getCollectionsForRecipe(recipeId)
@@ -441,15 +401,8 @@ const EditRecipePage: FC = () => {
             const currentDbSet = new Set(currentDbCollections);
             const targetSet = new Set(selectedCollections);
 
-            console.log(
-                `DB collections: ${currentDbCollections}. Target collections: ${selectedCollections}`
-            );
-
             for (const collectionId of currentDbCollections) {
                 if (!targetSet.has(collectionId)) {
-                    console.log(
-                        `Removing recipe ${recipeId} from collection ${collectionId}`
-                    );
                     await CollectionService.removeRecipeFromCollection(
                         recipeId,
                         collectionId
@@ -459,9 +412,6 @@ const EditRecipePage: FC = () => {
 
             for (const collectionId of selectedCollections) {
                 if (!currentDbSet.has(collectionId)) {
-                    console.log(
-                        `Adding recipe ${recipeId} to collection ${collectionId}`
-                    );
                     await CollectionService.addRecipeToCollection(
                         recipeId,
                         collectionId
@@ -470,9 +420,6 @@ const EditRecipePage: FC = () => {
             }
             setInitialCollectionIds([...selectedCollections]);
             setIsCollectionsChanged(false);
-            console.log(
-                `Collections saved successfully for recipe ${recipeId}.`
-            );
         } catch (err) {
             console.error(
                 `Error updating collections for recipe ${recipeId}:`,
@@ -527,7 +474,6 @@ const EditRecipePage: FC = () => {
 
         setIsSaving(true);
         setSaveError(null);
-        console.log('Saving recipe with ID:', recipe.id);
 
         try {
             const processedIngredients = ingredients
@@ -564,10 +510,6 @@ const EditRecipePage: FC = () => {
 
             let processedInstructions = instructions;
             if (idMapping.size > 0) {
-                console.log(
-                    'Updating instruction mentions with new ingredient IDs:',
-                    idMapping
-                );
                 processedInstructions = instructions.map((section) => ({
                     ...section,
                     steps: section.steps.map((step) => ({
@@ -612,23 +554,12 @@ const EditRecipePage: FC = () => {
                 isSavingNewRecipe
             );
 
-            console.log(
-                'Recipe saved successfully, result ID:',
-                savedRecipeResult.id
-            );
-
             setRecipe(savedRecipeResult);
 
             if (savedRecipeResult.id && isValidUuid(savedRecipeResult.id)) {
                 try {
                     if (isCollectionsChanged) {
-                        console.log(
-                            'Saving collection changes for recipe:',
-                            savedRecipeResult.id
-                        );
                         await saveCollections(savedRecipeResult.id);
-                    } else {
-                        console.log('No collection changes to save.');
                     }
                 } catch (collectionError) {
                     console.error(
@@ -648,9 +579,6 @@ const EditRecipePage: FC = () => {
                 return;
             }
 
-            console.log(
-                `Navigating to saved recipe: /recipe/${savedRecipeResult.id}`
-            );
             navigate(`/recipe/${savedRecipeResult.id}`, {
                 replace: isSavingNewRecipe,
                 state: { recipe: savedRecipeResult },

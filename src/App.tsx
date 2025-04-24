@@ -19,6 +19,7 @@ import SignUpPage from './pages/auth/SignUpPage';
 import AuthCallbackPage from './pages/auth/AuthCallbackPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import PublicRecipeRoute from './components/auth/PublicRecipeRoute';
+import PublicCollectionRoute from './components/auth/PublicCollectionRoute';
 import { AuthProvider } from './context/AuthContext';
 
 const App: FC = () => {
@@ -47,11 +48,7 @@ const App: FC = () => {
                         />
                         <Route
                             path="/collection/:collectionId"
-                            element={
-                                <ProtectedRoute>
-                                    <CatalogPage />
-                                </ProtectedRoute>
-                            }
+                            element={<PublicCollectionRoute />}
                         />
                         <Route
                             path="/recipe/new"

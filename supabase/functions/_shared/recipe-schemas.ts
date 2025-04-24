@@ -35,6 +35,19 @@ export interface InstructionSection {
     steps: InstructionStep[];
 }
 
+// Simple environment-aware logger for Deno functions
+const isProduction = Deno.env.get("ENVIRONMENT") === "production";
+const logger = {
+    log: (...args: unknown[]) => {
+        if (!isProduction) {
+            console.log(...args);
+        }
+    },
+    error: (...args: unknown[]) => {
+        console.error(...args);
+    },
+};
+
 // Function to validate AI-generated ingredient mentions
 export function validateIngredientMentions(
     instructions: InstructionSection[],
@@ -116,8 +129,8 @@ export function validateIngredientMentions(
             } else {
                 // No mentions found in this step, which might be okay for some steps
                 // e.g., "Preheat the oven to 350°F" or "Let cool for 10 minutes"
-                // We could potentially log this for review
-                console.log(`No ingredient mentions found in step: "${text}"`);
+                // Log with our environment-aware logger
+                logger.log(`No ingredient mentions found in step: "${text}"`);
             }
 
             return {

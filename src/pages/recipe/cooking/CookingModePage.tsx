@@ -18,6 +18,7 @@ import { RecipeService } from '../../../services/RecipeService';
 import { Recipe } from '../../../types/recipe';
 import { useAuth } from '../../../context/AuthContext';
 import { alpha } from '@mui/material/styles';
+import logger from '../../../utils/logger';
 
 interface ActiveTimer {
     sectionIndex: number;
@@ -67,7 +68,7 @@ const CookingModePage: FC = () => {
                     navigate('/');
                 }
             } catch (error) {
-                console.error('Error fetching recipe:', error);
+                logger.error('Error fetching recipe:', error);
                 navigate('/');
             } finally {
                 setLoading(false);
@@ -201,7 +202,7 @@ const CookingModePage: FC = () => {
             try {
                 await navigator.wakeLock?.request('screen');
             } catch (err) {
-                console.log('Wake Lock not supported or failed:', err);
+                logger.log('Wake Lock not supported or failed:', err);
             }
         };
         wakeLock();
