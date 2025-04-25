@@ -13,14 +13,11 @@ import SwapHorizRoundedIcon from '@mui/icons-material/SwapHorizRounded';
 import UndoIcon from '@mui/icons-material/Undo';
 import IngredientSubstitutionPopover from './IngredientSubstitutionPopover';
 import { SubstituteOption } from '../../types/substitution';
-import { scaleQuantity, formatQuantity } from '../../utils/recipe';
-
-// Helper function to get rounded quantity value
-const getRoundedQuantity = (quantity: number | null): number | null => {
-    if (quantity === null) return null;
-    // Round to at most 1 decimal place (same as formatQuantity logic)
-    return Math.round(quantity * 10) / 10;
-};
+import {
+    scaleQuantity,
+    formatQuantity,
+    getCookFriendlyQuantity,
+} from '../../utils/recipe';
 
 // Types for the component props
 interface IngredientItemWithSubstitutionProps {
@@ -99,25 +96,22 @@ const IngredientItemWithSubstitution: FC<
         handleCloseSubstitutionPopover();
     };
 
-    // Calculate scaled quantity based on servings
-    const scaledQuantity =
-        quantity !== null && quantity !== undefined
-            ? quantity * (currentServings / originalServings)
-            : null;
+    // Calculate scaled quantities
+    const scaledQuantityNum = scaleQuantity(
+        quantity ?? null,
+        originalServings,
+        currentServings
+    );
+    const scaledOriginalQuantityNum = scaleQuantity(
+        originalIngredient?.quantity ?? null,
+        originalServings,
+        currentServings
+    );
 
-    // Rounded version for both display and API
-    const roundedScaledQuantity = getRoundedQuantity(scaledQuantity);
-
-    // Scale original ingredient quantity
-    const scaledOriginalQuantity =
-        originalIngredient?.quantity !== null &&
-        originalIngredient?.quantity !== undefined
-            ? originalIngredient.quantity * (currentServings / originalServings)
-            : null;
-
-    // Rounded version for both display and API
-    const roundedScaledOriginalQuantity = getRoundedQuantity(
-        scaledOriginalQuantity
+    // Get the final "cook-friendly" numeric values
+    const friendlyQuantity = getCookFriendlyQuantity(scaledQuantityNum);
+    const friendlyOriginalQuantity = getCookFriendlyQuantity(
+        scaledOriginalQuantityNum
     );
 
     // Handler for the entire ingredient item click (for mobile)
@@ -154,7 +148,7 @@ const IngredientItemWithSubstitution: FC<
                     wordBreak: 'break-word',
                 }}
             >
-                {roundedScaledQuantity !== null && (
+                {friendlyQuantity !== null && (
                     <Box
                         component="span"
                         sx={{
@@ -163,7 +157,7 @@ const IngredientItemWithSubstitution: FC<
                             mr: 0.5,
                         }}
                     >
-                        {formatQuantity(roundedScaledQuantity)}
+                        {formatQuantity(friendlyQuantity)}
                         {unit && ` ${unit}`}
                     </Box>
                 )}
@@ -193,7 +187,7 @@ const IngredientItemWithSubstitution: FC<
                         wordBreak: 'break-word',
                     }}
                 >
-                    {roundedScaledOriginalQuantity !== null && (
+                    {friendlyOriginalQuantity !== null && (
                         <Box
                             component="span"
                             sx={{
@@ -203,7 +197,7 @@ const IngredientItemWithSubstitution: FC<
                                 textDecoration: 'line-through',
                             }}
                         >
-                            {formatQuantity(roundedScaledOriginalQuantity)}
+                            {formatQuantity(friendlyOriginalQuantity)}
                             {originalIngredient?.unit &&
                                 ` ${originalIngredient?.unit}`}
                         </Box>
@@ -257,29 +251,36 @@ const IngredientItemWithSubstitution: FC<
                                 },
                             }}
                         >
-                            {substituteInfo.ingredients[0].quantity !== null &&
-                                substituteInfo.ingredients[0].quantity !==
-                                    undefined && (
-                                    <Box
-                                        component="span"
-                                        sx={{
-                                            fontWeight: 600,
-                                            display: 'inline-block',
-                                            mr: 0.5,
-                                        }}
-                                    >
-                                        {formatQuantity(
+                            {getCookFriendlyQuantity(
+                                scaleQuantity(
+                                    substituteInfo.ingredients[0].quantity ??
+                                        null,
+                                    originalServings,
+                                    currentServings
+                                )
+                            ) !== null && (
+                                <Box
+                                    component="span"
+                                    sx={{
+                                        fontWeight: 600,
+                                        display: 'inline-block',
+                                        mr: 0.5,
+                                    }}
+                                >
+                                    {formatQuantity(
+                                        getCookFriendlyQuantity(
                                             scaleQuantity(
                                                 substituteInfo.ingredients[0]
-                                                    .quantity,
+                                                    .quantity ?? null,
                                                 originalServings,
                                                 currentServings
                                             )
-                                        )}
-                                        {substituteInfo.ingredients[0].unit &&
-                                            ` ${substituteInfo.ingredients[0].unit}`}
-                                    </Box>
-                                )}
+                                        )
+                                    )}
+                                    {substituteInfo.ingredients[0].unit &&
+                                        ` ${substituteInfo.ingredients[0].unit}`}
+                                </Box>
+                            )}
                             {substituteInfo.ingredients[0].name.toLowerCase()}
                         </Typography>
                     </Box>
@@ -317,27 +318,34 @@ const IngredientItemWithSubstitution: FC<
                                             },
                                         }}
                                     >
-                                        {ingredient.quantity !== null &&
-                                            ingredient.quantity !==
-                                                undefined && (
-                                                <Box
-                                                    component="span"
-                                                    sx={{
-                                                        fontWeight: 600,
-                                                        mr: 0.5,
-                                                    }}
-                                                >
-                                                    {formatQuantity(
+                                        {getCookFriendlyQuantity(
+                                            scaleQuantity(
+                                                ingredient.quantity ?? null,
+                                                originalServings,
+                                                currentServings
+                                            )
+                                        ) !== null && (
+                                            <Box
+                                                component="span"
+                                                sx={{
+                                                    fontWeight: 600,
+                                                    mr: 0.5,
+                                                }}
+                                            >
+                                                {formatQuantity(
+                                                    getCookFriendlyQuantity(
                                                         scaleQuantity(
-                                                            ingredient.quantity,
+                                                            ingredient.quantity ??
+                                                                null,
                                                             originalServings,
                                                             currentServings
                                                         )
-                                                    )}
-                                                    {ingredient.unit &&
-                                                        ` ${ingredient.unit}`}
-                                                </Box>
-                                            )}
+                                                    )
+                                                )}
+                                                {ingredient.unit &&
+                                                    ` ${ingredient.unit}`}
+                                            </Box>
+                                        )}
                                         {ingredient.name.toLowerCase()}
                                     </Typography>
                                 )
@@ -549,15 +557,13 @@ const IngredientItemWithSubstitution: FC<
                     anchorEl={containerRef.current}
                     onClose={handleCloseSubstitutionPopover}
                     ingredientId={id}
-                    ingredientName={name}
-                    ingredientQuantity={
+                    ingredientName={originalIngredient?.name || name}
+                    ingredientQuantity={getCookFriendlyQuantity(
                         isSubstituted
-                            ? getRoundedQuantity(
-                                  originalIngredient?.quantity ?? null
-                              )
-                            : getRoundedQuantity(quantity ?? null)
-                    }
-                    ingredientUnit={unit}
+                            ? originalIngredient?.quantity ?? null
+                            : quantity ?? null
+                    )}
+                    ingredientUnit={originalIngredient?.unit || unit}
                     originalServings={originalServings}
                     currentServings={currentServings}
                     onSubstitute={handleSubstitute}

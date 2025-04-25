@@ -10,14 +10,68 @@ export const scaleQuantity = (
     return (originalQuantity * newServings) / originalServings;
 };
 
+/**
+ * Calculates the final numeric quantity after snapping/rounding
+ * according to cooking-friendly logic.
+ */
+export const getCookFriendlyQuantity = (
+    quantity: number | null,
+): number | null => {
+    if (quantity === null || quantity === undefined) return null;
+
+    const integerPart = Math.floor(quantity);
+    const fractionalPart = quantity - integerPart;
+    const threshold = 0.02; // How close to snap
+
+    let finalQuantity: number;
+
+    // Check for snapping to quarters/halves/wholes
+    if (Math.abs(fractionalPart - 0.25) <= threshold) {
+        finalQuantity = integerPart + 0.25;
+    } else if (Math.abs(fractionalPart - 0.5) <= threshold) {
+        finalQuantity = integerPart + 0.5;
+    } else if (Math.abs(fractionalPart - 0.75) <= threshold) {
+        finalQuantity = integerPart + 0.75;
+    } else if (Math.abs(fractionalPart - 1) <= threshold) {
+        // Snap near the next whole number (e.g., 0.98 -> 1)
+        finalQuantity = integerPart + 1;
+    } else if (fractionalPart <= threshold) {
+        // Snap near zero (e.g., 0.02 -> 0)
+        finalQuantity = integerPart;
+    } else {
+        // Default: round to 1 decimal place numerically
+        finalQuantity = Math.round(quantity * 10) / 10;
+    }
+    return finalQuantity;
+};
+
+/**
+ * Formats a quantity (number) into a cooking-friendly string representation.
+ * Uses getCookFriendlyQuantity internally for the rounding logic.
+ */
 export const formatQuantity = (quantity: number | null): string => {
-    if (quantity === null) return "";
+    const finalQuantity = getCookFriendlyQuantity(quantity);
 
-    // Round to at most 1 decimal place
-    const rounded = Math.round(quantity * 10) / 10;
+    if (finalQuantity === null || finalQuantity === undefined) return "";
 
-    // Convert to string, removing trailing zeros (e.g., 1.0 -> 1)
-    return rounded % 1 === 0 ? rounded.toString() : rounded.toFixed(1);
+    // Format the final number string
+    if (finalQuantity % 1 === 0) {
+        // Whole number
+        return finalQuantity.toString();
+    } else if (Math.abs((finalQuantity * 100) % 100 - 50) < 0.1) {
+        // Ends in .5 (check with tolerance for floating point)
+        return finalQuantity.toFixed(1);
+    } else if (
+        Math.abs((finalQuantity * 100) % 100 - 25) < 0.1 ||
+        Math.abs((finalQuantity * 100) % 100 - 75) < 0.1
+    ) {
+        // Ends in .25 or .75 (check with tolerance)
+        return finalQuantity.toFixed(2);
+    } else {
+        // Other decimals (rounded to 1 place by getCookFriendlyQuantity)
+        // Use toFixed(1) to ensure consistency like 0.3
+        return finalQuantity.toFixed(1);
+    }
 };
 
 export const parseIngredientReferences = (
