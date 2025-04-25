@@ -1,5 +1,4 @@
-import { Ingredient, InstructionSection, Recipe } from "../types/recipe";
-import { createSlug } from "./recipe";
+import { Ingredient } from "../types/recipe";
 import { SubstitutionState } from "../types/substitution";
 import { isValidUuid } from "./uuid";
 
