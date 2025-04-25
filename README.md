@@ -7,6 +7,7 @@ Simmer is a modern web application that brings the warmth and personality of a p
 -   📝 Paper notebook-style interface with a warm, personal feel
 -   🔍 AI-powered recipe extraction from URLs
 -   🧠 AI-powered recipe ideas generation from text prompts
+-   🍳 AI-powered ingredient substitution suggestions
 -   📱 Mobile-friendly cooking mode with interactive timers
 -   🖼️ Beautiful image gallery management
 -   📂 Collections to organize recipes with custom emoji icons
@@ -97,6 +98,9 @@ The application will be available at:
 #### Testing
 
 -   `npm run test:function` - Test recipe extraction with sample URL
+-   `npm run test:ideas` - Test recipe ideas generation with sample prompt
+-   `npm run test:creation` - Test recipe creation from an idea
+-   `npm run test:substitution` - Test ingredient substitution
 
 ### Development Workflow
 
@@ -210,8 +214,16 @@ npm run deploy
 ### Deploying Functions to Supabase
 
 ```bash
-npm run functions:deploy
+npm run functions:deploy:prod
 ```
+
+This command deploys the following functions configured for production:
+
+-   recipe-extraction
+-   recipe-ideas-generation
+-   recipe-creation
+-   link-shares-on-signup
+-   ingredient-substitution
 
 ### Deployment Checklist
 

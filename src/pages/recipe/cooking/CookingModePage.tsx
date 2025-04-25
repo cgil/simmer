@@ -19,6 +19,7 @@ import { Recipe } from '../../../types/recipe';
 import { useAuth } from '../../../context/AuthContext';
 import { alpha } from '@mui/material/styles';
 import logger from '../../../utils/logger';
+import { IngredientSubstitutionProvider } from '../../../components/substitution/IngredientSubstitutionContext';
 
 interface ActiveTimer {
     sectionIndex: number;
@@ -265,123 +266,313 @@ const CookingModePage: FC = () => {
     };
 
     return (
-        <Box
-            sx={{
-                height: '100vh',
-                width: '100vw',
-                bgcolor: 'background.paper',
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                zIndex: 1200,
-                display: 'flex',
-                flexDirection: 'column',
-            }}
-        >
-            {/* Header */}
+        <IngredientSubstitutionProvider>
             <Box
                 sx={{
-                    px: { xs: 2, sm: 3 },
-                    py: 2,
-                    borderBottom: '1px solid',
-                    borderColor: 'divider',
+                    height: '100vh',
+                    width: '100vw',
+                    bgcolor: 'background.paper',
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    zIndex: 1200,
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    bgcolor: 'paper.light',
-                    boxShadow: 'none',
-                    position: 'relative',
-                    '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: alpha(theme.palette.paper.light, 0.9),
-                        boxShadow: 'inset 0 0 30px rgba(62, 28, 0, 0.05)',
-                        pointerEvents: 'none',
-                    },
-                    '&::after': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        opacity: 0.8,
-                        pointerEvents: 'none',
-                        backgroundImage: `
-                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.05) 0.5px, transparent 0.5px),
-                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.03) 1px, transparent 1px)
-                        `,
-                        backgroundSize: '6px 6px, 14px 14px',
-                        backgroundPosition: '0 0',
-                        mixBlendMode: 'multiply',
-                        filter: 'opacity(1)',
-                    },
-                    '& > *': {
-                        position: 'relative',
-                        zIndex: 1,
-                    },
+                    flexDirection: 'column',
                 }}
             >
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    {!user ? (
-                        // For non-authenticated users, show Simmer logo link
-                        <Box
-                            onClick={() => navigate('/login')}
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                cursor: 'pointer',
-                                mr: 2,
-                            }}
-                        >
-                            <Typography
-                                variant={isMobile ? 'h6' : 'h5'}
-                                sx={{
-                                    fontFamily: "'Kalam', cursive",
-                                    color: 'primary.main',
-                                }}
-                            >
-                                Simmer
-                            </Typography>
-                        </Box>
-                    ) : null}
-                    <Typography
-                        variant={isMobile ? 'h6' : 'h5'}
-                        sx={{
-                            fontFamily: "'Kalam', cursive",
-                            color: 'primary.main',
-                        }}
-                    >
-                        {recipe.title}
-                    </Typography>
-                </Box>
-                <IconButton
-                    onClick={() => navigate(`/recipe/${recipe.id}`)}
-                    size={isMobile ? 'small' : 'medium'}
-                    sx={{
-                        color: 'text.secondary',
-                        '&:hover': {
-                            color: 'primary.main',
-                        },
-                    }}
-                >
-                    <CloseIcon />
-                </IconButton>
-            </Box>
-
-            {/* Active Timers Bar */}
-            {activeTimers.length > 0 && (
-                <Paper
-                    elevation={0}
+                {/* Header */}
+                <Box
                     sx={{
                         px: { xs: 2, sm: 3 },
                         py: 2,
                         borderBottom: '1px solid',
                         borderColor: 'divider',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        bgcolor: 'paper.light',
+                        boxShadow: 'none',
+                        position: 'relative',
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: alpha(
+                                theme.palette.paper.light,
+                                0.9
+                            ),
+                            boxShadow: 'inset 0 0 30px rgba(62, 28, 0, 0.05)',
+                            pointerEvents: 'none',
+                        },
+                        '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            opacity: 0.8,
+                            pointerEvents: 'none',
+                            backgroundImage: `
+                                radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.05) 0.5px, transparent 0.5px),
+                                radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.03) 1px, transparent 1px)
+                            `,
+                            backgroundSize: '6px 6px, 14px 14px',
+                            backgroundPosition: '0 0',
+                            mixBlendMode: 'multiply',
+                            filter: 'opacity(1)',
+                        },
+                        '& > *': {
+                            position: 'relative',
+                            zIndex: 1,
+                        },
+                    }}
+                >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        {!user ? (
+                            // For non-authenticated users, show Simmer logo link
+                            <Box
+                                onClick={() => navigate('/login')}
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    cursor: 'pointer',
+                                    mr: 2,
+                                }}
+                            >
+                                <Typography
+                                    variant={isMobile ? 'h6' : 'h5'}
+                                    sx={{
+                                        fontFamily: "'Kalam', cursive",
+                                        color: 'primary.main',
+                                    }}
+                                >
+                                    Simmer
+                                </Typography>
+                            </Box>
+                        ) : null}
+                        <Typography
+                            variant={isMobile ? 'h6' : 'h5'}
+                            sx={{
+                                fontFamily: "'Kalam', cursive",
+                                color: 'primary.main',
+                            }}
+                        >
+                            {recipe.title}
+                        </Typography>
+                    </Box>
+                    <IconButton
+                        onClick={() => navigate(`/recipe/${recipe.id}`)}
+                        size={isMobile ? 'small' : 'medium'}
+                        sx={{
+                            color: 'text.secondary',
+                            '&:hover': {
+                                color: 'primary.main',
+                            },
+                        }}
+                    >
+                        <CloseIcon />
+                    </IconButton>
+                </Box>
+
+                {/* Active Timers Bar */}
+                {activeTimers.length > 0 && (
+                    <Paper
+                        elevation={0}
+                        sx={{
+                            px: { xs: 2, sm: 3 },
+                            py: 2,
+                            borderBottom: '1px solid',
+                            borderColor: 'divider',
+                            bgcolor: 'paper.light',
+                            position: 'relative',
+                            '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                boxShadow:
+                                    'inset 0 0 30px rgba(62, 28, 0, 0.05)',
+                                pointerEvents: 'none',
+                            },
+                            '&::after': {
+                                content: '""',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                opacity: 0.8,
+                                pointerEvents: 'none',
+                                backgroundImage: `
+                                    radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.05) 0.5px, transparent 0.5px),
+                                    radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.03) 1px, transparent 1px)
+                                `,
+                                backgroundSize: '6px 6px, 14px 14px',
+                                backgroundPosition: '0 0',
+                                mixBlendMode: 'multiply',
+                                filter: 'opacity(1)',
+                            },
+                            '& > *': {
+                                position: 'relative',
+                                zIndex: 1,
+                            },
+                        }}
+                    >
+                        <Stack spacing={1.5}>
+                            <Typography
+                                variant="subtitle2"
+                                sx={{
+                                    color: 'primary.dark',
+                                    fontWeight: 600,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    position: 'relative',
+                                    zIndex: 1,
+                                    fontFamily: "'Kalam', cursive",
+                                    fontSize: { xs: '1rem', sm: '1.1rem' },
+                                }}
+                            >
+                                <TimerIcon
+                                    sx={{
+                                        fontSize: { xs: 20, sm: 22 },
+                                        color: 'primary.main',
+                                    }}
+                                />
+                                Active Timers ({activeTimers.length})
+                            </Typography>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    gap: 1,
+                                    flexWrap: 'wrap',
+                                    position: 'relative',
+                                    zIndex: 1,
+                                }}
+                            >
+                                {activeTimers.map((timer, index) => {
+                                    const section =
+                                        recipe.instructions[timer.sectionIndex];
+                                    const stepNumber =
+                                        recipe.instructions
+                                            .slice(0, timer.sectionIndex)
+                                            .reduce(
+                                                (acc, section) =>
+                                                    acc + section.steps.length,
+                                                0
+                                            ) +
+                                        timer.stepIndex +
+                                        1;
+                                    const currentPauseTime = timer.pausedAt
+                                        ? Date.now() - timer.pausedAt
+                                        : 0;
+                                    const totalPauseTime =
+                                        timer.totalPausedTime +
+                                        (timer.pausedAt ? currentPauseTime : 0);
+                                    const elapsed = Math.floor(
+                                        (Date.now() -
+                                            timer.startTime -
+                                            totalPauseTime) /
+                                            1000
+                                    );
+                                    const timeLeft = Math.max(
+                                        0,
+                                        Math.floor(timer.duration / 1000) -
+                                            elapsed
+                                    );
+                                    const minutes = Math.floor(timeLeft / 60);
+                                    const seconds = timeLeft % 60;
+
+                                    return (
+                                        <Chip
+                                            key={index}
+                                            label={
+                                                <Box
+                                                    sx={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 1,
+                                                    }}
+                                                >
+                                                    <Typography
+                                                        variant="body2"
+                                                        component="span"
+                                                    >
+                                                        {section.section_title}{' '}
+                                                        - Step {stepNumber}
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="body2"
+                                                        component="span"
+                                                        sx={{
+                                                            fontWeight: 600,
+                                                            color: timer.hasFinished
+                                                                ? 'success.main'
+                                                                : timer.isRunning
+                                                                ? 'primary.main'
+                                                                : 'text.primary',
+                                                        }}
+                                                    >
+                                                        {minutes}:
+                                                        {seconds
+                                                            .toString()
+                                                            .padStart(2, '0')}
+                                                    </Typography>
+                                                </Box>
+                                            }
+                                            onClick={() => {
+                                                setCurrentSectionIndex(
+                                                    timer.sectionIndex
+                                                );
+                                                setCurrentStep(timer.stepIndex);
+                                            }}
+                                            onDelete={() =>
+                                                resetTimer(
+                                                    timer.sectionIndex,
+                                                    timer.stepIndex
+                                                )
+                                            }
+                                            color={
+                                                timer.hasFinished
+                                                    ? 'success'
+                                                    : timer.isRunning
+                                                    ? 'primary'
+                                                    : 'default'
+                                            }
+                                            variant="outlined"
+                                            sx={{
+                                                borderRadius: 2,
+                                                '& .MuiChip-label': {
+                                                    px: 1,
+                                                },
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s ease',
+                                                '&:hover': {
+                                                    transform:
+                                                        'translateY(-1px)',
+                                                    boxShadow:
+                                                        '0 2px 4px rgba(0,0,0,0.1)',
+                                                },
+                                            }}
+                                        />
+                                    );
+                                })}
+                            </Box>
+                        </Stack>
+                    </Paper>
+                )}
+
+                {/* Main Content Area */}
+                <Box
+                    sx={{
+                        flex: 1,
+                        overflow: 'auto',
                         bgcolor: 'paper.light',
                         position: 'relative',
                         '&::before': {
@@ -412,212 +603,30 @@ const CookingModePage: FC = () => {
                             mixBlendMode: 'multiply',
                             filter: 'opacity(1)',
                         },
-                        '& > *': {
-                            position: 'relative',
-                            zIndex: 1,
-                        },
                     }}
                 >
-                    <Stack spacing={1.5}>
-                        <Typography
-                            variant="subtitle2"
-                            sx={{
-                                color: 'primary.dark',
-                                fontWeight: 600,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
-                                position: 'relative',
-                                zIndex: 1,
-                                fontFamily: "'Kalam', cursive",
-                                fontSize: { xs: '1rem', sm: '1.1rem' },
-                            }}
-                        >
-                            <TimerIcon
-                                sx={{
-                                    fontSize: { xs: 20, sm: 22 },
-                                    color: 'primary.main',
-                                }}
-                            />
-                            Active Timers ({activeTimers.length})
-                        </Typography>
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                gap: 1,
-                                flexWrap: 'wrap',
-                                position: 'relative',
-                                zIndex: 1,
-                            }}
-                        >
-                            {activeTimers.map((timer, index) => {
-                                const section =
-                                    recipe.instructions[timer.sectionIndex];
-                                const stepNumber =
-                                    recipe.instructions
-                                        .slice(0, timer.sectionIndex)
-                                        .reduce(
-                                            (acc, section) =>
-                                                acc + section.steps.length,
-                                            0
-                                        ) +
-                                    timer.stepIndex +
-                                    1;
-                                const currentPauseTime = timer.pausedAt
-                                    ? Date.now() - timer.pausedAt
-                                    : 0;
-                                const totalPauseTime =
-                                    timer.totalPausedTime +
-                                    (timer.pausedAt ? currentPauseTime : 0);
-                                const elapsed = Math.floor(
-                                    (Date.now() -
-                                        timer.startTime -
-                                        totalPauseTime) /
-                                        1000
-                                );
-                                const timeLeft = Math.max(
-                                    0,
-                                    Math.floor(timer.duration / 1000) - elapsed
-                                );
-                                const minutes = Math.floor(timeLeft / 60);
-                                const seconds = timeLeft % 60;
+                    <StepContent
+                        recipe={recipe}
+                        currentStep={currentStep}
+                        currentSectionIndex={currentSectionIndex}
+                        servings={servings}
+                        activeTimers={activeTimers}
+                        onStartTimer={startTimer}
+                        onPauseTimer={pauseTimer}
+                        onResumeTimer={resumeTimer}
+                        onResetTimer={resetTimer}
+                    />
+                </Box>
 
-                                return (
-                                    <Chip
-                                        key={index}
-                                        label={
-                                            <Box
-                                                sx={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 1,
-                                                }}
-                                            >
-                                                <Typography
-                                                    variant="body2"
-                                                    component="span"
-                                                >
-                                                    {section.section_title} -
-                                                    Step {stepNumber}
-                                                </Typography>
-                                                <Typography
-                                                    variant="body2"
-                                                    component="span"
-                                                    sx={{
-                                                        fontWeight: 600,
-                                                        color: timer.hasFinished
-                                                            ? 'success.main'
-                                                            : timer.isRunning
-                                                            ? 'primary.main'
-                                                            : 'text.primary',
-                                                    }}
-                                                >
-                                                    {minutes}:
-                                                    {seconds
-                                                        .toString()
-                                                        .padStart(2, '0')}
-                                                </Typography>
-                                            </Box>
-                                        }
-                                        onClick={() => {
-                                            setCurrentSectionIndex(
-                                                timer.sectionIndex
-                                            );
-                                            setCurrentStep(timer.stepIndex);
-                                        }}
-                                        onDelete={() =>
-                                            resetTimer(
-                                                timer.sectionIndex,
-                                                timer.stepIndex
-                                            )
-                                        }
-                                        color={
-                                            timer.hasFinished
-                                                ? 'success'
-                                                : timer.isRunning
-                                                ? 'primary'
-                                                : 'default'
-                                        }
-                                        variant="outlined"
-                                        sx={{
-                                            borderRadius: 2,
-                                            '& .MuiChip-label': {
-                                                px: 1,
-                                            },
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s ease',
-                                            '&:hover': {
-                                                transform: 'translateY(-1px)',
-                                                boxShadow:
-                                                    '0 2px 4px rgba(0,0,0,0.1)',
-                                            },
-                                        }}
-                                    />
-                                );
-                            })}
-                        </Box>
-                    </Stack>
-                </Paper>
-            )}
-
-            {/* Main Content Area */}
-            <Box
-                sx={{
-                    flex: 1,
-                    overflow: 'auto',
-                    bgcolor: 'paper.light',
-                    position: 'relative',
-                    '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        boxShadow: 'inset 0 0 30px rgba(62, 28, 0, 0.05)',
-                        pointerEvents: 'none',
-                    },
-                    '&::after': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        opacity: 0.8,
-                        pointerEvents: 'none',
-                        backgroundImage: `
-                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.05) 0.5px, transparent 0.5px),
-                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.03) 1px, transparent 1px)
-                        `,
-                        backgroundSize: '6px 6px, 14px 14px',
-                        backgroundPosition: '0 0',
-                        mixBlendMode: 'multiply',
-                        filter: 'opacity(1)',
-                    },
-                }}
-            >
-                <StepContent
-                    recipe={recipe}
-                    currentStep={currentStep}
-                    currentSectionIndex={currentSectionIndex}
-                    servings={servings}
-                    activeTimers={activeTimers}
-                    onStartTimer={startTimer}
-                    onPauseTimer={pauseTimer}
-                    onResumeTimer={resumeTimer}
-                    onResetTimer={resetTimer}
+                {/* Navigation */}
+                <StepNavigation
+                    currentStep={currentOverallStep}
+                    totalSteps={totalSteps}
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
                 />
             </Box>
-
-            {/* Navigation */}
-            <StepNavigation
-                currentStep={currentOverallStep}
-                totalSteps={totalSteps}
-                onPrevious={handlePrevious}
-                onNext={handleNext}
-            />
-        </Box>
+        </IngredientSubstitutionProvider>
     );
 };
 

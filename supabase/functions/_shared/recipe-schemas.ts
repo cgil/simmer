@@ -35,6 +35,35 @@ export interface InstructionSection {
     steps: InstructionStep[];
 }
 
+// Define interfaces for substitution components
+export interface SubstituteIngredient {
+    id: string;
+    name: string;
+    quantity: number | null;
+    unit: string | null;
+}
+
+export interface IngredientSubstitutes {
+    ingredients: SubstituteIngredient[];
+    instructions?: string | null;
+}
+
+export interface SubstituteOption {
+    ingredients: SubstituteIngredient[];
+    instructions?: string | null;
+}
+
+export interface SubstitutionState {
+    originalIngredientId: string;
+    originalIngredient: {
+        id: string;
+        name: string;
+        quantity: number | null;
+        unit: string | null;
+    };
+    substituteOption: SubstituteOption;
+}
+
 // Simple environment-aware logger for Deno functions
 const isProduction = Deno.env.get("ENVIRONMENT") === "production";
 const logger = {
@@ -170,6 +199,30 @@ export const IngredientSchema = z.object({
     quantity: z.number().nullable(),
     unit: z.string().nullable(),
     notes: z.string().nullable(),
+});
+
+// Substitution schemas
+export const SubstituteIngredientSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    quantity: z.number().nullable(),
+    unit: z.string().nullable(),
+});
+
+export const SubstituteOptionSchema = z.object({
+    ingredients: z.array(SubstituteIngredientSchema),
+    instructions: z.string().nullable().optional(),
+});
+
+export const SubstitutionStateSchema = z.object({
+    originalIngredientId: z.string(),
+    originalIngredient: z.object({
+        id: z.string(),
+        name: z.string(),
+        quantity: z.number().nullable(),
+        unit: z.string().nullable(),
+    }),
+    substituteOption: SubstituteOptionSchema,
 });
 
 export const TimeEstimateSchema = z.object({

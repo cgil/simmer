@@ -6,6 +6,7 @@ import {
     IngredientMention,
 } from '../../../utils/ingredientMentions';
 import IngredientReferenceMention from './IngredientReferenceMention';
+import { useIngredientSubstitution } from '../../../components/substitution/IngredientSubstitutionContext';
 
 interface HighlightedInstructionProps {
     text: string;
@@ -20,6 +21,9 @@ const HighlightedInstruction: FC<HighlightedInstructionProps> = ({
     servings,
     originalServings,
 }) => {
+    // Access the substitution context
+    const { substitutions } = useIngredientSubstitution();
+
     if (!text) return null;
     if (!ingredients || !Array.isArray(ingredients)) {
         // Handle the case where ingredients is undefined or not an array
@@ -32,11 +36,13 @@ const HighlightedInstruction: FC<HighlightedInstructionProps> = ({
 
     // Parse the text to get segments (text or ingredient mentions)
     // Pass servings information to properly handle ingredient scaling
+    // Also pass substitutions for ingredient substitution handling
     const segments = parseIngredientMentions(
         text,
         ingredients,
         servings,
-        originalServings
+        originalServings,
+        substitutions
     );
 
     return (
@@ -57,10 +63,13 @@ const HighlightedInstruction: FC<HighlightedInstructionProps> = ({
                     <IngredientReferenceMention
                         key={`mention-${mention.id}-${index}`}
                         ingredient={mention.ingredient}
+                        id={mention.id}
                         display={mention.display}
                         servings={servings}
                         originalServings={originalServings}
                         scaledQuantity={mention.scaledQuantity}
+                        hasSubstitution={mention.hasSubstitution}
+                        substitutionInfo={mention.substitutionInfo}
                     />
                 );
             })}

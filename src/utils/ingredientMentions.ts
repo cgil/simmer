@@ -1,5 +1,7 @@
-import { Ingredient } from "../types/recipe";
-import { ensureUuid, isValidUuid } from "./uuid";
+import { Ingredient, InstructionSection, Recipe } from "../types/recipe";
+import { createSlug } from "./recipe";
+import { SubstitutionState } from "../types/substitution";
+import { isValidUuid } from "./uuid";
 
 // We can't import the component directly here to avoid a circular dependency
 // This will be rendered later at the component level
@@ -8,6 +10,8 @@ export interface IngredientMention {
     display: string;
     ingredient?: Ingredient;
     scaledQuantity?: number | null;
+    hasSubstitution?: boolean;
+    substitutionInfo?: SubstitutionState | null;
 }
 
 // Define the step timing interface
@@ -38,6 +42,7 @@ export const parseIngredientMentions = (
     ingredients: Ingredient[],
     servings?: number,
     originalServings?: number,
+    substitutions?: Record<string, SubstitutionState>,
 ): (string | IngredientMention)[] => {
     if (!text) return [];
 
@@ -58,6 +63,10 @@ export const parseIngredientMentions = (
         // Find the referenced ingredient
         const ingredient = ingredients.find((ing) => ing.id === id);
 
+        // Check if this ingredient has a substitution
+        const hasSubstitution = substitutions && id in substitutions;
+        const substitutionInfo = hasSubstitution ? substitutions?.[id] : null;
+
         // Calculate scaled quantity if applicable
         let scaledQuantity = null;
         if (
@@ -76,6 +85,8 @@ export const parseIngredientMentions = (
             display,
             ingredient,
             scaledQuantity,
+            hasSubstitution: Boolean(hasSubstitution),
+            substitutionInfo: substitutionInfo || null,
         });
 
         lastIndex = match.index + fullMatch.length;
@@ -236,7 +247,7 @@ export const convertSlugReferencesToUuids = (
 
             // If we can't match to an existing ingredient, convert the ID to a valid UUID format
             if (!isUuidFormat) {
-                const validUuid = ensureUuid(id);
+                const validUuid = isValidUuid(id);
                 console.warn(
                     `Converting non-UUID reference ID '${id}' to UUID format: ${validUuid}`,
                 );

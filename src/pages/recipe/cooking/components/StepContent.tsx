@@ -1,10 +1,13 @@
 import { FC } from 'react';
 import { Box, Typography, Paper } from '@mui/material';
 import { Recipe } from '../../../../types';
-import { scaleQuantity, formatQuantity } from '../../../../utils/recipe';
+import { scaleQuantity } from '../../../../utils/recipe';
 import HighlightedInstruction from '../../components/HighlightedInstruction';
 import Timer from './Timer';
 import { parseIngredientMentions } from '../../../../utils/ingredientMentions';
+import { useIngredientSubstitution } from '../../../../components/substitution/IngredientSubstitutionContext';
+import { SubstitutionState, Substitute } from '../../../../types/substitution';
+import IngredientItemWithSubstitutionCookingMode from './IngredientItemWithSubstitutionCookingMode';
 
 interface StepContentProps {
     recipe: Recipe;
@@ -44,6 +47,7 @@ const StepContent: FC<StepContentProps> = ({
 }) => {
     const section = recipe.instructions[currentSectionIndex];
     const step = section.steps[currentStep];
+    const { substitutions } = useIngredientSubstitution();
 
     // Calculate the total step number by counting steps in previous sections
     const totalStepNumber =
@@ -54,9 +58,15 @@ const StepContent: FC<StepContentProps> = ({
         1;
 
     // Parse the step text to find ingredient mentions
-    const segments = parseIngredientMentions(step.text, recipe.ingredients);
+    const segments = parseIngredientMentions(
+        step.text,
+        recipe.ingredients,
+        servings,
+        recipe.servings,
+        substitutions
+    );
 
-    // Extract ingredient IDs from the mentions
+    // Extract ingredient IDs from the mentions, accounting for substitutions
     const stepIngredients = segments
         .filter(
             (
@@ -65,19 +75,125 @@ const StepContent: FC<StepContentProps> = ({
                 id: string;
                 display: string;
                 ingredient?: Recipe['ingredients'][0];
-            } => typeof segment !== 'string' && segment.ingredient !== undefined
+                hasSubstitution?: boolean;
+                substitutionInfo?: SubstitutionState;
+            } => typeof segment !== 'string' && Boolean(segment.id)
         )
-        .map(({ ingredient }) => {
-            // Scale the ingredient quantity based on servings
-            const scaledQuantity = scaleQuantity(
-                ingredient!.quantity,
-                recipe.servings,
-                servings
-            );
+        .map((mention) => {
+            // Check if this ingredient has a substitution
+            if (mention.hasSubstitution && mention.substitutionInfo) {
+                // For single ingredient substitute
+                if (
+                    mention.substitutionInfo.substituteOption.ingredients
+                        .length === 1
+                ) {
+                    const substitute =
+                        mention.substitutionInfo.substituteOption
+                            .ingredients[0];
 
+                    // Scale the substitute quantity based on servings
+                    const scaledQuantity = scaleQuantity(
+                        substitute.quantity !== undefined
+                            ? substitute.quantity
+                            : null,
+                        recipe.servings,
+                        servings
+                    );
+
+                    return {
+                        id: `subst-${mention.id}`,
+                        name: substitute.name,
+                        quantity: scaledQuantity,
+                        unit: substitute.unit,
+                        notes: null,
+                        isSubstituted: true,
+                        originalIngredient: {
+                            ...mention.substitutionInfo.originalIngredient,
+                            // Scale the original ingredient quantity too
+                            quantity: scaleQuantity(
+                                mention.substitutionInfo.originalIngredient
+                                    .quantity !== undefined
+                                    ? mention.substitutionInfo
+                                          .originalIngredient.quantity
+                                    : null,
+                                recipe.servings,
+                                servings
+                            ),
+                        },
+                    };
+                }
+                // For multi-ingredient substitutes
+                else if (
+                    mention.substitutionInfo.substituteOption.ingredients
+                        .length > 1
+                ) {
+                    const ingredients =
+                        mention.substitutionInfo.substituteOption.ingredients;
+                    const instructions =
+                        mention.substitutionInfo.substituteOption.instructions;
+
+                    // Scale each ingredient in multi-substitute
+                    const scaledMultiIngredients = ingredients.map(
+                        (ing: Substitute) => ({
+                            ...ing,
+                            quantity: scaleQuantity(
+                                ing.quantity !== undefined
+                                    ? ing.quantity
+                                    : null,
+                                recipe.servings,
+                                servings
+                            ),
+                        })
+                    );
+
+                    // Generate a special ingredient object for UI display
+                    return {
+                        id: `multi-subst-${mention.id}`,
+                        name: 'Multiple ingredients',
+                        quantity: null,
+                        unit: null,
+                        notes: 'See below',
+                        isSubstituted: true,
+                        originalIngredient: {
+                            ...mention.substitutionInfo.originalIngredient,
+                            // Scale the original ingredient quantity too
+                            quantity: scaleQuantity(
+                                mention.substitutionInfo.originalIngredient
+                                    .quantity !== undefined
+                                    ? mention.substitutionInfo
+                                          .originalIngredient.quantity
+                                    : null,
+                                recipe.servings,
+                                servings
+                            ),
+                        },
+                        multiIngredients: scaledMultiIngredients,
+                        instructions: instructions,
+                    };
+                }
+            }
+
+            // When there's no substitution or a regular ingredient
+            if (mention.ingredient) {
+                // Scale the ingredient quantity based on servings
+                const scaledQuantity = scaleQuantity(
+                    mention.ingredient.quantity,
+                    recipe.servings,
+                    servings
+                );
+
+                return {
+                    ...mention.ingredient,
+                    quantity: scaledQuantity,
+                };
+            }
+
+            // Fallback for incomplete ingredient data
             return {
-                ...ingredient!,
-                quantity: scaledQuantity,
+                id: mention.id,
+                name: mention.display,
+                quantity: null,
+                unit: null,
             };
         });
 
@@ -91,29 +207,13 @@ const StepContent: FC<StepContentProps> = ({
     return (
         <Box
             sx={{
+                p: { xs: 2, sm: 3 },
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 3,
-                px: { xs: 2, sm: 3 },
-                py: { xs: 2, sm: 3 },
-                mb: 10,
             }}
         >
-            {/* Section Title */}
-            {section.section_title && (
-                <Typography
-                    variant="h5"
-                    sx={{
-                        color: 'primary.main',
-                        fontFamily: "'Kalam', cursive",
-                        mb: 1,
-                    }}
-                >
-                    {section.section_title}
-                </Typography>
-            )}
-
-            {/* Step Content */}
+            {/* Step content */}
             <Paper
                 elevation={0}
                 sx={{
@@ -184,8 +284,15 @@ const StepContent: FC<StepContentProps> = ({
                             />
                         </Typography>
 
-                        {step.timing && (
-                            <Box sx={{ mt: 2, maxWidth: 'sm' }}>
+                        {/* Timer */}
+                        {step.timing && step.timing.min > 0 && (
+                            <Box
+                                sx={{
+                                    mt: 2,
+                                    display: 'flex',
+                                    justifyContent: 'flex-end',
+                                }}
+                            >
                                 <Timer
                                     duration={step.timing.min}
                                     maxDuration={step.timing.max}
@@ -285,48 +392,32 @@ const StepContent: FC<StepContentProps> = ({
                         }}
                     >
                         {stepIngredients.map((ingredient) => (
-                            <Box
-                                component="li"
-                                key={ingredient.id}
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'baseline',
-                                    gap: 1,
-                                    fontSize: { xs: '1rem', sm: '1.125rem' },
-                                    fontFamily: "'Inter', sans-serif",
-                                }}
-                            >
-                                <Typography
-                                    component="span"
-                                    sx={{
-                                        fontWeight: 600,
-                                        color: 'text.primary',
-                                    }}
-                                >
-                                    {formatQuantity(ingredient.quantity)}{' '}
-                                    {ingredient.unit}
-                                    <Typography
-                                        component="span"
-                                        sx={{
-                                            color: 'text.secondary',
-                                            ml: 1,
-                                        }}
-                                    >
-                                        {ingredient.name}
-                                        {ingredient.notes && (
-                                            <Box
-                                                component="span"
-                                                sx={{
-                                                    color: 'text.secondary',
-                                                    ml: 1,
-                                                    fontSize: '0.85em',
-                                                }}
-                                            >
-                                                ({ingredient.notes})
-                                            </Box>
-                                        )}
-                                    </Typography>
-                                </Typography>
+                            <Box component="li" key={ingredient.id}>
+                                <IngredientItemWithSubstitutionCookingMode
+                                    id={
+                                        ingredient.id.startsWith('subst-')
+                                            ? ingredient.id.substring(6)
+                                            : ingredient.id
+                                    }
+                                    name={ingredient.name}
+                                    quantity={ingredient.quantity}
+                                    unit={ingredient.unit}
+                                    originalServings={recipe.servings}
+                                    currentServings={servings}
+                                    notes={
+                                        ingredient.notes as string | undefined
+                                    }
+                                    multiIngredients={
+                                        ingredient.multiIngredients
+                                    }
+                                    instructions={
+                                        ingredient.instructions ?? undefined
+                                    }
+                                    isSubstituted={ingredient.isSubstituted}
+                                    originalIngredient={
+                                        ingredient.originalIngredient
+                                    }
+                                />
                             </Box>
                         ))}
                     </Box>

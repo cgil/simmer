@@ -169,6 +169,17 @@ The app follows a "Paper Notebook Recipe Journal" aesthetic with these key eleme
     -   For collections, the share button (paper airplane icon) is located in the header, next to the "New Recipe" button.
 -   **Visual Indicator:** A small badge with a paper airplane icon appears on recipe cards in the catalog to indicate shared items.
 
+### 3.8. Ingredient Substitution
+
+-   **AI-Powered Suggestions:** Users can request AI-generated substitutions for specific ingredients.
+-   **Contextual Awareness:** The AI considers the ingredient's quantity, unit, and the recipe's context (title, description) to provide relevant substitutions.
+-   **Real-time Scaling:** Substitution quantities are automatically scaled based on the current serving size adjustment.
+-   **User Interface:** Suggestions are presented in a popover, triggered from the ingredients list in both the Recipe Page and Cooking Mode.
+-   **Limited Options:** A maximum of 3 substitution options are provided.
+-   **Transient Nature:** Substitutions are temporary suggestions and are not permanently saved with the recipe.
+-   **Handling Complex Substitutions:** Supports substitutions that require multiple ingredients and optional brief instructions.
+-   **Empty State:** Provides clear feedback when no suitable substitutions are found.
+
 ---
 
 ## 4. User Flows

@@ -1,7 +1,9 @@
 import { FC } from 'react';
 import { Box, Typography, Paper, Slider, Stack } from '@mui/material';
 import { Recipe } from '../../../types';
-import { scaleQuantity, formatQuantity } from '../../../utils/recipe';
+import IngredientItemWithSubstitution from '../../../components/substitution/IngredientItemWithSubstitution';
+import { useIngredientSubstitution } from '../../../components/substitution/IngredientSubstitutionContext';
+import { SubstituteOption } from '../../../types/substitution';
 
 interface IngredientsListProps {
     recipe: Recipe;
@@ -14,8 +16,36 @@ const IngredientsList: FC<IngredientsListProps> = ({
     servings,
     onServingsChange,
 }) => {
+    // Access the substitution context
+    const {
+        addSubstitution,
+        removeSubstitution,
+        hasSubstitution,
+        getSubstituteInfo,
+        getOriginalIngredient,
+    } = useIngredientSubstitution();
+
     const handleServingsChange = (_event: Event, value: number | number[]) => {
         onServingsChange(value as number);
+    };
+
+    // Handle substitution request
+    const handleSubstitute = (
+        ingredientId: string,
+        substituteOption: SubstituteOption
+    ) => {
+        // Find the original ingredient
+        const originalIngredient = recipe.ingredients.find(
+            (i) => i.id === ingredientId
+        );
+        if (originalIngredient) {
+            addSubstitution(ingredientId, originalIngredient, substituteOption);
+        }
+    };
+
+    // Handle substitution removal
+    const handleRevertSubstitution = (ingredientId: string) => {
+        removeSubstitution(ingredientId);
     };
 
     // Calculate dynamic max serving size based on recipe's default serving size
@@ -208,69 +238,41 @@ const IngredientsList: FC<IngredientsListProps> = ({
                         m: 0,
                     }}
                 >
-                    {recipe.ingredients.map((item) => (
-                        <Typography
-                            component="li"
-                            key={item.id}
-                            sx={{
-                                mb: 2,
-                                display: 'flex',
-                                alignItems: 'flex-start',
-                                fontSize: { xs: '0.9rem', sm: '1rem' },
-                                lineHeight: 1.5,
-                                '&::before': {
-                                    content: '""',
-                                    width: { xs: 4, sm: 6 },
-                                    height: { xs: 4, sm: 6 },
-                                    bgcolor: 'primary.main',
-                                    borderRadius: '50%',
-                                    mr: 2,
-                                    mt: '0.5em',
-                                    opacity: 0.7,
-                                    flexShrink: 0,
-                                },
-                                '&:last-child': {
-                                    mb: 0,
-                                },
-                            }}
-                        >
-                            <Box sx={{ flex: 1 }}>
-                                {(item.quantity !== null ||
-                                    item.unit !== null) && (
-                                    <Box
-                                        component="span"
-                                        sx={{
-                                            fontWeight: 500,
-                                            display: 'inline-block',
-                                            mr: 0.5,
-                                        }}
-                                    >
-                                        {formatQuantity(
-                                            scaleQuantity(
-                                                item.quantity,
-                                                recipe.servings,
-                                                servings
-                                            )
-                                        )}{' '}
-                                        {item.unit && `${item.unit} `}
-                                    </Box>
-                                )}
-                                {item.name}
-                                {item.notes && (
-                                    <Box
-                                        component="span"
-                                        sx={{
-                                            color: 'text.secondary',
-                                            ml: 1,
-                                            fontSize: '0.85em',
-                                        }}
-                                    >
-                                        ({item.notes})
-                                    </Box>
-                                )}
-                            </Box>
-                        </Typography>
-                    ))}
+                    {recipe.ingredients.map((item) => {
+                        const isSubstituted = hasSubstitution(item.id);
+                        const substituteInfo = isSubstituted
+                            ? getSubstituteInfo(item.id)
+                            : undefined;
+                        const originalIngredient = isSubstituted
+                            ? getOriginalIngredient(item.id)
+                            : undefined;
+
+                        return (
+                            <IngredientItemWithSubstitution
+                                key={item.id}
+                                id={item.id}
+                                name={item.name}
+                                quantity={item.quantity}
+                                unit={item.unit}
+                                originalServings={recipe.servings || 2}
+                                currentServings={servings}
+                                isSubstituted={isSubstituted}
+                                onSubstitute={handleSubstitute}
+                                onRevertSubstitution={handleRevertSubstitution}
+                                substituteInfo={substituteInfo || undefined}
+                                originalIngredient={
+                                    originalIngredient
+                                        ? {
+                                              name: originalIngredient.name,
+                                              quantity:
+                                                  originalIngredient.quantity,
+                                              unit: originalIngredient.unit,
+                                          }
+                                        : undefined
+                                }
+                            />
+                        );
+                    })}
                 </Box>
             </Stack>
         </Paper>

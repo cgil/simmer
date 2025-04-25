@@ -35,6 +35,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Recipe } from '../../types/recipe';
 import ShareMenuItem from '../../components/sharing/ShareMenuItem';
 import ShareDialogContainer from '../../components/sharing/ShareDialogContainer';
+import { IngredientSubstitutionProvider } from '../../components/substitution/IngredientSubstitutionContext';
 
 const RecipePage: FC = () => {
     const { id } = useParams();
@@ -440,267 +441,147 @@ const RecipePage: FC = () => {
             }
             actionButton={actionButton}
         >
-            <Box
-                sx={{
-                    position: 'relative',
-                    bgcolor: 'paper.light',
-                    minHeight: '100vh',
-                    px: { xs: 2, sm: 3, md: 4 },
-                    py: { xs: 3, sm: 4 },
-                    '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        boxShadow: 'inset 0 0 30px rgba(62, 28, 0, 0.05)',
-                        pointerEvents: 'none',
-                    },
-                    '&::after': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        opacity: 0.8,
-                        pointerEvents: 'none',
-                        backgroundImage: `
-                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.05) 0.5px, transparent 0.5px),
-                            radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.03) 1px, transparent 1px)
-                        `,
-                        backgroundSize: '6px 6px, 14px 14px',
-                        backgroundPosition: '0 0',
-                        mixBlendMode: 'multiply',
-                        filter: 'opacity(1)',
-                    },
-                }}
-            >
-                <Grid
-                    container
-                    spacing={4}
-                    sx={{ position: 'relative', zIndex: 1 }}
+            <IngredientSubstitutionProvider>
+                <Box
+                    sx={{
+                        position: 'relative',
+                        bgcolor: 'paper.light',
+                        minHeight: '100vh',
+                        px: { xs: 2, sm: 3, md: 4 },
+                        py: { xs: 3, sm: 4 },
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            boxShadow: 'inset 0 0 30px rgba(62, 28, 0, 0.05)',
+                            pointerEvents: 'none',
+                        },
+                        '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            opacity: 0.8,
+                            pointerEvents: 'none',
+                            backgroundImage: `
+                                radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.05) 0.5px, transparent 0.5px),
+                                radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.03) 1px, transparent 1px)
+                            `,
+                            backgroundSize: '6px 6px, 14px 14px',
+                            backgroundPosition: '0 0',
+                            mixBlendMode: 'multiply',
+                            filter: 'opacity(1)',
+                        },
+                    }}
                 >
-                    {/* Header Section */}
-                    <Grid item xs={12}>
-                        <Box
-                            sx={{
-                                textAlign: 'center',
-                                mb: 4,
-                                mt: 4,
-                                maxWidth: 800,
-                                mx: 'auto',
-                            }}
-                        >
-                            <Typography
-                                variant={isMobile ? 'h4' : 'h3'}
-                                component="h1"
-                                gutterBottom
-                                sx={{
-                                    fontWeight: 700,
-                                    color: 'primary.main',
-                                    fontFamily: "'Kalam', cursive",
-                                    mb: 2,
-                                }}
-                            >
-                                {recipe.title}
-                            </Typography>
-                            <Typography
-                                variant="subtitle1"
-                                color="text.secondary"
-                                sx={{
-                                    mb: 3,
-                                    fontSize: '1.1rem',
-                                    maxWidth: '600px',
-                                    mx: 'auto',
-                                    lineHeight: 1.6,
-                                    fontFamily: "'Inter', sans-serif",
-                                }}
-                            >
-                                {recipe.description}
-                            </Typography>
+                    <Grid
+                        container
+                        spacing={4}
+                        sx={{ position: 'relative', zIndex: 1 }}
+                    >
+                        {/* Header Section */}
+                        <Grid item xs={12}>
                             <Box
                                 sx={{
-                                    display: 'flex',
-                                    gap: 1,
-                                    flexWrap: 'wrap',
-                                    justifyContent: 'center',
-                                    mb: 3,
+                                    textAlign: 'center',
+                                    mb: 4,
+                                    mt: 4,
+                                    maxWidth: 800,
+                                    mx: 'auto',
                                 }}
                             >
-                                {recipe.tags.map((tag) => (
-                                    <Chip
-                                        key={tag}
-                                        label={tag}
-                                        color="secondary"
-                                        size={isMobile ? 'small' : 'medium'}
-                                        sx={{
-                                            borderRadius: '16px',
-                                            fontFamily: "'Inter', sans-serif",
-                                            boxShadow:
-                                                '0 4px 20px rgba(0,0,0,0.08)',
-                                        }}
-                                    />
-                                ))}
+                                <Typography
+                                    variant={isMobile ? 'h4' : 'h3'}
+                                    component="h1"
+                                    gutterBottom
+                                    sx={{
+                                        fontWeight: 700,
+                                        color: 'primary.main',
+                                        fontFamily: "'Kalam', cursive",
+                                        mb: 2,
+                                    }}
+                                >
+                                    {recipe.title}
+                                </Typography>
+                                <Typography
+                                    variant="subtitle1"
+                                    color="text.secondary"
+                                    sx={{
+                                        mb: 3,
+                                        fontSize: '1.1rem',
+                                        maxWidth: '600px',
+                                        mx: 'auto',
+                                        lineHeight: 1.6,
+                                        fontFamily: "'Inter', sans-serif",
+                                    }}
+                                >
+                                    {recipe.description}
+                                </Typography>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        gap: 1,
+                                        flexWrap: 'wrap',
+                                        justifyContent: 'center',
+                                        mb: 3,
+                                    }}
+                                >
+                                    {recipe.tags.map((tag) => (
+                                        <Chip
+                                            key={tag}
+                                            label={tag}
+                                            color="secondary"
+                                            size={isMobile ? 'small' : 'medium'}
+                                            sx={{
+                                                borderRadius: '16px',
+                                                fontFamily:
+                                                    "'Inter', sans-serif",
+                                                boxShadow:
+                                                    '0 4px 20px rgba(0,0,0,0.08)',
+                                            }}
+                                        />
+                                    ))}
+                                </Box>
                             </Box>
-                        </Box>
-                    </Grid>
+                        </Grid>
 
-                    {/* Image Section */}
-                    <Grid item xs={12}>
-                        <Paper
-                            elevation={0}
-                            sx={{
-                                borderRadius: 1,
-                                overflow: 'hidden',
-                                position: 'relative',
-                                bgcolor: 'paper.main',
-                                '&::before': {
-                                    content: '""',
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    height: '100%',
-                                    background: 'rgba(255,255,255,0.6)',
-                                    backdropFilter: 'blur(4px)',
+                        {/* Image Section */}
+                        <Grid item xs={12}>
+                            <Paper
+                                elevation={0}
+                                sx={{
                                     borderRadius: 1,
-                                    zIndex: 0,
-                                },
-                                '& > *': {
+                                    overflow: 'hidden',
                                     position: 'relative',
-                                    zIndex: 1,
-                                },
-                            }}
-                        >
-                            <RecipeGallery images={recipe.images} />
-                        </Paper>
-                    </Grid>
+                                    bgcolor: 'paper.main',
+                                    '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: '100%',
+                                        background: 'rgba(255,255,255,0.6)',
+                                        backdropFilter: 'blur(4px)',
+                                        borderRadius: 1,
+                                        zIndex: 0,
+                                    },
+                                    '& > *': {
+                                        position: 'relative',
+                                        zIndex: 1,
+                                    },
+                                }}
+                            >
+                                <RecipeGallery images={recipe.images} />
+                            </Paper>
+                        </Grid>
 
-                    {/* Time Estimate Section */}
-                    <Grid item xs={12}>
-                        <Paper
-                            elevation={0}
-                            sx={{
-                                p: { xs: 2, sm: 3 },
-                                borderRadius: 1,
-                                position: 'relative',
-                                bgcolor: 'paper.main',
-                                boxShadow: `
-                                    0 1px 2px rgba(0,0,0,0.03),
-                                    0 4px 20px rgba(0,0,0,0.06),
-                                    inset 0 0 0 1px rgba(255,255,255,0.9)
-                                `,
-                                '&::before': {
-                                    content: '""',
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    height: '100%',
-                                    background: 'rgba(255,255,255,0.5)',
-                                    backdropFilter: 'blur(4px)',
-                                    borderRadius: 1,
-                                    zIndex: 0,
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                },
-                                '& > *': {
-                                    position: 'relative',
-                                    zIndex: 1,
-                                },
-                            }}
-                        >
-                            <TimeEstimate timeEstimate={recipe.time_estimate} />
-                        </Paper>
-                    </Grid>
-
-                    {/* Ingredients Section */}
-                    <Grid item xs={12} md={4}>
-                        <Paper
-                            elevation={0}
-                            sx={{
-                                p: { xs: 2, sm: 3 },
-                                borderRadius: 1,
-                                position: 'relative',
-                                bgcolor: 'paper.main',
-                                boxShadow: `
-                                    0 1px 2px rgba(0,0,0,0.03),
-                                    0 4px 20px rgba(0,0,0,0.06),
-                                    inset 0 0 0 1px rgba(255,255,255,0.9)
-                                `,
-                                '&::before': {
-                                    content: '""',
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    height: '100%',
-                                    background: 'rgba(255,255,255,0.5)',
-                                    backdropFilter: 'blur(4px)',
-                                    borderRadius: 1,
-                                    zIndex: 0,
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                },
-                                '& > *': {
-                                    position: 'relative',
-                                    zIndex: 1,
-                                },
-                            }}
-                        >
-                            <IngredientsList
-                                recipe={recipe}
-                                servings={servings}
-                                onServingsChange={setServings}
-                            />
-                        </Paper>
-                    </Grid>
-
-                    {/* Instructions Section */}
-                    <Grid item xs={12} md={8}>
-                        <Paper
-                            elevation={0}
-                            sx={{
-                                p: { xs: 2, sm: 3 },
-                                borderRadius: 1,
-                                position: 'relative',
-                                bgcolor: 'paper.main',
-                                boxShadow: `
-                                    0 1px 2px rgba(0,0,0,0.03),
-                                    0 4px 20px rgba(0,0,0,0.06),
-                                    inset 0 0 0 1px rgba(255,255,255,0.9)
-                                `,
-                                '&::before': {
-                                    content: '""',
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    height: '100%',
-                                    background: 'rgba(255,255,255,0.5)',
-                                    backdropFilter: 'blur(4px)',
-                                    borderRadius: 1,
-                                    zIndex: 0,
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                },
-                                '& > *': {
-                                    position: 'relative',
-                                    zIndex: 1,
-                                },
-                            }}
-                        >
-                            <CookingInstructions
-                                recipe={recipe}
-                                servings={servings}
-                            />
-                        </Paper>
-                    </Grid>
-
-                    {/* Notes Section */}
-                    {recipe.notes && recipe.notes.length > 0 && (
+                        {/* Time Estimate Section */}
                         <Grid item xs={12}>
                             <Paper
                                 elevation={0}
@@ -734,12 +615,137 @@ const RecipePage: FC = () => {
                                     },
                                 }}
                             >
-                                <RecipeNotes recipe={recipe} />
+                                <TimeEstimate
+                                    timeEstimate={recipe.time_estimate}
+                                />
                             </Paper>
                         </Grid>
-                    )}
-                </Grid>
-            </Box>
+
+                        {/* Ingredients Section */}
+                        <Grid item xs={12} md={4}>
+                            <Paper
+                                elevation={0}
+                                sx={{
+                                    p: { xs: 2, sm: 3 },
+                                    borderRadius: 1,
+                                    position: 'relative',
+                                    bgcolor: 'paper.main',
+                                    boxShadow: `
+                                        0 1px 2px rgba(0,0,0,0.03),
+                                        0 4px 20px rgba(0,0,0,0.06),
+                                        inset 0 0 0 1px rgba(255,255,255,0.9)
+                                    `,
+                                    '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: '100%',
+                                        background: 'rgba(255,255,255,0.5)',
+                                        backdropFilter: 'blur(4px)',
+                                        borderRadius: 1,
+                                        zIndex: 0,
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                    },
+                                    '& > *': {
+                                        position: 'relative',
+                                        zIndex: 1,
+                                    },
+                                }}
+                            >
+                                <IngredientsList
+                                    recipe={recipe}
+                                    servings={servings}
+                                    onServingsChange={setServings}
+                                />
+                            </Paper>
+                        </Grid>
+
+                        {/* Instructions Section */}
+                        <Grid item xs={12} md={8}>
+                            <Paper
+                                elevation={0}
+                                sx={{
+                                    p: { xs: 2, sm: 3 },
+                                    borderRadius: 1,
+                                    position: 'relative',
+                                    bgcolor: 'paper.main',
+                                    boxShadow: `
+                                        0 1px 2px rgba(0,0,0,0.03),
+                                        0 4px 20px rgba(0,0,0,0.06),
+                                        inset 0 0 0 1px rgba(255,255,255,0.9)
+                                    `,
+                                    '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: '100%',
+                                        background: 'rgba(255,255,255,0.5)',
+                                        backdropFilter: 'blur(4px)',
+                                        borderRadius: 1,
+                                        zIndex: 0,
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                    },
+                                    '& > *': {
+                                        position: 'relative',
+                                        zIndex: 1,
+                                    },
+                                }}
+                            >
+                                <CookingInstructions
+                                    recipe={recipe}
+                                    servings={servings}
+                                />
+                            </Paper>
+                        </Grid>
+
+                        {/* Notes Section */}
+                        {recipe.notes && recipe.notes.length > 0 && (
+                            <Grid item xs={12}>
+                                <Paper
+                                    elevation={0}
+                                    sx={{
+                                        p: { xs: 2, sm: 3 },
+                                        borderRadius: 1,
+                                        position: 'relative',
+                                        bgcolor: 'paper.main',
+                                        boxShadow: `
+                                            0 1px 2px rgba(0,0,0,0.03),
+                                            0 4px 20px rgba(0,0,0,0.06),
+                                            inset 0 0 0 1px rgba(255,255,255,0.9)
+                                        `,
+                                        '&::before': {
+                                            content: '""',
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            right: 0,
+                                            height: '100%',
+                                            background: 'rgba(255,255,255,0.5)',
+                                            backdropFilter: 'blur(4px)',
+                                            borderRadius: 1,
+                                            zIndex: 0,
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                        },
+                                        '& > *': {
+                                            position: 'relative',
+                                            zIndex: 1,
+                                        },
+                                    }}
+                                >
+                                    <RecipeNotes recipe={recipe} />
+                                </Paper>
+                            </Grid>
+                        )}
+                    </Grid>
+                </Box>
+            </IngredientSubstitutionProvider>
 
             {/* Share Dialog */}
             <ShareDialogContainer
