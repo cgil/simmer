@@ -17,6 +17,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import { SubstituteOption } from '../../types/substitution';
 import { supabase } from '../../lib/supabase';
+import { formatQuantity } from '../../utils/recipe';
 
 interface IngredientSubstitutionPopoverProps {
     open: boolean;
@@ -124,6 +125,13 @@ const IngredientSubstitutionPopover: FC<IngredientSubstitutionPopoverProps> = ({
         };
     }, [open, isSubstituted, ingredientId, originalServings, currentServings]);
 
+    // Helper function to get scaled and properly formatted quantity
+    const getScaledQuantity = (qty: number | null | undefined) => {
+        if (qty === null || qty === undefined) return null;
+        const scaled = qty * (currentServings / originalServings);
+        return scaled;
+    };
+
     return (
         <Popover
             open={open}
@@ -225,11 +233,8 @@ const IngredientSubstitutionPopover: FC<IngredientSubstitutionPopoverProps> = ({
                         }}
                     >
                         {ingredientQuantity
-                            ? `${(
-                                  ingredientQuantity *
-                                  (currentServings / originalServings)
-                              ).toFixed(
-                                  ingredientQuantity % 1 === 0 ? 0 : 2
+                            ? `${formatQuantity(
+                                  getScaledQuantity(ingredientQuantity)
                               )} ${ingredientUnit || ''} ${ingredientName}`
                             : ingredientName}
                     </Typography>
@@ -387,11 +392,11 @@ const IngredientSubstitutionPopover: FC<IngredientSubstitutionPopoverProps> = ({
                                                                 mr: 0,
                                                             }}
                                                         >
-                                                            {
+                                                            {formatQuantity(
                                                                 option
                                                                     .ingredients[0]
                                                                     .quantity
-                                                            }{' '}
+                                                            )}{' '}
                                                             {
                                                                 option
                                                                     .ingredients[0]
@@ -399,7 +404,7 @@ const IngredientSubstitutionPopover: FC<IngredientSubstitutionPopoverProps> = ({
                                                             }{' '}
                                                         </Box>
                                                     )}
-                                                    {option.ingredients[0].name}
+                                                    {option.ingredients[0].name.toLowerCase()}
                                                 </Typography>
                                             </Box>
                                             <Button
@@ -557,17 +562,15 @@ const IngredientSubstitutionPopover: FC<IngredientSubstitutionPopoverProps> = ({
                                                                             mr: 0,
                                                                         }}
                                                                     >
-                                                                        {
+                                                                        {formatQuantity(
                                                                             ingredient.quantity
-                                                                        }{' '}
+                                                                        )}{' '}
                                                                         {
                                                                             ingredient.unit
                                                                         }{' '}
                                                                     </Box>
                                                                 )}
-                                                                {
-                                                                    ingredient.name
-                                                                }
+                                                                {ingredient.name.toLowerCase()}
                                                             </Typography>
                                                         </Box>
                                                     )

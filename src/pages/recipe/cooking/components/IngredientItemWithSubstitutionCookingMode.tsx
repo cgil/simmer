@@ -15,6 +15,13 @@ import { SubstituteOption } from '../../../../types/substitution';
 import { formatQuantity } from '../../../../utils/recipe';
 import { useIngredientSubstitution } from '../../../../components/substitution/IngredientSubstitutionContext';
 
+// Helper function to get rounded quantity value
+const getRoundedQuantity = (quantity: number | null): number | null => {
+    if (quantity === null) return null;
+    // Round to at most 1 decimal place (same as formatQuantity logic)
+    return Math.round(quantity * 10) / 10;
+};
+
 // Types for the component props
 interface IngredientItemWithSubstitutionCookingModeProps {
     id: string;
@@ -61,6 +68,12 @@ const IngredientItemWithSubstitutionCookingMode: FC<
     const [isItemActive, setIsItemActive] = useState(false); // For mobile active state
     const containerRef = useRef<HTMLDivElement>(null);
     const { addSubstitution, removeSubstitution } = useIngredientSubstitution();
+
+    // Get rounded quantity values for display and API
+    const roundedQuantity = getRoundedQuantity(quantity ?? null);
+    const roundedOriginalQuantity = originalIngredient
+        ? getRoundedQuantity(originalIngredient.quantity ?? null)
+        : null;
 
     // Handle opening the substitution popover
     const handleOpenSubstitutionPopover = (
@@ -208,7 +221,7 @@ const IngredientItemWithSubstitutionCookingMode: FC<
                                         mr: 0.5,
                                     }}
                                 >
-                                    {formatQuantity(quantity)}
+                                    {formatQuantity(roundedQuantity)}
                                     {unit && ` ${unit}`}
                                 </Box>
                             )}
@@ -258,7 +271,7 @@ const IngredientItemWithSubstitutionCookingMode: FC<
                                                 }}
                                             >
                                                 {formatQuantity(
-                                                    originalIngredient.quantity
+                                                    roundedOriginalQuantity
                                                 )}
                                                 {originalIngredient.unit &&
                                                     ` ${originalIngredient.unit}`}
@@ -324,11 +337,13 @@ const IngredientItemWithSubstitutionCookingMode: FC<
                                                         mr: 0.5,
                                                     }}
                                                 >
-                                                    {formatQuantity(quantity)}
+                                                    {formatQuantity(
+                                                        roundedQuantity
+                                                    )}
                                                     {unit && ` ${unit}`}
                                                 </Box>
                                             )}
-                                        {name}
+                                        {name.toLowerCase()}
                                     </Typography>
 
                                     {/* Description for single ingredient substitute */}
@@ -397,13 +412,16 @@ const IngredientItemWithSubstitutionCookingMode: FC<
                                                                 }}
                                                             >
                                                                 {formatQuantity(
-                                                                    ingredient.quantity
+                                                                    getRoundedQuantity(
+                                                                        ingredient.quantity ??
+                                                                            null
+                                                                    )
                                                                 )}
                                                                 {ingredient.unit &&
                                                                     ` ${ingredient.unit}`}
                                                             </Box>
                                                         )}
-                                                    {ingredient.name}
+                                                    {ingredient.name.toLowerCase()}
                                                 </Typography>
                                             )
                                         )}
@@ -530,7 +548,9 @@ const IngredientItemWithSubstitutionCookingMode: FC<
                     ingredientId={id}
                     ingredientName={originalIngredient?.name || name}
                     ingredientQuantity={
-                        originalIngredient?.quantity || quantity || null
+                        isSubstituted
+                            ? roundedOriginalQuantity
+                            : roundedQuantity
                     }
                     ingredientUnit={originalIngredient?.unit || unit}
                     originalServings={originalServings}

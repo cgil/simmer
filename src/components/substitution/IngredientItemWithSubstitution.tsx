@@ -15,6 +15,13 @@ import IngredientSubstitutionPopover from './IngredientSubstitutionPopover';
 import { SubstituteOption } from '../../types/substitution';
 import { scaleQuantity, formatQuantity } from '../../utils/recipe';
 
+// Helper function to get rounded quantity value
+const getRoundedQuantity = (quantity: number | null): number | null => {
+    if (quantity === null) return null;
+    // Round to at most 1 decimal place (same as formatQuantity logic)
+    return Math.round(quantity * 10) / 10;
+};
+
 // Types for the component props
 interface IngredientItemWithSubstitutionProps {
     id: string;
@@ -98,12 +105,20 @@ const IngredientItemWithSubstitution: FC<
             ? quantity * (currentServings / originalServings)
             : null;
 
+    // Rounded version for both display and API
+    const roundedScaledQuantity = getRoundedQuantity(scaledQuantity);
+
     // Scale original ingredient quantity
     const scaledOriginalQuantity =
         originalIngredient?.quantity !== null &&
         originalIngredient?.quantity !== undefined
             ? originalIngredient.quantity * (currentServings / originalServings)
             : null;
+
+    // Rounded version for both display and API
+    const roundedScaledOriginalQuantity = getRoundedQuantity(
+        scaledOriginalQuantity
+    );
 
     // Handler for the entire ingredient item click (for mobile)
     const handleItemClick = isMobile
@@ -139,7 +154,7 @@ const IngredientItemWithSubstitution: FC<
                     wordBreak: 'break-word',
                 }}
             >
-                {scaledQuantity !== null && (
+                {roundedScaledQuantity !== null && (
                     <Box
                         component="span"
                         sx={{
@@ -148,7 +163,7 @@ const IngredientItemWithSubstitution: FC<
                             mr: 0.5,
                         }}
                     >
-                        {formatQuantity(scaledQuantity)}
+                        {formatQuantity(roundedScaledQuantity)}
                         {unit && ` ${unit}`}
                     </Box>
                 )}
@@ -178,7 +193,7 @@ const IngredientItemWithSubstitution: FC<
                         wordBreak: 'break-word',
                     }}
                 >
-                    {scaledOriginalQuantity !== null && (
+                    {roundedScaledOriginalQuantity !== null && (
                         <Box
                             component="span"
                             sx={{
@@ -188,7 +203,7 @@ const IngredientItemWithSubstitution: FC<
                                 textDecoration: 'line-through',
                             }}
                         >
-                            {formatQuantity(scaledOriginalQuantity)}
+                            {formatQuantity(roundedScaledOriginalQuantity)}
                             {originalIngredient?.unit &&
                                 ` ${originalIngredient?.unit}`}
                         </Box>
@@ -265,7 +280,7 @@ const IngredientItemWithSubstitution: FC<
                                             ` ${substituteInfo.ingredients[0].unit}`}
                                     </Box>
                                 )}
-                            {substituteInfo.ingredients[0].name}
+                            {substituteInfo.ingredients[0].name.toLowerCase()}
                         </Typography>
                     </Box>
                 )}
@@ -323,7 +338,7 @@ const IngredientItemWithSubstitution: FC<
                                                         ` ${ingredient.unit}`}
                                                 </Box>
                                             )}
-                                        {ingredient.name}
+                                        {ingredient.name.toLowerCase()}
                                     </Typography>
                                 )
                             )}
@@ -535,7 +550,13 @@ const IngredientItemWithSubstitution: FC<
                     onClose={handleCloseSubstitutionPopover}
                     ingredientId={id}
                     ingredientName={name}
-                    ingredientQuantity={quantity}
+                    ingredientQuantity={
+                        isSubstituted
+                            ? getRoundedQuantity(
+                                  originalIngredient?.quantity ?? null
+                              )
+                            : getRoundedQuantity(quantity ?? null)
+                    }
                     ingredientUnit={unit}
                     originalServings={originalServings}
                     currentServings={currentServings}
