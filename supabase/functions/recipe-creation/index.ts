@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { OpenAI } from "https://esm.sh/openai@4.95.0";
+import { OpenAI } from "https://esm.sh/openai@4.96.0";
 import { zodResponseFormat } from "https://deno.land/x/openai@v4.55.1/helpers/zod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
