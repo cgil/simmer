@@ -31,6 +31,10 @@ serve(async (req) => {
                 "Recipe idea with title and description is required",
             );
         }
+        if (!originalPrompt) {
+            console.warn("Original prompt not provided for image generation.");
+            // Allow proceeding without originalPrompt, but image quality might be lower
+        }
 
         // Initialize OpenAI client
         const openai = new OpenAI({
@@ -63,19 +67,22 @@ serve(async (req) => {
             });
         }
 
-        // Generate complete recipe using OpenAI with Zod schema
-        const completion = await openai.chat.completions.create({
-            model: "o4-mini",
-            reasoning_effort: "high",
-            response_format: zodResponseFormat(
-                RecipeSchema,
-                "recipe_creation",
-            ),
-            messages: [
-                {
-                    role: "system",
-                    content:
-                        `You are a culinary expert specializing in recipe development for home cooks. Create a complete, detailed recipe based on the title and description provided, and the user's original prompt for a recipe idea.
+        // --- Asynchronous Task Definitions ---
+
+        // Task 1: Generate Recipe Details
+        const generateRecipeDetails = async () => {
+            const completion = await openai.chat.completions.create({
+                model: "o4-mini", // Or your preferred model for text generation
+                reasoning_effort: "high",
+                response_format: zodResponseFormat(
+                    RecipeSchema,
+                    "recipe_creation",
+                ),
+                messages: [
+                    {
+                        role: "system",
+                        content:
+                            `You are a culinary expert specializing in recipe development for home cooks. Create a complete, detailed recipe based on the title and description provided, and the user's original prompt for a recipe idea.
 
         Follow these rules strictly:
         - Create exactly ONE recipe matching the title and description, and incorporating the user's original prompt for a recipe idea when it makes sense.
@@ -180,29 +187,69 @@ serve(async (req) => {
             The recipe must be accurate, real, based on recommendations from culinary experts and other recipes.
             Think about how prep, ingredients, heat, cooking times, and other factors will affect the recipe and final product. Ensure the final set of instructions will actually yield the desired result.
             `,
-                },
-                {
-                    role: "user",
-                    content:
-                        `Create a complete and accurate recipe based on this title, description, and original prompt:
+                    },
+                    {
+                        role: "user",
+                        content:
+                            `Create a complete and accurate recipe based on this title, description, and original prompt:
 
-                        Title: ${recipeIdea.title}
-                        Description: ${recipeIdea.description}
-                        Original Prompt: ${
-                            originalPrompt ||
-                            "No user prompt provided"
-                        }`,
-                },
-            ],
-        });
+                            Title: ${recipeIdea.title}
+                            Description: ${recipeIdea.description}
+                            Original Prompt: ${
+                                originalPrompt || "No user prompt provided"
+                            }`, // Use originalPrompt here
+                    },
+                ],
+            });
 
-        const result = completion.choices[0].message?.content;
-        if (!result) {
-            throw new Error("No content in response");
-        }
+            const result = completion.choices[0].message?.content;
+            if (!result) {
+                throw new Error("No recipe content generated");
+            }
+            return JSON.parse(result);
+        };
 
-        // Parse and validate the response
-        const parsedResult = JSON.parse(result);
+        // Task 2: Generate Recipe Image
+        const generateRecipeImage = async (): Promise<string | null> => {
+            try {
+                const imagePrompt =
+                    `A delicious looking image of the final dish for a recipe titled '${recipeIdea.title}'. Description: ${recipeIdea.description}. Requested by user: "${
+                        originalPrompt || recipeIdea.title
+                    }". Style: Studio Ghibli food aesthetic, vibrant, cozy, detailed. Clearly show the ingredients and the final dish. No text, watermarks, or logos.`;
+
+                // Use gpt-image-1 and request base64 JPEG data
+                const imageResponse = await openai.images.generate({
+                    model: "gpt-image-1",
+                    prompt: imagePrompt,
+                    n: 1,
+                    size: "1024x1024",
+                    quality: "low",
+                    output_format: "jpeg", // Request JPEG output format
+                });
+
+                // Extract base64 data and format as data URI
+                const base64Json = imageResponse.data[0]?.b64_json;
+                if (base64Json) {
+                    return `data:image/jpeg;base64,${base64Json}`;
+                }
+                return null;
+            } catch (error) {
+                console.error(
+                    "Error generating recipe image with gpt-image-1:",
+                    error,
+                );
+                return null; // Return null if image generation fails
+            }
+        };
+
+        // --- Execute Tasks Concurrently ---
+        const [recipeResult, imageDataUri] = await Promise.all([
+            generateRecipeDetails(),
+            generateRecipeImage(),
+        ]);
+
+        // --- Process Results ---
+        const parsedResult = recipeResult; // Already parsed in generateRecipeDetails
 
         // Generate IDs for the recipe and instruction sections
         parsedResult.id = generateId(parsedResult.title);
@@ -228,6 +275,9 @@ serve(async (req) => {
             parsedResult.instructions,
             parsedResult.ingredients,
         );
+
+        // Add the generated image data URI if available
+        parsedResult.images = imageDataUri ? [imageDataUri] : []; // Use the data URI here
 
         // Final validation with Zod schema
         const validatedRecipe = RecipeSchema.parse(parsedResult);
