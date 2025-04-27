@@ -10,8 +10,6 @@ import {
     List,
     ListItem,
     ListItemAvatar,
-    ListItemText,
-    ListItemSecondaryAction,
     IconButton,
     Typography,
     Chip,
@@ -27,10 +25,10 @@ import {
     SelectChangeEvent,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import PersonIcon from '@mui/icons-material/Person';
 import PublicIcon from '@mui/icons-material/Public';
 import LockIcon from '@mui/icons-material/Lock';
 import UserAvatar from '../common/UserAvatar';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 
 // Type for shared user access level
 type AccessLevel = 'view' | 'edit' | 'owner';
@@ -214,6 +212,15 @@ const UserList = memo(
         handleCloseAccessMenu: () => void;
         selectedUserId: string | null;
     }) => {
+        // Find the user object corresponding to the selectedUserId
+        const selectedUser = useMemo(
+            () =>
+                selectedUserId
+                    ? userList.find((u) => u.id === selectedUserId)
+                    : null,
+            [userList, selectedUserId]
+        );
+
         if (userList.length === 0) return null;
 
         return (
@@ -248,137 +255,124 @@ const UserList = memo(
                             backgroundColor: alpha('#000', 0.1),
                             borderRadius: '8px',
                             '&:hover': {
-                                backgroundColor: alpha('#000', 0.15),
+                                backgroundColor: alpha('#000', 0.2),
                             },
                         },
+                        marginRight: '-8px',
                     }}
                 >
                     {userList.map((user) => (
-                        <ListItem
-                            key={user.id}
-                            sx={{
-                                px: 1,
-                                borderRadius: 1,
-                                '&:hover': {
-                                    bgcolor: alpha('#000', 0.02),
-                                },
-                            }}
-                        >
-                            <ListItemAvatar>
-                                <UserAvatar
-                                    email={user.email}
-                                    avatarUrl={user.avatarUrl}
-                                />
-                            </ListItemAvatar>
-                            <ListItemText
-                                primary={
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            maxWidth: '100%',
-                                        }}
-                                    >
-                                        <Tooltip title={user.email}>
-                                            <Typography
-                                                variant="body2"
-                                                sx={{
-                                                    fontWeight: 500,
-                                                    fontFamily:
-                                                        "'Inter', sans-serif",
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                    maxWidth: user.isCurrentUser
-                                                        ? 'calc(100% - 45px)'
-                                                        : '100%',
-                                                }}
-                                            >
-                                                {user.email}
-                                            </Typography>
-                                        </Tooltip>
-                                        {user.isCurrentUser && (
-                                            <Typography
-                                                variant="body2"
-                                                sx={{
-                                                    fontFamily:
-                                                        "'Inter', sans-serif",
+                        <ListItem key={user.id} disablePadding sx={{ mb: 1 }}>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    width: '100%',
+                                    gap: 1.5,
+                                }}
+                            >
+                                <ListItemAvatar sx={{ minWidth: 'auto' }}>
+                                    <UserAvatar
+                                        avatarUrl={user.avatarUrl}
+                                        email={user.email}
+                                        size={32}
+                                    />
+                                </ListItemAvatar>
+                                <Box
+                                    sx={{
+                                        flexGrow: 1,
+                                        minWidth: 0,
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                    }}
+                                >
+                                    <Tooltip title={user.email} placement="top">
+                                        <Typography
+                                            component="span"
+                                            variant="body2"
+                                            sx={{
+                                                fontFamily:
+                                                    "'Inter', sans-serif",
+                                                fontWeight: 500,
+                                                color: 'text.primary',
+                                                display: 'inline',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                            }}
+                                        >
+                                            {user.email}
+                                        </Typography>
+                                    </Tooltip>
+                                    {user.isCurrentUser && (
+                                        <Typography
+                                            component="span"
+                                            variant="body2"
+                                            sx={{
+                                                ml: 0.5,
+                                                color: 'text.secondary',
+                                                fontFamily:
+                                                    "'Inter', sans-serif",
+                                                display: 'inline',
+                                                whiteSpace: 'nowrap',
+                                                flexShrink: 0, // Prevent the (you) label from shrinking
+                                            }}
+                                        >
+                                            (you)
+                                        </Typography>
+                                    )}
+                                </Box>
+                                <Box sx={{ flexShrink: 0, ml: 'auto' }}>
+                                    {user.access === 'owner' ? (
+                                        <Chip
+                                            label="Owner"
+                                            size="small"
+                                            disabled
+                                            sx={{
+                                                fontFamily:
+                                                    "'Inter', sans-serif",
+                                                fontWeight: 500,
+                                            }}
+                                        />
+                                    ) : (
+                                        <Chip
+                                            label={
+                                                user.access === 'view'
+                                                    ? 'Viewer'
+                                                    : 'Editor'
+                                            }
+                                            size="small"
+                                            onClick={(event) =>
+                                                handleOpenAccessMenu(
+                                                    event,
+                                                    user.id
+                                                )
+                                            }
+                                            deleteIcon={
+                                                <MoreVertIcon fontSize="small" />
+                                            }
+                                            onDelete={(event) =>
+                                                handleOpenAccessMenu(
+                                                    event,
+                                                    user.id
+                                                )
+                                            }
+                                            sx={{
+                                                fontFamily:
+                                                    "'Inter', sans-serif",
+                                                fontWeight: 500,
+                                                cursor: 'pointer',
+                                                '& .MuiChip-deleteIcon': {
                                                     color: 'text.secondary',
-                                                    ml: 0.5,
-                                                    whiteSpace: 'nowrap',
-                                                }}
-                                            >
-                                                (you)
-                                            </Typography>
-                                        )}
-                                    </Box>
-                                }
-                            />
-                            <ListItemSecondaryAction>
-                                {user.access === 'owner' ? (
-                                    // Owner chip - styled to look disabled/non-clickable
-                                    <Chip
-                                        label="Owner"
-                                        size="small"
-                                        icon={
-                                            <PersonIcon
-                                                sx={{
-                                                    fontSize: '16px !important',
-                                                }}
-                                            />
-                                        }
-                                        sx={{
-                                            height: 24,
-                                            fontSize: '0.75rem',
-                                            bgcolor: alpha('#E0E0E0', 0.5),
-                                            color: alpha('#666666', 0.8),
-                                            fontFamily: "'Inter', sans-serif",
-                                            fontWeight: 500,
-                                            border: '1px solid',
-                                            borderColor: alpha('#E0E0E0', 0.6),
-                                            opacity: 0.8,
-                                            cursor: 'default',
-                                            '& .MuiChip-icon': {
-                                                color: 'inherit',
-                                            },
-                                        }}
-                                    />
-                                ) : (
-                                    // Access control chip for non-owners
-                                    <Chip
-                                        label={
-                                            user.access === 'edit'
-                                                ? 'Editor'
-                                                : 'Viewer'
-                                        }
-                                        size="small"
-                                        onClick={(e) =>
-                                            handleOpenAccessMenu(e, user.id)
-                                        }
-                                        sx={{
-                                            height: 24,
-                                            fontSize: '0.75rem',
-                                            bgcolor:
-                                                user.access === 'edit'
-                                                    ? alpha('#2C3E50', 0.08)
-                                                    : alpha('#2C3E50', 0.05),
-                                            color: 'text.primary',
-                                            fontFamily: "'Inter', sans-serif",
-                                            fontWeight: 500,
-                                            '&:hover': {
-                                                bgcolor:
-                                                    user.access === 'edit'
-                                                        ? alpha('#2C3E50', 0.12)
-                                                        : alpha(
-                                                              '#2C3E50',
-                                                              0.08
-                                                          ),
-                                            },
-                                            cursor: 'pointer',
-                                        }}
-                                    />
-                                )}
-                            </ListItemSecondaryAction>
+                                                    margin: 0,
+                                                },
+                                            }}
+                                        />
+                                    )}
+                                </Box>
+                            </Box>
                         </ListItem>
                     ))}
                 </List>
@@ -402,12 +396,7 @@ const UserList = memo(
                 >
                     <MenuItem
                         onClick={() => handleUpdateAccess('view')}
-                        selected={
-                            selectedUserId
-                                ? userList.find((u) => u.id === selectedUserId)
-                                      ?.access === 'view'
-                                : false
-                        }
+                        selected={selectedUser?.access === 'view'}
                     >
                         <Typography
                             variant="body2"
@@ -420,12 +409,7 @@ const UserList = memo(
                     </MenuItem>
                     <MenuItem
                         onClick={() => handleUpdateAccess('edit')}
-                        selected={
-                            selectedUserId
-                                ? userList.find((u) => u.id === selectedUserId)
-                                      ?.access === 'edit'
-                                : false
-                        }
+                        selected={selectedUser?.access === 'edit'}
                     >
                         <Typography
                             variant="body2"
