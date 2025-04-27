@@ -41,6 +41,17 @@ const AI_RECIPE_STEPS = [
     'Finalizing your personal recipe',
 ];
 
+// --- Progress Step Timing Configuration ---
+// The progress indicator felt too quick, so we slow each step down by expanding the random
+// duration range. Feel free to tweak these values to fine-tune UX speed.
+const STEP_MIN_DURATION_MS = 5000; // 5 seconds
+const STEP_MAX_DURATION_MS = 9000; // 9 seconds
+
+const getRandomStepDuration = () =>
+    Math.floor(
+        Math.random() * (STEP_MAX_DURATION_MS - STEP_MIN_DURATION_MS + 1)
+    ) + STEP_MIN_DURATION_MS;
+
 // --- Dynamic Motion Variants Function ---
 const getMotionVariants = (direction: number) => ({
     initial: {
@@ -132,7 +143,7 @@ const NewRecipePage: FC = () => {
                 setIsImporting(true);
                 setImportActiveStep(0);
 
-                const stepDuration = Math.floor(Math.random() * 1500) + 1000;
+                const stepDuration = getRandomStepDuration();
                 for (let i = 0; i < EXTRACTION_STEPS.length - 1; i++) {
                     await new Promise((resolve) =>
                         setTimeout(resolve, stepDuration)
@@ -219,7 +230,7 @@ const NewRecipePage: FC = () => {
         setError(null);
 
         try {
-            const stepDuration = Math.floor(Math.random() * 1500) + 1000;
+            const stepDuration = getRandomStepDuration();
             for (let i = 0; i < AI_RECIPE_STEPS.length - 1; i++) {
                 await new Promise((resolve) =>
                     setTimeout(resolve, stepDuration)
