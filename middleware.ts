@@ -92,9 +92,10 @@ export default async function middleware(request: Request) {
     // Check if it's a crawler request
     const isCrawler = CRAWLER_USER_AGENTS_REGEX.test(userAgent);
 
-    // If not a crawler, pass through
+    // If not a crawler, pass through to the origin server
     if (!isCrawler) {
-        return Response.redirect(request.url);
+        // Let the request continue to the React app
+        return undefined;
     }
 
     // Check if it's a valid recipe detail path with UUID
