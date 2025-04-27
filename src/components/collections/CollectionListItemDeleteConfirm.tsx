@@ -93,7 +93,7 @@ const CollectionListItemDeleteConfirm: FC<CollectionListItemDeleteConfirmProps> 
                                     textOverflow: 'ellipsis',
                                 }}
                             >
-                                Delete collection & recipes?
+                                Delete collection?
                             </Typography>
                             <Box sx={{ display: 'flex', gap: 0 }}>
                                 <Zoom
