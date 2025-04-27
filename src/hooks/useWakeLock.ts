@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import logger from "../utils/logger"; // Assuming logger exists
+import NoSleep from "nosleep.js"; // Lightweight library for iOS fallback
 
 // Check for Wake Lock API support only once
 const isWakeLockSupported = typeof navigator !== "undefined" &&
@@ -10,136 +11,143 @@ const isMobileOrTablet = typeof navigator !== "undefined" &&
     navigator.maxTouchPoints > 0;
 
 /**
- * A React hook to manage the Screen Wake Lock API, specifically for mobile/tablet devices.
- * Keeps the screen awake when the component using the hook is mounted and visible.
- *
- * @param {string} reason - Optional reason for requesting the wake lock.
- * @returns {object} An object containing the wake lock status information.
- *                   - isSupported: boolean - Whether the Wake Lock API is supported.
- *                   - isActive: boolean - Whether the wake lock is currently active.
- *                   - requestError: Error | null - Any error encountered during request.
+ * A React hook to manage keeping the screen awake on mobile/tablet devices.
+ * 1. Uses the Screen Wake Lock API when available.
+ * 2. Falls back to NoSleep.js (hidden looping video) on iOS Safari & other browsers without support.
  */
 const useWakeLock = (reason: string = "Screen Wake Lock active") => {
-    // const [isSupported, setIsSupported] = useState<boolean>(
-    //     typeof navigator !== "undefined" && "wakeLock" in navigator,
-    // );
     const [isActive, setIsActive] = useState<boolean>(false);
     const [requestError, setRequestError] = useState<Error | null>(null);
+
+    // References to wake-lock sentinel or NoSleep instance
     const wakeLockSentinel = useRef<WakeLockSentinel | null>(null);
+    const noSleepRef = useRef<NoSleep | null>(null);
 
-    const requestWakeLock = useCallback(async () => {
-        // Only proceed if API is supported AND it's a mobile/tablet device
-        if (!isWakeLockSupported || !isMobileOrTablet) {
-            if (isMobileOrTablet) {
-                logger.log("Wake Lock API not supported on this device.");
-            } else {
-                // Don't log anything if it's not mobile/tablet, as it's expected behaviour
-            }
-            return;
-        }
-
-        // Prevent multiple requests
-        if (wakeLockSentinel.current) {
-            logger.log("Wake Lock already active or request pending.");
-            return;
-        }
-
+    const enableNoSleep = useCallback(() => {
         try {
-            wakeLockSentinel.current = await navigator.wakeLock.request(
-                "screen",
-            );
-            setIsActive(true);
-            setRequestError(null);
-            logger.log("Wake Lock acquired successfully:", reason);
-
-            // Handle release event (e.g., system constraints)
-            wakeLockSentinel.current.addEventListener("release", () => {
-                logger.log("Wake Lock released externally.");
-                // Check if the sentinel reference still matches before clearing
-                if (wakeLockSentinel.current === wakeLockSentinel.current) {
-                    wakeLockSentinel.current = null;
-                    setIsActive(false);
-                }
-            });
-        } catch (err) {
-            setIsActive(false);
-            if (err instanceof Error) {
-                setRequestError(err);
-                logger.error(
-                    "Failed to acquire Wake Lock:",
-                    err.name,
-                    err.message,
-                );
-            } else {
-                setRequestError(
-                    new Error(
-                        "An unknown error occurred during wake lock request.",
-                    ),
-                );
-                logger.error(
-                    "Failed to acquire Wake Lock with unknown error:",
-                    err,
-                );
+            if (!noSleepRef.current) {
+                noSleepRef.current = new NoSleep();
             }
-            wakeLockSentinel.current = null; // Ensure sentinel is null on error
+            noSleepRef.current.enable();
+            setIsActive(true);
+            logger.log("NoSleep fallback enabled:", reason);
+        } catch (err) {
+            setRequestError(err as Error);
+            logger.error("Failed to enable NoSleep fallback:", err);
         }
     }, [reason]);
 
-    const releaseWakeLock = useCallback(async () => {
-        if (wakeLockSentinel.current) {
-            try {
-                await wakeLockSentinel.current.release();
-                logger.log("Wake Lock released programmatically.");
-            } catch (err) {
-                logger.error("Failed to release Wake Lock:", err);
-            } finally {
-                wakeLockSentinel.current = null;
-                setIsActive(false);
-            }
-        } else {
-            // logger.log('No active Wake Lock to release.');
+    const disableNoSleep = useCallback(() => {
+        try {
+            noSleepRef.current?.disable();
+            setIsActive(false);
+            logger.log("NoSleep fallback disabled");
+        } catch (err) {
+            logger.error("Error disabling NoSleep fallback:", err);
         }
     }, []);
 
-    // Effect to handle initial request and cleanup
+    const requestWakeLock = useCallback(async () => {
+        // Only attempt on mobile/tablet devices
+        if (!isMobileOrTablet) return;
+
+        if (isWakeLockSupported) {
+            // Use native API
+            if (wakeLockSentinel.current) return; // Already active
+            try {
+                wakeLockSentinel.current = await navigator.wakeLock.request(
+                    "screen",
+                );
+                setIsActive(true);
+                setRequestError(null);
+                logger.log("Wake Lock acquired successfully:", reason);
+
+                // Handle system release
+                wakeLockSentinel.current.addEventListener("release", () => {
+                    logger.log("Wake Lock released externally.");
+                    wakeLockSentinel.current = null;
+                    setIsActive(false);
+                });
+            } catch (err) {
+                setIsActive(false);
+                setRequestError(err as Error);
+                logger.error("Failed to acquire Wake Lock:", err);
+            }
+        } else {
+            // Fallback to NoSleep.js (requires user gesture to start video on iOS)
+            enableNoSleep();
+        }
+    }, [enableNoSleep, reason]);
+
+    const releaseWakeLock = useCallback(async () => {
+        if (isWakeLockSupported) {
+            if (wakeLockSentinel.current) {
+                try {
+                    await wakeLockSentinel.current.release();
+                    logger.log("Wake Lock released programmatically.");
+                } catch (err) {
+                    logger.error("Failed to release Wake Lock:", err);
+                } finally {
+                    wakeLockSentinel.current = null;
+                    setIsActive(false);
+                }
+            }
+        } else {
+            // Disable NoSleep fallback
+            disableNoSleep();
+        }
+    }, [disableNoSleep]);
+
+    // Effect to handle initial request when visible
     useEffect(() => {
-        // Only request if supported, mobile/tablet, and document is visible
-        if (
-            isWakeLockSupported && isMobileOrTablet &&
-            document.visibilityState === "visible"
-        ) {
-            requestWakeLock();
+        if (!isMobileOrTablet) return; // Only mobile/tablet
+
+        if (document.visibilityState === "visible") {
+            // For devices/browsers requiring user interaction (iOS), defer to first touch/click
+            if (!isWakeLockSupported) {
+                const handleFirstInteraction = () => {
+                    requestWakeLock();
+                    document.removeEventListener(
+                        "touchstart",
+                        handleFirstInteraction,
+                    );
+                    document.removeEventListener(
+                        "click",
+                        handleFirstInteraction,
+                    );
+                };
+                document.addEventListener(
+                    "touchstart",
+                    handleFirstInteraction,
+                    { once: true },
+                );
+                document.addEventListener("click", handleFirstInteraction, {
+                    once: true,
+                });
+            } else {
+                requestWakeLock();
+            }
         }
 
-        // Cleanup function to release lock on unmount
         return () => {
             releaseWakeLock();
         };
     }, [requestWakeLock, releaseWakeLock]);
 
-    // Effect to handle visibility changes
+    // Re-acquire/release on visibility change
     useEffect(() => {
-        const handleVisibilityChange = async () => {
-            // Only handle visibility if API is supported AND it's mobile/tablet
-            if (!isWakeLockSupported || !isMobileOrTablet) return;
+        if (!isMobileOrTablet) return;
 
+        const handleVisibilityChange = async () => {
             if (document.visibilityState === "visible") {
-                // If returning to visibility and lock is not active/pending, request it again
-                if (!wakeLockSentinel.current) {
-                    logger.log(
-                        "Re-acquiring Wake Lock due to visibility change.",
-                    );
-                    await requestWakeLock();
-                }
+                requestWakeLock();
             } else {
-                // If page becomes hidden, release the lock
-                logger.log("Releasing Wake Lock due to visibility change.");
                 await releaseWakeLock();
             }
         };
 
         document.addEventListener("visibilitychange", handleVisibilityChange);
-        document.addEventListener("pagehide", releaseWakeLock); // Also release on page hide
+        document.addEventListener("pagehide", releaseWakeLock);
 
         return () => {
             document.removeEventListener(
@@ -150,8 +158,11 @@ const useWakeLock = (reason: string = "Screen Wake Lock active") => {
         };
     }, [requestWakeLock, releaseWakeLock]);
 
-    // Return API support status regardless of device type, but active status depends on both
-    return { isSupported: isWakeLockSupported, isActive, requestError };
+    return {
+        isSupported: isWakeLockSupported || !!noSleepRef.current,
+        isActive,
+        requestError,
+    };
 };
 
 export default useWakeLock;
