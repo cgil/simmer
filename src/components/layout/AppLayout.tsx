@@ -54,20 +54,31 @@ const AppLayout: FC<AppLayoutProps> = ({
     const navigate = useNavigate();
     const { user, signOut } = useAuth();
     const menuButtonRef = useRef<HTMLButtonElement>(null);
+    // Track previous drawer state to avoid focusing on initial load
+    const prevDrawerOpen = useRef<boolean>(isDrawerOpen);
 
     // User menu state
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
 
-    // Focus the menu button when drawer closes on mobile
     useEffect(() => {
-        if (isMobile && !isDrawerOpen && menuButtonRef.current) {
+        // Only focus the menu button when the drawer was previously open and has just been closed
+        if (
+            isMobile &&
+            prevDrawerOpen.current && // drawer was open in the previous render
+            !isDrawerOpen &&
+            menuButtonRef.current
+        ) {
             // Add a small delay to ensure DOM updates first
             const timer = setTimeout(() => {
                 menuButtonRef.current?.focus();
             }, 100);
+            // Cleanup
             return () => clearTimeout(timer);
         }
+
+        // Update the ref for the next render cycle
+        prevDrawerOpen.current = isDrawerOpen;
     }, [isMobile, isDrawerOpen]);
 
     const handleUserMenuClick = (event: React.MouseEvent<HTMLElement>) => {
