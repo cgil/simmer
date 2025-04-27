@@ -36,6 +36,7 @@ import { Recipe } from '../../types/recipe';
 import ShareMenuItem from '../../components/sharing/ShareMenuItem';
 import ShareDialogContainer from '../../components/sharing/ShareDialogContainer';
 import { IngredientSubstitutionProvider } from '../../components/substitution/IngredientSubstitutionContext';
+import useWakeLock from '../../hooks/useWakeLock';
 
 const RecipePage: FC = () => {
     const { id } = useParams();
@@ -64,6 +65,9 @@ const RecipePage: FC = () => {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [shareDialogOpen, setShareDialogOpen] = useState(false);
+
+    // Use the wake lock hook
+    useWakeLock('Viewing Recipe');
 
     // Menu handlers
     const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
