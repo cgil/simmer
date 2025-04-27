@@ -55,31 +55,64 @@ const useWakeLock = (enabled: boolean = true) => {
         let noSleep: NoSleepInstance | null = null;
         let isActive = true; // Guard to avoid actions after cleanup
 
+        const setupNoSleep = async () => {
+            if (noSleep) return; // already instantiated
+            const nsModule = await import("nosleep.js");
+            const NoSleepClass =
+                (nsModule as { default?: new () => NoSleepInstance }).default ??
+                    (nsModule as unknown as new () => NoSleepInstance);
+            noSleep = new NoSleepClass();
+
+            const enableNoSleep = () => {
+                try {
+                    noSleep?.enable();
+                } catch (e) {
+                    console.error("[useWakeLock] NoSleep enable failed", e);
+                }
+                document.removeEventListener("click", enableNoSleep);
+                document.removeEventListener("touchstart", enableNoSleep);
+            };
+
+            // Must be triggered by user interaction on iOS
+            document.addEventListener("click", enableNoSleep, { once: true });
+            document.addEventListener("touchstart", enableNoSleep, {
+                once: true,
+            });
+        };
+
         const requestWakeLock = async () => {
+            if (!isActive) return;
             try {
                 if ("wakeLock" in navigator) {
                     const wlNavigator = navigator as WakeLockNavigator;
                     wakeLock = await wlNavigator.wakeLock.request("screen");
 
-                    // Re-acquire the lock if it is released for any reason (page hidden, etc.)
-                    // Some platforms (Android) may release it automatically.
                     wakeLock?.addEventListener("release", () => {
                         if (isActive) {
-                            requestWakeLock().catch(console.error);
+                            // The lock was released (maybe tab hidden). Try again after visibilitychange.
                         }
                     });
                 } else {
-                    // Fallback for browsers without the WakeLock API (e.g. iOS Safari)
-                    const nsModule = await import("nosleep.js");
-                    const NoSleepClass =
-                        (nsModule as { default?: new () => NoSleepInstance })
-                            .default ??
-                            (nsModule as unknown as new () => NoSleepInstance);
-                    noSleep = new NoSleepClass();
-                    noSleep.enable();
+                    await setupNoSleep();
                 }
-            } catch (err) {
-                console.error("[useWakeLock] Failed to acquire wake lock", err);
+            } catch (err: unknown) {
+                // Some browsers throw NotAllowedError if not triggered by user gesture.
+                if ((err as { name?: string })?.name === "NotAllowedError") {
+                    // Retry after next user gesture
+                    const reRequest = () => {
+                        document.removeEventListener("click", reRequest);
+                        document.removeEventListener("touchstart", reRequest);
+                        requestWakeLock().catch(console.error);
+                    };
+                    document.addEventListener("click", reRequest, {
+                        once: true,
+                    });
+                    document.addEventListener("touchstart", reRequest, {
+                        once: true,
+                    });
+                } else {
+                    console.error("[useWakeLock] Failed", err);
+                }
             }
         };
 
