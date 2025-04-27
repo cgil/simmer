@@ -36,6 +36,7 @@ import { Recipe } from '../../types/recipe';
 import ShareMenuItem from '../../components/sharing/ShareMenuItem';
 import ShareDialogContainer from '../../components/sharing/ShareDialogContainer';
 import { IngredientSubstitutionProvider } from '../../components/substitution/IngredientSubstitutionContext';
+import useWakeLock from '../../hooks/useWakeLock';
 
 const RecipePage: FC = () => {
     const { id } = useParams();
@@ -44,6 +45,9 @@ const RecipePage: FC = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const { user } = useAuth();
+
+    // Keep screen awake on mobile while viewing a recipe
+    useWakeLock(isMobile);
 
     // Check if recipe was passed through location state (from CatalogPage)
     const initialRecipe = location.state?.recipe as Recipe | undefined;

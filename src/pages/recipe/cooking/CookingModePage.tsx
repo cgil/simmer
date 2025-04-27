@@ -20,6 +20,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { alpha } from '@mui/material/styles';
 import logger from '../../../utils/logger';
 import { IngredientSubstitutionProvider } from '../../../components/substitution/IngredientSubstitutionContext';
+import useWakeLock from '../../../hooks/useWakeLock';
 
 interface ActiveTimer {
     sectionIndex: number;
@@ -46,6 +47,9 @@ const CookingModePage: FC = () => {
     const [currentStep, setCurrentStep] = useState(0);
     const [servings] = useState(location.state?.servings || 2);
     const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
+
+    // Keep screen awake on mobile while actively cooking
+    useWakeLock(isMobile);
 
     // Fetch recipe data
     useEffect(() => {
@@ -195,18 +199,6 @@ const CookingModePage: FC = () => {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, []);
-
-    // Keep screen on
-    useEffect(() => {
-        const wakeLock = async () => {
-            try {
-                await navigator.wakeLock?.request('screen');
-            } catch (err) {
-                logger.log('Wake Lock not supported or failed:', err);
-            }
-        };
-        wakeLock();
     }, []);
 
     // Handle navigation if recipe is not found
