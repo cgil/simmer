@@ -92,7 +92,7 @@ serve(async (req) => {
 
         // Generate recipe ideas using OpenAI with Zod schema
         const completion = await openai.chat.completions.create({
-            model: "o3-mini",
+            model: "o4-mini",
             reasoning_effort: "low",
             response_format: zodResponseFormat(
                 RecipeIdeasSchema,

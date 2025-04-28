@@ -11,9 +11,33 @@ import {
     validateIngredientMentions,
 } from "../_shared/recipe-schemas.ts";
 
+// Simple environment-aware logger
+const isProduction = Deno.env.get("ENVIRONMENT") === "production";
+const logger = {
+    log: (...args: unknown[]) => {
+        if (!isProduction) {
+            console.log("[Info]", ...args);
+        }
+    },
+    warn: (...args: unknown[]) => {
+        if (!isProduction) {
+            console.warn("[Warn]", ...args);
+        }
+    },
+    error: (...args: unknown[]) => {
+        // Always log errors
+        console.error("[Error]", ...args);
+    },
+};
+
+logger.log("Recipe Creation function initializing.");
+
 serve(async (req) => {
+    logger.log("Function received a request.");
+
     // Handle CORS preflight requests
     if (req.method === "OPTIONS") {
+        logger.log("Handling OPTIONS preflight request.");
         return new Response(null, {
             status: 204,
             headers: {
@@ -25,6 +49,7 @@ serve(async (req) => {
 
     try {
         const { recipeIdea, originalPrompt } = await req.json();
+        logger.log(`Processing request for idea: ${recipeIdea?.title}`);
 
         if (!recipeIdea || !recipeIdea.title || !recipeIdea.description) {
             throw new Error(
@@ -32,8 +57,9 @@ serve(async (req) => {
             );
         }
         if (!originalPrompt) {
-            console.warn("Original prompt not provided for image generation.");
-            // Allow proceeding without originalPrompt, but image quality might be lower
+            logger.warn(
+                "Original prompt not provided, may affect image quality.",
+            );
         }
 
         // Initialize OpenAI client
@@ -58,6 +84,7 @@ serve(async (req) => {
             .maybeSingle();
 
         if (!cacheError && cachedData?.data) {
+            logger.log(`Cache hit for key: ${cacheKey}.`);
             return new Response(JSON.stringify(cachedData.data), {
                 headers: {
                     ...corsHeaders,
@@ -66,23 +93,32 @@ serve(async (req) => {
                 },
             });
         }
+        if (cacheError) {
+            logger.error("Cache check error:", cacheError);
+            // Proceed without cache, but log the error
+        }
+        logger.log(
+            `Cache miss for key: ${cacheKey}. Proceeding with generation.`,
+        );
 
         // --- Asynchronous Task Definitions ---
 
         // Task 1: Generate Recipe Details
         const generateRecipeDetails = async () => {
-            const completion = await openai.chat.completions.create({
-                model: "o4-mini", // Or your preferred model for text generation
-                reasoning_effort: "high",
-                response_format: zodResponseFormat(
-                    RecipeSchema,
-                    "recipe_creation",
-                ),
-                messages: [
-                    {
-                        role: "system",
-                        content:
-                            `You are a culinary expert specializing in recipe development for home cooks. Create a complete, detailed recipe based on the title and description provided, and the user's original prompt for a recipe idea.
+            logger.log("Starting generateRecipeDetails task.");
+            try {
+                const completion = await openai.chat.completions.create({
+                    model: "o4-mini",
+                    reasoning_effort: "medium", // Keep the optimized setting
+                    response_format: zodResponseFormat(
+                        RecipeSchema,
+                        "recipe_creation",
+                    ),
+                    messages: [
+                        {
+                            role: "system",
+                            content:
+                                `You are a culinary expert specializing in recipe development for home cooks. Create a complete, detailed recipe based on the title and description provided, and the user's original prompt for a recipe idea.
 
         Follow these rules strictly:
         - Create exactly ONE recipe matching the title and description, and incorporating the user's original prompt for a recipe idea when it makes sense.
@@ -187,69 +223,82 @@ serve(async (req) => {
             The recipe must be accurate, real, based on recommendations from culinary experts and other recipes.
             Think about how prep, ingredients, heat, cooking times, and other factors will affect the recipe and final product. Ensure the final set of instructions will actually yield the desired result.
             `,
-                    },
-                    {
-                        role: "user",
-                        content:
-                            `Create a complete and accurate recipe based on this title, description, and original prompt:
+                        },
+                        {
+                            role: "user",
+                            content:
+                                `Create a complete and accurate recipe based on this title, description, and original prompt:
 
-                            Title: ${recipeIdea.title}
-                            Description: ${recipeIdea.description}
-                            Original Prompt: ${
-                                originalPrompt || "No user prompt provided"
-                            }`, // Use originalPrompt here
-                    },
-                ],
-            });
+                                Title: ${recipeIdea.title}
+                                Description: ${recipeIdea.description}
+                                Original Prompt: ${
+                                    originalPrompt || "No user prompt provided"
+                                }`, // Use originalPrompt here
+                        },
+                    ],
+                });
 
-            const result = completion.choices[0].message?.content;
-            if (!result) {
-                throw new Error("No recipe content generated");
+                const result = completion.choices[0].message?.content;
+                if (!result) {
+                    throw new Error("No recipe content generated");
+                }
+                logger.log("Finished generateRecipeDetails task successfully.");
+                return JSON.parse(result);
+            } catch (error) {
+                logger.error("Error in generateRecipeDetails:", error);
+                throw error;
             }
-            return JSON.parse(result);
         };
 
         // Task 2: Generate Recipe Image
         const generateRecipeImage = async (): Promise<string | null> => {
-            try {
-                const imagePrompt =
-                    `A delicious looking image of the final dish for a recipe titled '${recipeIdea.title}'. Description: ${recipeIdea.description}. Requested by user: "${
+            logger.log("Starting generateRecipeImage task.");
+            const imageGenParams = {
+                model: "gpt-image-1",
+                prompt:
+                    `A delicious looking image of the final dish for a recipe titled '${recipeIdea.title}'. Description: ${recipeIdea.description}. With the following original user prompt and recipe idea which led to the title and description: "${
                         originalPrompt || recipeIdea.title
-                    }". Style: Studio Ghibli food aesthetic, vibrant, cozy, detailed. Clearly show the ingredients and the final dish. No text, watermarks, or logos.`;
-
-                // Use gpt-image-1 and request base64 JPEG data
-                const imageResponse = await openai.images.generate({
-                    model: "gpt-image-1",
-                    prompt: imagePrompt,
-                    n: 1,
-                    size: "1024x1024",
-                    quality: "low",
-                    output_format: "jpeg", // Request JPEG output format
-                });
-
-                // Extract base64 data and format as data URI
+                    }". Style: In the style of Studio Ghibli. Clearly show the ingredients and the final dish. No text, no watermarks, no logos.`,
+                n: 1,
+                size: "1024x1024",
+                quality: "low",
+                output_format: "jpeg",
+            };
+            try {
+                const imageResponse = await openai.images.generate(
+                    imageGenParams,
+                );
                 const base64Json = imageResponse.data[0]?.b64_json;
                 if (base64Json) {
+                    logger.log(
+                        "Finished generateRecipeImage task successfully.",
+                    );
                     return `data:image/jpeg;base64,${base64Json}`;
                 }
+                logger.warn(
+                    "generateRecipeImage finished but no base64 data received.",
+                );
                 return null;
             } catch (error) {
-                console.error(
-                    "Error generating recipe image with gpt-image-1:",
-                    error,
-                );
-                return null; // Return null if image generation fails
+                logger.error("Error in generateRecipeImage task:", error);
+                return null;
             }
         };
 
         // --- Execute Tasks Concurrently ---
+        logger.log("Starting Promise.all for recipe and image.");
         const [recipeResult, imageDataUri] = await Promise.all([
             generateRecipeDetails(),
             generateRecipeImage(),
         ]);
+        logger.log("Finished Promise.all.");
 
         // --- Process Results ---
-        const parsedResult = recipeResult; // Already parsed in generateRecipeDetails
+        const parsedResult = recipeResult;
+        if (!parsedResult) {
+            // Handle case where recipe generation failed but didn't throw in Promise.all
+            throw new Error("Recipe generation failed to return data.");
+        }
 
         // Generate IDs for the recipe and instruction sections
         parsedResult.id = generateId(parsedResult.title);
@@ -271,16 +320,27 @@ serve(async (req) => {
         );
 
         // Validate ingredient mentions in instruction steps
-        parsedResult.instructions = validateIngredientMentions(
-            parsedResult.instructions,
-            parsedResult.ingredients,
-        );
+        try {
+            parsedResult.instructions = validateIngredientMentions(
+                parsedResult.instructions,
+                parsedResult.ingredients,
+            );
+            logger.log("Validated ingredient mentions.");
+        } catch (validationError) {
+            logger.error(
+                "Ingredient mention validation failed:",
+                validationError,
+            );
+            // Decide how to handle: return error, or proceed with potentially bad mentions?
+            // For now, let's proceed but log the error.
+        }
 
         // Add the generated image data URI if available
-        parsedResult.images = imageDataUri ? [imageDataUri] : []; // Use the data URI here
+        parsedResult.images = imageDataUri ? [imageDataUri] : [];
 
         // Final validation with Zod schema
         const validatedRecipe = RecipeSchema.parse(parsedResult);
+        logger.log("Final recipe structure validated.");
 
         // Store in cache
         try {
@@ -291,11 +351,12 @@ serve(async (req) => {
                     data: validatedRecipe,
                     created_at: new Date().toISOString(),
                 });
-        } catch (cacheError) {
-            // Log but don't fail if caching fails
-            console.error("Cache error:", cacheError);
+            logger.log("Stored result in cache.");
+        } catch (cacheWriteError) {
+            logger.error("Cache write error:", cacheWriteError);
         }
 
+        logger.log("Returning successful response.");
         return new Response(JSON.stringify(validatedRecipe), {
             headers: {
                 ...corsHeaders,
@@ -304,7 +365,7 @@ serve(async (req) => {
             },
         });
     } catch (error: unknown) {
-        console.error("Error:", error);
+        logger.error("Uncaught error in main handler:", error);
         const errorMessage = error instanceof Error
             ? error.message
             : "Unknown error occurred";
@@ -312,7 +373,10 @@ serve(async (req) => {
         return new Response(
             JSON.stringify({ error: errorMessage }),
             {
-                status: 400,
+                status: typeof error === "object" && error !== null &&
+                        "status" in error && typeof error.status === "number"
+                    ? error.status
+                    : 500,
                 headers: {
                     ...corsHeaders,
                     "Content-Type": "application/json",

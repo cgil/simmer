@@ -44,8 +44,8 @@ const AI_RECIPE_STEPS = [
 // --- Progress Step Timing Configuration ---
 // The progress indicator felt too quick, so we slow each step down by expanding the random
 // duration range. Feel free to tweak these values to fine-tune UX speed.
-const STEP_MIN_DURATION_MS = 5000; // 5 seconds
-const STEP_MAX_DURATION_MS = 9000; // 9 seconds
+const STEP_MIN_DURATION_MS = 8000; // 8 seconds
+const STEP_MAX_DURATION_MS = 10000; // 10 seconds
 
 const getRandomStepDuration = () =>
     Math.floor(
