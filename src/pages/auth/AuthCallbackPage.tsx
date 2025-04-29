@@ -18,7 +18,8 @@ const AuthCallbackPage = () => {
                 if (hash || query.has('code')) {
                     // Get previously stored redirect path or default to home
                     const redirectPath =
-                        sessionStorage.getItem('redirectAfterAuth') || '/';
+                        sessionStorage.getItem('redirectAfterAuth') ||
+                        '/collection/all';
 
                     // Process the auth callback
                     const { error } = await supabase.auth.getSession();

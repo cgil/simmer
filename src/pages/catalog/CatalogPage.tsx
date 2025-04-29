@@ -1,4 +1,4 @@
-import { FC, useState, useEffect, useRef, useCallback } from 'react';
+import { FC, useState, useEffect, useRef, useCallback, memo } from 'react';
 import { Box, Typography, useTheme, Button } from '@mui/material';
 import AppLayout from '../../components/layout/AppLayout';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -25,6 +25,9 @@ import ShareDialogContainer from '../../components/sharing/ShareDialogContainer'
 
 // Import our new components
 import RecipeGrid from '../../features/catalog/components/RecipeGrid';
+
+// Memoize CollectionsDrawer to prevent re-renders unless props change
+const MemoizedCollectionsDrawer = memo(CollectionsDrawer);
 
 /**
  * Determines the highest priority match type for a recipe
@@ -202,7 +205,9 @@ const CatalogPage: FC = () => {
 
                 if (finalCollectionId !== collectionId && collectionId) {
                     // If the collection in URL doesn't exist, navigate to all recipes
-                    navigate('/', { replace: true });
+                    navigate(`${COLLECTION_ROUTE_PATH}/${ALL_RECIPES_ID}`, {
+                        replace: true,
+                    });
                 } else {
                     await loadRecipesByCollection(finalCollectionId);
                     initialLoadCompleted.current = true;
@@ -342,35 +347,40 @@ const CatalogPage: FC = () => {
     const visibleRecipes = recipes.slice(0, page * RECIPES_PER_PAGE);
 
     // Update handleCollectionSelect to update URL and filter recipes
-    const handleCollectionSelect = async (collectionId: string) => {
-        setSelectedCollection(collectionId);
+    const handleCollectionSelect = useCallback(
+        async (collectionId: string) => {
+            setSelectedCollection(collectionId);
 
-        // Update URL based on selected collection
-        if (collectionId === ALL_RECIPES_ID) {
-            navigate('/', { replace: false }); // Go to home for "All Recipes"
-        } else {
-            navigate(`${COLLECTION_ROUTE_PATH}/${collectionId}`, {
-                replace: false,
-            });
-        }
+            // Update URL based on selected collection
+            if (collectionId === ALL_RECIPES_ID) {
+                navigate(`${COLLECTION_ROUTE_PATH}/${ALL_RECIPES_ID}`, {
+                    replace: true,
+                });
+            } else {
+                navigate(`${COLLECTION_ROUTE_PATH}/${collectionId}`, {
+                    replace: false,
+                });
+            }
 
-        // Reset search when changing collections
-        if (searchQuery) {
-            setSearchQuery('');
-            setDebouncedSearchQuery('');
-        }
+            // Reset search when changing collections
+            if (searchQuery) {
+                setSearchQuery('');
+                setDebouncedSearchQuery('');
+            }
 
-        // Load recipes for the selected collection
-        await loadRecipesByCollection(collectionId);
-    };
+            // Load recipes for the selected collection
+            await loadRecipesByCollection(collectionId);
+        },
+        [navigate, searchQuery] // Dependencies: navigate, searchQuery
+    );
 
     // Handle drawer state change
-    const handleDrawerStateChange = (isOpen: boolean) => {
+    const handleDrawerStateChange = useCallback((isOpen: boolean) => {
         setDrawerOpen(isOpen);
-    };
+    }, []); // No dependencies, setDrawerOpen is stable
 
     // Create a new collection
-    const handleCreateCollection = async () => {
+    const handleCreateCollection = useCallback(async () => {
         if (!user) return;
 
         try {
@@ -408,85 +418,90 @@ const CatalogPage: FC = () => {
                 prev.filter((c) => !c.id.startsWith('temp-'))
             );
         }
-    };
+    }, [user]); // Dependency: user
 
     // Add handleUpdateCollection function
-    const handleUpdateCollection = async (
-        collectionId: string,
-        name: string,
-        emoji?: string
-    ) => {
-        if (!user) return;
+    const handleUpdateCollection = useCallback(
+        async (collectionId: string, name: string, emoji?: string) => {
+            if (!user) return;
 
-        try {
-            // Optimistically update the UI first
-            setCollections((prev) =>
-                prev.map((c) =>
-                    c.id === collectionId
-                        ? { ...c, name, emoji: emoji || c.emoji }
-                        : c
-                )
-            );
+            try {
+                // Optimistically update the UI first
+                setCollections((prev) =>
+                    prev.map((c) =>
+                        c.id === collectionId
+                            ? { ...c, name, emoji: emoji || c.emoji }
+                            : c
+                    )
+                );
 
-            // Update in the backend
-            await CollectionService.updateCollection(collectionId, {
-                name,
-                emoji,
-            });
+                // Update in the backend
+                await CollectionService.updateCollection(collectionId, {
+                    name,
+                    emoji,
+                });
 
-            // No need to reload all collections since we've already updated our local state
-        } catch (err) {
-            logger.error('Error updating collection:', err);
-            // Reload collections on error to ensure UI is in sync with backend
-            await loadCollections();
-        }
-    };
+                // No need to reload all collections since we've already updated our local state
+            } catch (err) {
+                logger.error('Error updating collection:', err);
+                // Reload collections on error to ensure UI is in sync with backend
+                await loadCollections(); // loadCollections depends on user
+            }
+        },
+        [user] // Dependencies: user (implicitly depends on loadCollections which depends on user)
+    );
 
     // Modified handleDeleteCollection function with animation support
-    const handleDeleteCollection = async (collectionId: string) => {
-        if (!user) return;
+    const handleDeleteCollection = useCallback(
+        async (collectionId: string) => {
+            if (!user) return;
 
-        try {
-            // Mark this collection as being removed (for animation)
-            setCollectionsBeingRemoved((prev) => [...prev, collectionId]);
+            try {
+                // Mark this collection as being removed (for animation)
+                setCollectionsBeingRemoved((prev) => [...prev, collectionId]);
 
-            // Set a small timeout to allow the animation to complete
-            setTimeout(async () => {
-                try {
-                    // Remove from the backend
-                    await CollectionService.deleteCollection(collectionId);
+                // Set a small timeout to allow the animation to complete
+                setTimeout(async () => {
+                    try {
+                        // Remove from the backend
+                        await CollectionService.deleteCollection(collectionId);
 
-                    // Update the selected collection if the one being deleted is selected
-                    if (selectedCollection === collectionId) {
-                        setSelectedCollection(ALL_RECIPES_ID);
-                        navigate('/', { replace: true });
-                        await loadRecipesByCollection(ALL_RECIPES_ID);
+                        // Update the selected collection if the one being deleted is selected
+                        if (selectedCollection === collectionId) {
+                            setSelectedCollection(ALL_RECIPES_ID);
+                            navigate(
+                                `${COLLECTION_ROUTE_PATH}/${ALL_RECIPES_ID}`,
+                                { replace: true }
+                            );
+                            await loadRecipesByCollection(ALL_RECIPES_ID);
+                        }
+
+                        // Update our local state
+                        setCollections((prev) =>
+                            prev.filter((c) => c.id !== collectionId)
+                        );
+                    } catch (error) {
+                        logger.error(
+                            'Error deleting collection from backend:',
+                            error
+                        );
+                    } finally {
+                        // Remove from the being-removed state
+                        setCollectionsBeingRemoved((prev) =>
+                            prev.filter((id) => id !== collectionId)
+                        );
                     }
-
-                    // Update our local state
-                    setCollections((prev) =>
-                        prev.filter((c) => c.id !== collectionId)
-                    );
-                } catch (error) {
-                    logger.error(
-                        'Error deleting collection from backend:',
-                        error
-                    );
-                } finally {
-                    // Remove from the being-removed state
-                    setCollectionsBeingRemoved((prev) =>
-                        prev.filter((id) => id !== collectionId)
-                    );
-                }
-            }, 300); // Match this with your animation duration
-        } catch (err) {
-            logger.error('Error starting collection deletion:', err);
-            // Remove from the being-removed state
-            setCollectionsBeingRemoved((prev) =>
-                prev.filter((id) => id !== collectionId)
-            );
-        }
-    };
+                }, 300); // Match this with your animation duration
+            } catch (err) {
+                logger.error('Error starting collection deletion:', err);
+                // Remove from the being-removed state
+                setCollectionsBeingRemoved((prev) =>
+                    prev.filter((id) => id !== collectionId)
+                );
+            }
+        },
+        [user, selectedCollection, navigate] // Dependencies: user, selectedCollection, navigate (loadRecipesByCollection implicitly depends on user)
+    );
 
     // Helper function to find the currently selected collection
     const getSelectedCollection = () => {
@@ -510,7 +525,7 @@ const CatalogPage: FC = () => {
                 fromCollection: selectedCollection,
                 returnTo:
                     selectedCollection === ALL_RECIPES_ID
-                        ? '/'
+                        ? `${COLLECTION_ROUTE_PATH}/${ALL_RECIPES_ID}`
                         : `${COLLECTION_ROUTE_PATH}/${selectedCollection}`,
             },
         });
@@ -833,7 +848,7 @@ const CatalogPage: FC = () => {
                     flex: 1,
                 }}
             >
-                <CollectionsDrawer
+                <MemoizedCollectionsDrawer
                     selectedCollection={selectedCollection}
                     onCollectionSelect={handleCollectionSelect}
                     width={drawerWidth}

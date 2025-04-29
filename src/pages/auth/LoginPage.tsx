@@ -77,7 +77,7 @@ const LoginPage = () => {
 
     // If user is already logged in, redirect to home page
     if (user) {
-        return <Navigate to="/" replace />;
+        return <Navigate to={`/collection/all`} replace />;
     }
 
     const handleEmailLogin = async (e: React.FormEvent) => {

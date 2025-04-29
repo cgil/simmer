@@ -1,6 +1,7 @@
 import { FC, useState, ReactNode, useRef, useEffect, useMemo } from 'react';
 import {
     Drawer,
+    SwipeableDrawer,
     Box,
     List,
     ListItem,
@@ -16,10 +17,8 @@ import {
     Popover,
     Collapse,
     useMediaQuery,
-    Backdrop,
     Theme,
     Tooltip,
-    styled,
 } from '@mui/material';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
@@ -164,9 +163,18 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
     }, [collections, isOpen, hoveredCollection, editingCollection]);
 
     const handleToggleDrawer = () => {
+        const closing = isOpen; // Check current state before toggling
         // Notify parent component about drawer state change
         if (onDrawerStateChange) {
             onDrawerStateChange(!isOpen);
+        }
+
+        // If closing on a small screen, shift focus to prevent aria-hidden issue
+        if (isSmallScreen && closing) {
+            requestAnimationFrame(() => {
+                // Try focusing a known element like body
+                document.body.focus();
+            });
         }
     };
 
@@ -323,183 +331,188 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
         );
     };
 
-    return (
+    // Store common PaperProps for both Drawer variants
+    const paperPropsSx = {
+        width: isOpen ? width : collapsedWidth,
+        boxSizing: 'border-box',
+        bgcolor: 'paper.main',
+        transition: theme.transitions.create(['width'], {
+            easing: theme.transitions.easing.easeInOut,
+            duration: theme.transitions.duration.standard,
+        }),
+        borderRadius: 0,
+        overflowX: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        borderRight: '1px solid',
+        borderColor: alpha(theme.palette.primary.main, 0.08),
+        backgroundSize: '20px 20px',
+        top: 0,
+        left: 0,
+        position: 'fixed',
+        zIndex: isSmallScreen ? theme.zIndex.modal : theme.zIndex.drawer,
+    };
+
+    // Store common Drawer sx props
+    const drawerSx = {
+        width: isOpen ? width : collapsedWidth,
+        flexShrink: 0,
+        position: 'fixed',
+        zIndex: isSmallScreen ? theme.zIndex.modal : theme.zIndex.drawer,
+    };
+
+    // Define the common content for both drawer types
+    const drawerContent = (
         <>
-            {/* Add backdrop for small screens when drawer is open */}
-            {isSmallScreen && isOpen && (
-                <Backdrop
-                    open={true}
-                    sx={{
-                        zIndex: theme.zIndex.drawer + 1,
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                    }}
-                    onClick={handleToggleDrawer}
-                />
-            )}
-            <Drawer
-                id="collections-drawer"
-                variant={isSmallScreen ? 'temporary' : 'permanent'}
-                open={isSmallScreen ? isOpen : undefined}
-                onClose={isSmallScreen ? handleToggleDrawer : undefined}
-                ModalProps={{
-                    keepMounted: isSmallScreen, // Only keep mounted for temporary drawer on small screens
-                }}
+            <CollectionsDrawerHeader
+                isOpen={isOpen}
+                handleToggleDrawer={handleToggleDrawer}
+                theme={theme}
+            />
+
+            {/* Scrollable collections list */}
+            <Box
                 sx={{
-                    width: isOpen ? width : collapsedWidth,
-                    flexShrink: 0,
-                    position: 'fixed',
-                    display: isSmallScreen && !isOpen ? 'none' : 'block',
-                    '& .MuiDrawer-paper': {
-                        width: isOpen ? width : collapsedWidth,
-                        boxSizing: 'border-box',
-                        bgcolor: 'paper.main',
-                        transition: theme.transitions.create(['width'], {
-                            easing: theme.transitions.easing.easeInOut,
-                            duration: theme.transitions.duration.standard,
-                        }),
-                        borderRadius: 0,
-                        overflowX: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        height: '100vh',
-                        borderRight: '1px solid',
-                        borderColor: alpha(theme.palette.primary.main, 0.08),
-                        backgroundSize: '20px 20px',
-                        top: 0,
-                        left: 0,
-                        position: 'fixed',
-                        zIndex: isSmallScreen
-                            ? theme.zIndex.modal
-                            : theme.zIndex.drawer,
-                    },
-                    // Ensure overlay stays on top for small screens
-                    ...(isSmallScreen && {
-                        zIndex: theme.zIndex.modal,
-                    }),
-                }}
-                // Fix for accessibility - hide content properly from screen readers
-                components={{
-                    Backdrop: styled('div')({
-                        zIndex: theme.zIndex.drawer,
-                    }),
+                    overflow: 'auto',
+                    flexGrow: 1,
                 }}
             >
-                {/* Use CollectionsDrawerHeader instead of the Box */}
-                <CollectionsDrawerHeader
-                    isOpen={isOpen}
-                    handleToggleDrawer={handleToggleDrawer}
-                    theme={theme}
-                />
-
-                {/* Scrollable collections list */}
-                <Box
-                    sx={{
-                        overflow: 'auto',
-                        flexGrow: 1,
-                    }}
-                >
-                    {isLoading ? (
-                        /* Replace with CollectionListSkeleton */
-                        <CollectionListSkeleton
-                            isOpen={isOpen}
-                            itemHeight={COLLECTION_ITEM_HEIGHT}
-                            theme={theme}
-                        />
-                    ) : (
-                        <List sx={{ px: isOpen ? 1 : 0.75, pt: 1 }}>
-                            {sortedCollections.map((collection) => (
-                                <CollectionListItem
-                                    key={collection.id}
-                                    collection={collection}
-                                    isOpen={isOpen}
-                                    selectedCollection={selectedCollection}
-                                    editingCollection={editingCollection}
-                                    deletingCollection={deletingCollection}
-                                    hoveredCollection={hoveredCollection}
-                                    collectionsBeingRemoved={
-                                        collectionsBeingRemoved
-                                    }
-                                    onCollectionSelect={onCollectionSelect}
-                                    onEditCollection={handleEditCollection}
-                                    onConfirmDelete={handleConfirmDelete}
-                                    onSaveCollection={handleSaveCollection}
-                                    onCancelEdit={handleCancelEdit}
-                                    onDeleteCollection={handleDeleteCollection}
-                                    onCancelDelete={handleCancelDelete}
-                                    onOpenEmojiPicker={handleOpenEmojiPicker}
-                                    setHoveredCollection={setHoveredCollection}
-                                    getCollectionIcon={getCollectionIcon}
-                                    formatRecipeCount={formatRecipeCount}
-                                    collectionItemRef={collectionItemRef}
-                                    listItemRefs={listItemRefs}
-                                    buttonPositions={buttonPositions}
-                                    onDropRecipe={onDropRecipe}
-                                    editingName={editingName}
-                                    setEditingName={setEditingName}
-                                    theme={theme}
-                                />
-                            ))}
-                        </List>
-                    )}
-                </Box>
-
-                {/* Replace with CollectionsDrawerFooter */}
-                <CollectionsDrawerFooter
-                    isOpen={isOpen}
-                    isLoading={isLoading}
-                    onCreateCollection={onCreateCollection}
-                    theme={theme}
-                />
-
-                {/* Emoji picker popover */}
-                <Popover
-                    anchorEl={emojiPickerAnchorEl}
-                    open={Boolean(emojiPickerAnchorEl)}
-                    onClose={handleCloseEmojiPicker}
-                    anchorOrigin={{
-                        vertical: 'center',
-                        horizontal: 'right',
-                    }}
-                    transformOrigin={{
-                        vertical: 'center',
-                        horizontal: 'left',
-                    }}
-                    sx={{
-                        '.MuiPopover-paper': {
-                            overflow: 'hidden',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                            borderRadius: 3,
-                            border: '1px solid',
-                            borderColor: alpha(theme.palette.divider, 0.2),
-                        },
-                    }}
-                >
-                    <Picker
-                        data={data}
-                        onEmojiSelect={handleSelectEmoji}
-                        previewPosition="none"
-                        skinTonePosition="none"
-                        theme={theme.palette.mode === 'dark' ? 'dark' : 'light'}
-                        set="native"
-                        navPosition="top"
-                        categories={[
-                            'foods',
-                            'places',
-                            'activities',
-                            'nature',
-                            'flags',
-                            'objects',
-                            'symbols',
-                        ]}
-                        perLine={7}
-                        maxFrequentRows={0}
-                        emojiSize={24}
-                        emojiButtonSize={36}
-                        searchPosition="sticky"
-                        autoFocus={false}
+                {isLoading ? (
+                    <CollectionListSkeleton
+                        isOpen={isOpen}
+                        itemHeight={COLLECTION_ITEM_HEIGHT}
+                        theme={theme}
                     />
-                </Popover>
-            </Drawer>
+                ) : (
+                    <List sx={{ px: isOpen ? 1 : 0.75, pt: 1 }}>
+                        {sortedCollections.map((collection) => (
+                            <CollectionListItem
+                                key={collection.id}
+                                collection={collection}
+                                isOpen={isOpen}
+                                selectedCollection={selectedCollection}
+                                editingCollection={editingCollection}
+                                deletingCollection={deletingCollection}
+                                hoveredCollection={hoveredCollection}
+                                collectionsBeingRemoved={
+                                    collectionsBeingRemoved
+                                }
+                                onCollectionSelect={onCollectionSelect}
+                                onEditCollection={handleEditCollection}
+                                onConfirmDelete={handleConfirmDelete}
+                                onSaveCollection={handleSaveCollection}
+                                onCancelEdit={handleCancelEdit}
+                                onDeleteCollection={handleDeleteCollection}
+                                onCancelDelete={handleCancelDelete}
+                                onOpenEmojiPicker={handleOpenEmojiPicker}
+                                setHoveredCollection={setHoveredCollection}
+                                getCollectionIcon={getCollectionIcon}
+                                formatRecipeCount={formatRecipeCount}
+                                collectionItemRef={collectionItemRef}
+                                listItemRefs={listItemRefs}
+                                buttonPositions={buttonPositions}
+                                onDropRecipe={onDropRecipe}
+                                editingName={editingName}
+                                setEditingName={setEditingName}
+                                theme={theme}
+                            />
+                        ))}
+                    </List>
+                )}
+            </Box>
+
+            <CollectionsDrawerFooter
+                isOpen={isOpen}
+                isLoading={isLoading}
+                onCreateCollection={onCreateCollection}
+                theme={theme}
+            />
+        </>
+    );
+
+    return (
+        <>
+            {/* Conditional rendering of Drawer based on screen size */}
+            {isSmallScreen ? (
+                <SwipeableDrawer
+                    id="collections-drawer-swipeable"
+                    anchor="left"
+                    open={isOpen}
+                    onClose={handleToggleDrawer} // Handles swipe close
+                    onOpen={handleToggleDrawer} // Handles edge swipe open
+                    ModalProps={{
+                        keepMounted: true, // Important for performance on mobile
+                    }}
+                    PaperProps={{
+                        sx: paperPropsSx, // Apply shared paper styles
+                    }}
+                    sx={drawerSx} // Apply shared drawer container styles
+                >
+                    {drawerContent} {/* Render the shared content */}
+                </SwipeableDrawer>
+            ) : (
+                <Drawer
+                    id="collections-drawer-permanent"
+                    variant="permanent"
+                    open={isOpen} // For permanent drawer, open controls width
+                    PaperProps={{
+                        sx: paperPropsSx, // Apply shared paper styles
+                    }}
+                    sx={drawerSx} // Apply shared drawer container styles
+                >
+                    {drawerContent} {/* Render the shared content */}
+                </Drawer>
+            )}
+
+            {/* Emoji picker popover - outside the main drawer structure */}
+            <Popover
+                anchorEl={emojiPickerAnchorEl}
+                open={Boolean(emojiPickerAnchorEl)}
+                onClose={handleCloseEmojiPicker}
+                anchorOrigin={{
+                    vertical: 'center',
+                    horizontal: 'right',
+                }}
+                transformOrigin={{
+                    vertical: 'center',
+                    horizontal: 'left',
+                }}
+                sx={{
+                    '.MuiPopover-paper': {
+                        overflow: 'hidden',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                        borderRadius: 3,
+                        border: '1px solid',
+                        borderColor: alpha(theme.palette.divider, 0.2),
+                    },
+                }}
+            >
+                <Picker
+                    data={data}
+                    onEmojiSelect={handleSelectEmoji}
+                    previewPosition="none"
+                    skinTonePosition="none"
+                    theme={theme.palette.mode === 'dark' ? 'dark' : 'light'}
+                    set="native"
+                    navPosition="top"
+                    categories={[
+                        'foods',
+                        'places',
+                        'activities',
+                        'nature',
+                        'flags',
+                        'objects',
+                        'symbols',
+                    ]}
+                    perLine={7}
+                    maxFrequentRows={0}
+                    emojiSize={24}
+                    emojiButtonSize={36}
+                    searchPosition="sticky"
+                    autoFocus={false}
+                />
+            </Popover>
         </>
     );
 };
@@ -836,6 +849,17 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                             <ListItemIcon
                                 sx={{
                                     minWidth: isOpen ? 36 : 0,
+                                    mr: isOpen ? 1 : 0, // Add margin when open
+                                    transition: theme.transitions.create(
+                                        ['min-width', 'margin'],
+                                        {
+                                            easing: theme.transitions.easing
+                                                .easeInOut,
+                                            duration:
+                                                theme.transitions.duration
+                                                    .standard,
+                                        }
+                                    ),
                                     color:
                                         selectedCollection === collection.id
                                             ? 'primary.main'
@@ -845,104 +869,120 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                             >
                                 {getCollectionIcon(collection)}
                             </ListItemIcon>
-                            {isOpen && (
-                                <ListItemText
-                                    primary={
-                                        collection.is_shared ? (
-                                            <Tooltip
-                                                title={`Shared collection (${
-                                                    collection.access_level ===
-                                                        'edit' ||
-                                                    collection.access_level ===
-                                                        'editor'
-                                                        ? 'Can edit'
-                                                        : 'View only'
-                                                })`}
-                                                placement="right"
+                            {/* Always render ListItemText, control visibility with sx */}
+                            <ListItemText
+                                primary={
+                                    collection.is_shared ? (
+                                        <Tooltip
+                                            title={`Shared collection (${
+                                                collection.access_level ===
+                                                    'edit' ||
+                                                collection.access_level ===
+                                                    'editor'
+                                                    ? 'Can edit'
+                                                    : 'View only'
+                                            })`}
+                                            placement="right"
+                                        >
+                                            <Box
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent:
+                                                        'space-between',
+                                                    width: '100%',
+                                                    overflow: 'hidden',
+                                                }}
                                             >
                                                 <Box
                                                     sx={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent:
-                                                            'space-between',
-                                                        width: '100%',
                                                         overflow: 'hidden',
+                                                        textOverflow:
+                                                            'ellipsis',
+                                                        whiteSpace: 'nowrap',
                                                     }}
                                                 >
-                                                    <Box
-                                                        sx={{
-                                                            overflow: 'hidden',
-                                                            textOverflow:
-                                                                'ellipsis',
-                                                            whiteSpace:
-                                                                'nowrap',
-                                                        }}
-                                                    >
-                                                        {collection.name}
-                                                    </Box>
-                                                    {collection.access_level ===
-                                                        'edit' ||
-                                                    collection.access_level ===
-                                                        'editor' ? (
-                                                        <CreateIcon
-                                                            fontSize="small"
-                                                            sx={{
-                                                                ml: 1,
-                                                                flexShrink: 0,
-                                                                color: 'primary.main',
-                                                                fontSize:
-                                                                    '0.875rem',
-                                                                opacity: 0.6,
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <MenuBookIcon
-                                                            fontSize="small"
-                                                            sx={{
-                                                                ml: 1,
-                                                                flexShrink: 0,
-                                                                color: 'text.secondary',
-                                                                fontSize:
-                                                                    '0.875rem',
-                                                                opacity: 0.6,
-                                                            }}
-                                                        />
-                                                    )}
+                                                    {collection.name}
                                                 </Box>
-                                            </Tooltip>
-                                        ) : (
-                                            <Box
-                                                sx={{
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                }}
-                                            >
-                                                {collection.name}
+                                                {collection.access_level ===
+                                                    'edit' ||
+                                                collection.access_level ===
+                                                    'editor' ? (
+                                                    <CreateIcon
+                                                        fontSize="small"
+                                                        sx={{
+                                                            ml: 1,
+                                                            flexShrink: 0,
+                                                            color: 'primary.main',
+                                                            fontSize:
+                                                                '0.875rem',
+                                                            opacity: 0.6,
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <MenuBookIcon
+                                                        fontSize="small"
+                                                        sx={{
+                                                            ml: 1,
+                                                            flexShrink: 0,
+                                                            color: 'text.secondary',
+                                                            fontSize:
+                                                                '0.875rem',
+                                                            opacity: 0.6,
+                                                        }}
+                                                    />
+                                                )}
                                             </Box>
-                                        )
-                                    }
-                                    primaryTypographyProps={{
-                                        noWrap: true,
-                                        sx: {
-                                            fontWeight:
-                                                selectedCollection ===
-                                                collection.id
-                                                    ? 600
-                                                    : 500,
-                                            color:
-                                                selectedCollection ===
-                                                collection.id
-                                                    ? 'primary.dark'
-                                                    : 'text.primary',
-                                        },
-                                    }}
-                                    secondary={formatRecipeCount(
-                                        collection.count
-                                    )}
-                                />
-                            )}
+                                        </Tooltip>
+                                    ) : (
+                                        <Box
+                                            sx={{
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                            }}
+                                        >
+                                            {collection.name}
+                                        </Box>
+                                    )
+                                }
+                                // Add sx prop for dynamic styling and transition
+                                sx={{
+                                    opacity: isOpen ? 1 : 0,
+                                    maxWidth: isOpen ? 'calc(100% - 36px)' : 0, // Adjust max width based on icon
+                                    pl: isOpen ? 1 : 0, // Adjust padding
+                                    overflow: 'hidden',
+                                    whiteSpace: 'nowrap',
+                                    transition: theme.transitions.create(
+                                        ['opacity', 'max-width', 'padding'],
+                                        {
+                                            easing: theme.transitions.easing
+                                                .easeInOut,
+                                            duration:
+                                                theme.transitions.duration
+                                                    .standard,
+                                        }
+                                    ),
+                                }}
+                                // Ensure noWrap is set for both primary and secondary
+                                secondary={formatRecipeCount(collection.count)}
+                                primaryTypographyProps={{
+                                    noWrap: true,
+                                    sx: {
+                                        fontWeight:
+                                            selectedCollection === collection.id
+                                                ? 600
+                                                : 500,
+                                        color:
+                                            selectedCollection === collection.id
+                                                ? 'primary.dark'
+                                                : 'text.primary',
+                                    },
+                                }}
+                                secondaryTypographyProps={{
+                                    noWrap: true,
+                                }}
+                            />
                         </ListItemButton>
                     )}
                 </Box>

@@ -78,12 +78,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const signInWithGoogle = async () => {
-        // Determine the redirectTo URL based on the current environment
-        let redirectTo = window.location.origin;
+        // Use our dedicated callback route so we can parse the hash and then send the user to /collection/all
+        let redirectTo = `${window.location.origin}/auth/callback`;
 
         // For production environment, use the production URL
         if (config.environment === 'production') {
-            redirectTo = 'https://simmer-app.vercel.app';
+            redirectTo = 'https://simmer-app.vercel.app/auth/callback';
         }
 
         try {

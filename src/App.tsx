@@ -9,7 +9,6 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import theme from './theme/theme';
-import CatalogPage from './pages/catalog/CatalogPage';
 import RecipePage from './pages/recipe/RecipePage';
 import NewRecipePage from './pages/recipe/NewRecipePage';
 import EditRecipePage from './pages/recipe/EditRecipePage';
@@ -21,6 +20,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import PublicRecipeRoute from './components/auth/PublicRecipeRoute';
 import PublicCollectionRoute from './components/auth/PublicCollectionRoute';
 import { AuthProvider } from './context/AuthContext';
+import { ALL_RECIPES_ID, COLLECTION_ROUTE_PATH } from './types/collection';
 
 const App: FC = () => {
     return (
@@ -42,7 +42,10 @@ const App: FC = () => {
                             path="/"
                             element={
                                 <ProtectedRoute>
-                                    <CatalogPage />
+                                    <Navigate
+                                        to={`${COLLECTION_ROUTE_PATH}/${ALL_RECIPES_ID}`}
+                                        replace
+                                    />
                                 </ProtectedRoute>
                             }
                         />
@@ -84,7 +87,15 @@ const App: FC = () => {
                         />
 
                         {/* Fallback Route */}
-                        <Route path="*" element={<Navigate to="/" replace />} />
+                        <Route
+                            path="*"
+                            element={
+                                <Navigate
+                                    to={`${COLLECTION_ROUTE_PATH}/${ALL_RECIPES_ID}`}
+                                    replace
+                                />
+                            }
+                        />
                     </Routes>
                 </Router>
             </AuthProvider>

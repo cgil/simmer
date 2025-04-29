@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import CatalogPage from '../../pages/catalog/CatalogPage';
 import PublicCollectionPage from '../../pages/catalog/PublicCollectionPage';
+import { ALL_RECIPES_ID } from '../../types/collection';
 
 interface PublicCollectionRouteProps {
     children?: ReactNode; // Not used but kept for flexibility
@@ -26,9 +27,22 @@ const PublicCollectionRoute: FC<PublicCollectionRouteProps> = () => {
         'loading' | 'owner' | 'shared' | 'public-only' | 'no-access'
     >('loading');
 
+    const isAllRecipes = collectionId === ALL_RECIPES_ID;
+
     // Check collection access rights
     useEffect(() => {
         if (authLoading) return; // Wait for auth to finish loading
+
+        // Handle the special "All Recipes" case early
+        if (isAllRecipes) {
+            if (user) {
+                setAccessStatus('owner'); // Treat as owner for main view
+            } else {
+                setAccessStatus('no-access'); // Require login for All Recipes
+            }
+            return;
+        }
+
         if (!collectionId) {
             setAccessStatus('no-access');
             return;
@@ -97,7 +111,7 @@ const PublicCollectionRoute: FC<PublicCollectionRouteProps> = () => {
         };
 
         checkAccess();
-    }, [collectionId, user, authLoading, accessStatus]);
+    }, [collectionId, user, authLoading, accessStatus, isAllRecipes]);
 
     // Show loading spinner while checking access
     if (accessStatus === 'loading' || authLoading) {
@@ -116,20 +130,17 @@ const PublicCollectionRoute: FC<PublicCollectionRouteProps> = () => {
         );
     }
 
-    // Render based on access status
-    switch (accessStatus) {
-        case 'owner':
-        case 'shared':
-            // Full edit access for owners and users with explicit share access
-            return <CatalogPage />;
-        case 'public-only':
-            // Read-only access for users who can only see it because it's public
-            return <PublicCollectionPage />;
-        case 'no-access':
-        default:
-            // No access, redirect to login
-            return <Navigate to="/login" state={{ from: location }} replace />;
+    // Render based on access status with special case for All Recipes already handled
+    if (accessStatus === 'owner' || accessStatus === 'shared') {
+        return <CatalogPage />;
     }
+
+    if (accessStatus === 'public-only') {
+        return <PublicCollectionPage />;
+    }
+
+    // Fallback: no access
+    return <Navigate to="/login" state={{ from: location }} replace />;
 };
 
 export default PublicCollectionRoute;

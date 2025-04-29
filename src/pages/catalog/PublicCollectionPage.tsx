@@ -276,7 +276,7 @@ const PublicCollectionPage: FC = () => {
                 user ? (
                     <Button
                         variant="outlined"
-                        onClick={() => navigate('/')}
+                        onClick={() => navigate('/collection/all')}
                         sx={{
                             height: { xs: 34, sm: 40 },
                             borderColor: 'divider',
