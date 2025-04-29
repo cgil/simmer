@@ -28,14 +28,14 @@ const MethodSwitcherComponent: FC<MethodSwitcherProps> = ({
     const isDisabled =
         isLoading || isImporting || isGeneratingIdeas || isCreatingFromIdea;
     const icons = {
-        import: LinkIcon,
         ai: AutoAwesomeIcon,
+        import: LinkIcon,
         blank: CreateIcon,
         image: ImageIcon,
     };
     const labels = {
-        import: 'Add from Link',
         ai: 'Ask the Chef',
+        import: 'Add from Link',
         blank: 'Start Blank',
         image: 'From Image',
     };

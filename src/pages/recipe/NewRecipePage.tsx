@@ -23,7 +23,7 @@ import ProgressStepsDisplay from '../../components/NewRecipeSections/ProgressSte
 type CreationMethod = 'import' | 'ai' | 'blank' | 'image';
 
 // Define the available creation methods in order for index calculation
-const creationMethods: CreationMethod[] = ['import', 'ai', 'blank', 'image'];
+const creationMethods: CreationMethod[] = ['ai', 'import', 'blank', 'image'];
 
 // --- Constants ---
 const EXTRACTION_STEPS = [
@@ -77,7 +77,7 @@ const getMotionVariants = (direction: number) => ({
 
 const NewRecipePage: FC = () => {
     const navigate = useNavigate();
-    const [activeMethod, setActiveMethod] = useState<CreationMethod>('import');
+    const [activeMethod, setActiveMethod] = useState<CreationMethod>('ai');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [url, setUrl] = useState('');
