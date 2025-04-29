@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import CreateIcon from '@mui/icons-material/Create';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 import { RecipeIdea } from '../../types'; // Adjust path if needed
 import RecipeIdeaLoadingCard from './RecipeIdeaLoadingCard'; // Assuming it's in the same dir
 import ProgressStepsDisplay from './ProgressStepsDisplay'; // Assuming it's in the same dir
@@ -38,7 +38,7 @@ interface AiSectionProps {
     handleCreateFromSelectedIdea: () => Promise<void>;
     setError: (error: string | null) => void; // If general error needs setting
     customDirection: number;
-    getVariants: (direction: number) => any; // Use 'any' or a more specific type
+    getVariants: (direction: number) => Variants; // Use Framer Motion's Variants type
     aiRecipeSteps: string[];
 }
 
@@ -332,13 +332,13 @@ const AiSectionComponent: FC<AiSectionProps> = ({
                                                     ? 3
                                                     : 0
                                             }
-                                            onClick={() =>
-                                                setSelectedIdeaId(
-                                                    selectedIdeaId === idea.id
-                                                        ? null
-                                                        : idea.id
-                                                )
-                                            }
+                                            onClick={() => {
+                                                if (
+                                                    selectedIdeaId !== idea.id
+                                                ) {
+                                                    setSelectedIdeaId(idea.id);
+                                                }
+                                            }}
                                             sx={{
                                                 p: 2.5,
                                                 height: 220,

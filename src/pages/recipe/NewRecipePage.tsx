@@ -193,6 +193,11 @@ const NewRecipePage: FC = () => {
             const ideas = await generateRecipeIdeas(recipePrompt);
             if (activeMethod === 'ai') {
                 setRecipeIdeas(ideas);
+                if (ideas.length > 0) {
+                    setSelectedIdeaId(ideas[0].id);
+                } else {
+                    setSelectedIdeaId(null);
+                }
             }
         } catch (err) {
             const message =
