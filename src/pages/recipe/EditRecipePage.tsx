@@ -852,6 +852,23 @@ const EditRecipePage: FC = () => {
         }
     };
 
+    const handleGoBack = () => {
+        // Use location.state.isNew to identify unsaved AI/Blank recipes
+        if (location.state?.isNew === true) {
+            // Go back to the creation page
+            navigate('/recipe/new');
+        } else if (location.state?.from) {
+            // If navigated from somewhere specific (like login redirect)
+            navigate(location.state.from);
+        } else if (recipe && recipe.id && recipe.id !== 'new') {
+            // If editing an existing recipe, go to its view page
+            navigate(`/recipe/${recipe.id}`);
+        } else {
+            // Default fallback (e.g., imported recipe, or direct access without state)
+            navigate('/');
+        }
+    };
+
     const headerContent = (
         <Box
             sx={{
@@ -862,14 +879,7 @@ const EditRecipePage: FC = () => {
             }}
         >
             <Box
-                onClick={() => {
-                    const returnTo =
-                        location.state?.returnTo ||
-                        (recipe?.id && recipe.id !== 'new'
-                            ? `/recipe/${recipe.id}`
-                            : '/');
-                    navigate(returnTo);
-                }}
+                onClick={handleGoBack}
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
