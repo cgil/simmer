@@ -3,7 +3,6 @@ import { OpenAI } from "https://esm.sh/openai@4.96.0";
 import { z } from "https://deno.land/x/zod@v3.24.1/mod.ts";
 import { zodResponseFormat } from "https://deno.land/x/openai@v4.55.1/helpers/zod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 // Define Zod schema for a single recipe idea
 const RecipeIdeaSchema = z.object({
@@ -65,30 +64,6 @@ serve(async (req) => {
         const openai = new OpenAI({
             apiKey: Deno.env.get("OPENAI_API_KEY") || "",
         });
-
-        // Initialize Supabase client for caching (optional)
-        const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
-            "";
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-        // Check cache first - optional but recommended
-        const cacheKey = `recipe-ideas:${generateId(prompt)}`;
-        const { data: cachedData, error: cacheError } = await supabase
-            .from("recipe_generation_cache")
-            .select("data")
-            .eq("key", cacheKey)
-            .maybeSingle();
-
-        if (!cacheError && cachedData?.data) {
-            return new Response(JSON.stringify(cachedData.data), {
-                headers: {
-                    ...corsHeaders,
-                    "Content-Type": "application/json",
-                    "X-Cache": "HIT",
-                },
-            });
-        }
 
         // Generate recipe ideas using OpenAI with Zod schema
         const completion = await openai.chat.completions.create({
@@ -158,25 +133,10 @@ serve(async (req) => {
         // Validate the response
         const validatedIdeas = RecipeIdeasArraySchema.parse(recipeIdeas);
 
-        // Store in cache (optional)
-        try {
-            await supabase
-                .from("recipe_generation_cache")
-                .upsert({
-                    key: cacheKey,
-                    data: validatedIdeas,
-                    created_at: new Date().toISOString(),
-                });
-        } catch (cacheError) {
-            // Log but don't fail if caching fails
-            console.error("Cache error:", cacheError);
-        }
-
         return new Response(JSON.stringify(validatedIdeas), {
             headers: {
                 ...corsHeaders,
                 "Content-Type": "application/json",
-                "X-Cache": "MISS",
             },
         });
     } catch (error: unknown) {
