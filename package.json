@@ -14,7 +14,7 @@
         "db:reset": "supabase db reset",
         "db:migration:new": "supabase migration new",
         "functions:serve": "supabase functions serve --env-file .env.local --no-verify-jwt",
-        "functions:deploy:prod": "supabase functions deploy recipe-extraction recipe-ideas-generation recipe-creation link-shares-on-signup ingredient-substitution --project-ref aedgycrrgaxtkennfvma",
+        "functions:deploy:prod": "supabase functions deploy recipe-extraction recipe-ideas-generation recipe-creation link-shares-on-signup ingredient-substitution generate-recipe-image --project-ref aedgycrrgaxtkennfvma",
         "dev:all": "concurrently \"npm run dev\" \"npm run functions:serve\"",
         "test:function": "curl -i --request POST 'http://localhost:54321/functions/v1/recipe-extraction' --header 'Content-Type: application/json' --data '{\"url\": \"https://www.allrecipes.com/recipe/158968/spinach-and-feta-turkey-burgers/\"}'",
         "test:ideas": "curl -i --request POST 'http://localhost:54321/functions/v1/recipe-ideas-generation' --header 'Content-Type: application/json' --data '{\"prompt\": \"A quick weeknight dinner with chicken and vegetables\"}'",

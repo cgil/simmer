@@ -17,11 +17,13 @@ import {
     FormControl,
     SelectChangeEvent,
     Tooltip,
+    CircularProgress,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
 import AddIcon from '@mui/icons-material/Add';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import FontAwesomeIcon from '../../components/icons/FontAwesomeIcon';
 import CarrotPlusIcon from '../../components/icons/CarrotPlusIcon';
 import AppLayout from '../../components/layout/AppLayout';
@@ -47,6 +49,7 @@ import { useAuth } from '../../context/AuthContext';
 import { RecipeService } from '../../services/RecipeService';
 import { CollectionService } from '../../services/CollectionService';
 import { generateUuidV4, ensureUuid, isValidUuid } from '../../utils/uuid';
+import { generateRecipeImage } from '../../lib/api';
 
 const EditRecipePage: FC = () => {
     const location = useLocation();
@@ -100,6 +103,7 @@ const EditRecipePage: FC = () => {
     const [canEdit, setCanEdit] = useState<boolean>(false);
     const [checkingPermission, setCheckingPermission] = useState<boolean>(true);
     const [isOwner, setIsOwner] = useState<boolean>(false);
+    const [isGeneratingAiImage, setIsGeneratingAiImage] = useState(false);
 
     useEffect(() => {
         const stateRecipe = location.state?.recipe as Recipe | undefined;
@@ -433,6 +437,10 @@ const EditRecipePage: FC = () => {
 
     const isLoading = checkingPermission || !recipe;
 
+    // Determine if this is a new recipe
+    const isNewRecipe =
+        recipe?.id === 'new' || (recipe && !isValidUuid(recipe.id));
+
     if (isLoading) {
         return (
             <AppLayout>
@@ -476,6 +484,45 @@ const EditRecipePage: FC = () => {
         setSaveError(null);
 
         try {
+            // Determine if saving a new recipe based on state
+            // A recipe is new if its ID is 'new' OR if it's not a valid UUID (imported case)
+            const isSavingNewRecipe =
+                recipe.id === 'new' || !isValidUuid(recipe.id);
+
+            let currentImages = [...images];
+
+            // --- AI Image Generation Logic for New Recipes ---
+            if (
+                isSavingNewRecipe &&
+                title.trim() !== '' &&
+                currentImages.length === 0
+            ) {
+                console.log(
+                    'Attempting to generate AI image for new recipe...'
+                );
+                try {
+                    const generatedImage = await generateRecipeImage(
+                        title,
+                        description
+                    );
+                    if (generatedImage) {
+                        console.log('AI image generated successfully.');
+                        currentImages = [generatedImage]; // Replace empty array with the generated image
+                    } else {
+                        console.warn(
+                            'AI image generation returned null or failed, saving without image.'
+                        );
+                    }
+                } catch (imgError) {
+                    console.error('Error generating AI image:', imgError);
+                    // Non-fatal: Log error and continue saving without the AI image
+                    setSaveError(
+                        'Recipe saved, but failed to generate AI image.'
+                    ); // Optional: inform user
+                }
+            }
+            // --- End AI Image Generation Logic ---
+
             const processedIngredients = ingredients
                 .filter(
                     (ingredient) =>
@@ -527,14 +574,9 @@ const EditRecipePage: FC = () => {
                 }));
             }
 
-            // Determine if saving a new recipe based on state
-            // A recipe is new if its ID is 'new' OR if it's not a valid UUID (imported case)
-            const isSavingNewRecipe =
-                recipe.id === 'new' || !isValidUuid(recipe.id);
-
             const updatedRecipeData: Recipe = {
                 ...recipe,
-                id: recipe.id,
+                id: recipe.id, // Preserve original ID ('new' or existing UUID)
                 title,
                 description,
                 ingredients: processedIngredients,
@@ -542,7 +584,7 @@ const EditRecipePage: FC = () => {
                 notes: notes.map((note) => note.text),
                 time_estimate: timeEstimate,
                 tags,
-                images,
+                images: currentImages, // Use potentially updated images array
                 servings,
                 user_id: recipe.user_id || user.id,
                 is_public: recipe.is_public ?? true,
@@ -551,10 +593,16 @@ const EditRecipePage: FC = () => {
             const savedRecipeResult = await RecipeService.saveRecipe(
                 updatedRecipeData,
                 user.id,
-                isSavingNewRecipe
+                isSavingNewRecipe // Pass the flag to the service
             );
 
+            // Update local state with the truly saved recipe (including new ID and potentially AI image)
             setRecipe(savedRecipeResult);
+
+            // Update images state explicitly if an AI image was added
+            if (currentImages.length > images.length) {
+                setImages(currentImages);
+            }
 
             if (savedRecipeResult.id && isValidUuid(savedRecipeResult.id)) {
                 try {
@@ -566,38 +614,53 @@ const EditRecipePage: FC = () => {
                         'Error managing recipe collections post-save:',
                         collectionError
                     );
+                    // Keep the specific image generation error if it exists, otherwise show collection error
+                    if (!saveError) {
+                        setSaveError(
+                            'Failed to update recipe collections. Please try again.'
+                        );
+                    }
                 }
             } else {
                 console.error(
                     'Save operation did not return a valid UUID:',
                     savedRecipeResult.id
                 );
-                setSaveError(
-                    'Failed to save recipe (invalid ID returned). Please try again.'
-                );
+                // Keep the specific image generation error if it exists, otherwise show save error
+                if (!saveError) {
+                    setSaveError(
+                        'Failed to save recipe (invalid ID returned). Please try again.'
+                    );
+                }
                 setIsSaving(false);
-                return;
+                return; // Stop execution here if save failed fundamentally
             }
 
+            // Navigate only after successful save and collection update (if applicable)
             navigate(`/recipe/${savedRecipeResult.id}`, {
-                replace: isSavingNewRecipe,
-                state: { recipe: savedRecipeResult },
+                replace: isSavingNewRecipe, // Replace history if it was a new recipe
+                state: { recipe: savedRecipeResult }, // Pass the final saved recipe state
             });
         } catch (error: unknown) {
             console.error('Error during handleSave:', error);
-            let errorMessage = 'Failed to save recipe. Please try again.';
-            if (error instanceof Error) {
-                if (error.message.includes('permission')) {
-                    errorMessage = error.message;
-                } else if (
-                    (error as { code?: string }).code === '42501' ||
-                    error.message.includes('RLS')
-                ) {
-                    errorMessage =
-                        'Permission denied: You cannot modify this recipe.';
+            // Keep the specific image generation error if it exists, otherwise show generic save error
+            if (!saveError) {
+                let errorMessage = 'Failed to save recipe. Please try again.';
+                if (error instanceof Error) {
+                    if (error.message.includes('permission')) {
+                        errorMessage = error.message;
+                    } else if (
+                        (error as { code?: string }).code === '42501' ||
+                        error.message.includes('RLS')
+                    ) {
+                        errorMessage =
+                            'Permission denied: You cannot modify this recipe.';
+                    }
                 }
+                setSaveError(errorMessage);
             }
-            setSaveError(errorMessage);
+        } finally {
+            // Always ensure isSaving is reset
             setIsSaving(false);
         }
     };
@@ -866,6 +929,35 @@ const EditRecipePage: FC = () => {
         } else {
             // Default fallback (e.g., imported recipe, or direct access without state)
             navigate('/');
+        }
+    };
+
+    const handleGenerateAiCoverImage = async () => {
+        if (!title.trim()) {
+            setSaveError('Please enter a recipe title first');
+            return;
+        }
+
+        setIsGeneratingAiImage(true);
+        setSaveError(null);
+
+        try {
+            const imageDataUri = await generateRecipeImage(title, description);
+
+            if (imageDataUri) {
+                setImages([imageDataUri, ...images]);
+                console.log('AI image generated successfully');
+            } else {
+                setSaveError(
+                    'Failed to generate AI image. Try again or add your own image.'
+                );
+                console.warn('AI image generation returned null');
+            }
+        } catch (error) {
+            console.error('Error generating AI image:', error);
+            setSaveError('Error generating AI image. Please try again.');
+        } finally {
+            setIsGeneratingAiImage(false);
         }
     };
 
@@ -1195,6 +1287,69 @@ const EditRecipePage: FC = () => {
                                 >
                                     <ImageIcon /> Recipe Images
                                 </Typography>
+
+                                {/* AI Image Generation Button - Show only for new recipes with no images */}
+                                {isNewRecipe &&
+                                    images.length === 0 &&
+                                    title.trim() && (
+                                        <Box
+                                            sx={{
+                                                position: 'absolute',
+                                                top: { xs: 12, sm: 16 },
+                                                right: { xs: 12, sm: 16 },
+                                                zIndex: 2,
+                                            }}
+                                        >
+                                            <Tooltip title="">
+                                                <Button
+                                                    onClick={
+                                                        handleGenerateAiCoverImage
+                                                    }
+                                                    variant="outlined"
+                                                    size="small"
+                                                    disabled={
+                                                        isGeneratingAiImage
+                                                    }
+                                                    startIcon={
+                                                        isGeneratingAiImage ? (
+                                                            <CircularProgress
+                                                                size={16}
+                                                                color="inherit"
+                                                            />
+                                                        ) : (
+                                                            <AutoAwesomeIcon fontSize="small" />
+                                                        )
+                                                    }
+                                                    sx={{
+                                                        fontFamily:
+                                                            "'Inter', sans-serif",
+                                                        borderRadius: 1,
+                                                        textTransform: 'none',
+                                                        fontSize: '0.875rem',
+                                                        fontWeight: 500,
+                                                        padding: '4px 10px',
+                                                        borderColor: 'divider',
+                                                        color: 'text.primary',
+                                                        bgcolor:
+                                                            'background.paper',
+                                                        boxShadow: 'none',
+                                                        '&:hover': {
+                                                            borderColor:
+                                                                'divider',
+                                                            bgcolor:
+                                                                'action.hover',
+                                                            color: 'text.primary',
+                                                        },
+                                                    }}
+                                                >
+                                                    {isGeneratingAiImage
+                                                        ? 'Sketching...'
+                                                        : 'Sketch It'}
+                                                </Button>
+                                            </Tooltip>
+                                        </Box>
+                                    )}
+
                                 <Box
                                     sx={{
                                         display: 'grid',

@@ -53,3 +53,27 @@ export const createRecipeFromIdea = async (
 
     return data;
 };
+
+export const generateRecipeImage = async (
+    title: string,
+    description: string,
+): Promise<string | null> => {
+    const { data, error } = await supabase.functions.invoke(
+        "generate-recipe-image",
+        {
+            body: {
+                title,
+                description,
+            },
+        },
+    );
+
+    if (error) {
+        // Log the error but don't throw, as we want the recipe save to proceed
+        console.error("Image generation failed:", error);
+        return null;
+    }
+
+    // The function returns { imageDataUri: "data:image/..." } or { imageDataUri: null }
+    return data?.imageDataUri || null;
+};

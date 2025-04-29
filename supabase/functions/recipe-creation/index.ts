@@ -10,6 +10,7 @@ import {
     RecipeSchema,
     validateIngredientMentions,
 } from "../_shared/recipe-schemas.ts";
+import { generateGhibliRecipeImage } from "../_shared/image-generation.ts";
 
 // Simple environment-aware logger
 const isProduction = Deno.env.get("ENVIRONMENT") === "production";
@@ -250,46 +251,19 @@ serve(async (req) => {
             }
         };
 
-        // Task 2: Generate Recipe Image
-        const generateRecipeImage = async (): Promise<string | null> => {
-            logger.log("Starting generateRecipeImage task.");
-            const imageGenParams = {
-                model: "gpt-image-1",
-                prompt:
-                    `A delicious looking image of the final dish for a recipe titled '${recipeIdea.title}'. Description: ${recipeIdea.description}. With the following original user prompt and recipe idea which led to the title and description: "${
-                        originalPrompt || recipeIdea.title
-                    }". Style: In the style of Studio Ghibli. Clearly show the ingredients and the final dish. No text, no watermarks, no logos.`,
-                n: 1,
-                size: "1024x1024",
-                quality: "low",
-                output_format: "jpeg",
-            };
-            try {
-                const imageResponse = await openai.images.generate(
-                    imageGenParams,
-                );
-                const base64Json = imageResponse.data[0]?.b64_json;
-                if (base64Json) {
-                    logger.log(
-                        "Finished generateRecipeImage task successfully.",
-                    );
-                    return `data:image/jpeg;base64,${base64Json}`;
-                }
-                logger.warn(
-                    "generateRecipeImage finished but no base64 data received.",
-                );
-                return null;
-            } catch (error) {
-                logger.error("Error in generateRecipeImage task:", error);
-                return null;
-            }
-        };
+        // Task 2: Generate Recipe Image (Uses shared utility)
+        const generateImageTask = () =>
+            generateGhibliRecipeImage(
+                recipeIdea.title,
+                recipeIdea.description,
+                originalPrompt || null, // Pass context
+            );
 
         // --- Execute Tasks Concurrently ---
         logger.log("Starting Promise.all for recipe and image.");
         const [recipeResult, imageDataUri] = await Promise.all([
             generateRecipeDetails(),
-            generateRecipeImage(),
+            generateImageTask(), // Call the task wrapper
         ]);
         logger.log("Finished Promise.all.");
 
