@@ -55,7 +55,12 @@ const PublicRecipeRoute = ({ children }: PublicRecipeRouteProps) => {
                     justifyContent: 'center',
                     alignItems: 'center',
                     height: '100vh',
-                    backgroundColor: '#F8F7FA',
+                    width: '100vw',
+                    maxWidth: '100%',
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    bgcolor: 'background.default',
                 }}
             >
                 <CircularProgress />
