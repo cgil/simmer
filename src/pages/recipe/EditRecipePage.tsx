@@ -807,12 +807,6 @@ const EditRecipePage: FC = () => {
             })),
         }));
 
-        // Debug log
-        console.log(
-            '[handleDeleteIngredient] Removed references for',
-            ingredientId
-        );
-
         setInstructions(cleanedInstructions);
     };
 
