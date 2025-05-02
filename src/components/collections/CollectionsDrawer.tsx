@@ -344,7 +344,7 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
         overflowX: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        height: '100vh',
+        height: '100%', // Changed from 100vh to 100% for better mobile compatibility
         borderRight: '1px solid',
         borderColor: alpha(theme.palette.primary.main, 0.08),
         backgroundSize: '20px 20px',
@@ -376,6 +376,8 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                 sx={{
                     overflow: 'auto',
                     flexGrow: 1,
+                    // Add this max-height property to ensure the list doesn't push the footer out of view
+                    maxHeight: isSmallScreen ? 'calc(100% - 120px)' : 'none',
                 }}
             >
                 {isLoading ? (
