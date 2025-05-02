@@ -758,6 +758,7 @@ const CatalogPage: FC = () => {
 
     // Update the renderShareButton function to handle the CollectionItem structure correctly
     const renderShareButton = () => {
+        // Use the existing isSmallScreen variable from the component scope
         // Only show share button when viewing a non-All collection that the user owns
         const collection = collections.find((c) => c.id === selectedCollection);
 
@@ -775,31 +776,53 @@ const CatalogPage: FC = () => {
             return (
                 <Button
                     variant="outlined"
+                    // Conditionally render icon or icon + text
                     startIcon={
-                        <SendIcon sx={{ transform: 'rotate(-45deg)' }} />
+                        isSmallScreen ? null : (
+                            <SendIcon sx={{ transform: 'rotate(-45deg)' }} />
+                        )
                     }
                     onClick={handleOpenCollectionShareDialog}
                     sx={{
                         height: { xs: 38, sm: 42 },
-                        ml: 1,
+                        // Slightly wider button on mobile with padding
+                        minWidth: { xs: 38, sm: 'auto' }, // Keep minWidth
+                        width: { xs: 'auto', sm: 'auto' }, // Let padding determine width on xs
+                        px: { xs: 1.5, sm: 1.5 }, // Add small horizontal padding on xs
+                        py: { xs: 0, sm: 'auto' }, // No vertical padding on xs
+                        ml: { xs: 0.5, sm: 1 }, // Keep some margin
                         borderColor: 'divider',
                         color: 'text.primary',
                         fontSize: {
-                            xs: '0.875rem',
                             sm: '0.9375rem',
                         },
                         fontFamily: "'Inter', sans-serif",
                         textTransform: 'none',
+                        // Center icon on mobile
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        '& .MuiButton-startIcon': {
+                            // Only apply margin on larger screens
+                            mr: { sm: 1 },
+                            ml: { sm: 0 },
+                        },
                         '&:hover': {
                             borderColor: 'primary.main',
                             bgcolor: 'rgba(44, 62, 80, 0.04)',
                         },
                     }}
                 >
+                    {/* Render icon separately for mobile */}
+                    {isSmallScreen && (
+                        <SendIcon
+                            sx={{ fontSize: 20, transform: 'rotate(-45deg)' }}
+                        />
+                    )}
                     {/* Only show text on screens larger than xs */}
                     <Box
                         component="span"
-                        sx={{ display: { xs: 'none', sm: 'inline' } }}
+                        sx={{ display: isSmallScreen ? 'none' : 'inline' }}
                     >
                         Share
                     </Box>

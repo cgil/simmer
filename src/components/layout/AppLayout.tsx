@@ -219,7 +219,7 @@ const AppLayout: FC<AppLayoutProps> = ({
                         <Box
                             sx={{
                                 display: 'flex',
-                                gap: { xs: 0, sm: 1 },
+                                gap: { xs: 0.5, sm: 1 },
                                 alignItems: 'center',
                             }}
                         >
@@ -228,30 +228,40 @@ const AppLayout: FC<AppLayoutProps> = ({
                                     variant="contained"
                                     onClick={onCookingClick}
                                     startIcon={
-                                        <RestaurantIcon
-                                            sx={{
-                                                fontSize: { xs: 20, sm: 22 },
-                                            }}
-                                        />
+                                        isMobile ? null : (
+                                            <RestaurantIcon
+                                                sx={{ fontSize: 22 }}
+                                            />
+                                        )
                                     }
                                     sx={{
                                         height: { xs: 38, sm: 42 },
-                                        px: { xs: 1.5, sm: 2.5 },
+                                        minWidth: { xs: 38, sm: 'auto' },
+                                        width: { xs: 'auto', sm: 'auto' },
+                                        px: { xs: 2.5, sm: 2.5 },
+                                        py: { xs: 0, sm: 'auto' },
                                         bgcolor: 'primary.main',
                                         color: 'primary.contrastText',
                                         fontWeight: 600,
-                                        fontSize: {
-                                            xs: '0.875rem',
-                                            sm: '0.9375rem',
-                                        },
+                                        fontSize: { sm: '0.9375rem' },
                                         fontFamily: "'Inter', sans-serif",
                                         letterSpacing: '0.01em',
                                         textTransform: 'none',
+                                        display: {
+                                            xs: 'flex',
+                                            sm: 'inline-flex',
+                                        },
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
                                         boxShadow: `
                                             0 1px 2px rgba(0,0,0,0.03),
                                             0 4px 20px rgba(0,0,0,0.06),
                                             inset 0 0 0 1px rgba(255,255,255,0.9)
                                         `,
+                                        '& .MuiButton-startIcon': {
+                                            mr: { sm: 1 },
+                                            ml: { sm: 0 },
+                                        },
                                         '&:hover': {
                                             bgcolor: 'primary.dark',
                                             transform: 'translateY(-1px)',
@@ -263,6 +273,9 @@ const AppLayout: FC<AppLayoutProps> = ({
                                         },
                                     }}
                                 >
+                                    {isMobile && (
+                                        <RestaurantIcon sx={{ fontSize: 20 }} />
+                                    )}
                                     {isMobile ? '' : 'Start Cooking'}
                                 </Button>
                             )}
@@ -273,22 +286,27 @@ const AppLayout: FC<AppLayoutProps> = ({
                                     variant="contained"
                                     onClick={() => navigate('/recipe/new')}
                                     startIcon={
-                                        <AddIcon
-                                            sx={{
-                                                fontSize: { xs: 20, sm: 22 },
-                                            }}
-                                        />
+                                        isMobile ? null : (
+                                            <AddIcon
+                                                sx={{
+                                                    fontSize: {
+                                                        xs: 20,
+                                                        sm: 22,
+                                                    },
+                                                }}
+                                            />
+                                        )
                                     }
                                     sx={{
                                         height: { xs: 38, sm: 42 },
+                                        minWidth: { xs: 38, sm: 'auto' },
+                                        width: { xs: 'auto', sm: 'auto' },
                                         px: { xs: 1.5, sm: 2.5 },
+                                        py: { xs: 0, sm: 'auto' },
                                         bgcolor: 'secondary.main',
                                         color: 'text.primary',
                                         fontWeight: 600,
-                                        fontSize: {
-                                            xs: '0.875rem',
-                                            sm: '0.9375rem',
-                                        },
+                                        fontSize: { sm: '0.9375rem' },
                                         fontFamily: "'Kalam', cursive",
                                         letterSpacing: '0.01em',
                                         textTransform: 'none',
@@ -298,16 +316,15 @@ const AppLayout: FC<AppLayoutProps> = ({
                                         borderBottomColor: 'divider',
                                         boxShadow: 'none',
                                         transition: 'all 0.2s ease',
-                                        maxWidth: {
-                                            xs: '100px',
-                                            sm: '150px',
-                                            md: '200px',
+                                        display: {
+                                            xs: 'flex',
+                                            sm: 'inline-flex',
                                         },
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
                                         '& .MuiButton-startIcon': {
-                                            mr: { xs: 0.5, sm: 1 },
-                                        },
-                                        '& .MuiButton-endIcon': {
-                                            ml: { xs: 0.5, sm: 1 },
+                                            mr: { sm: 1 },
+                                            ml: { sm: 0 },
                                         },
                                         '&:hover': {
                                             bgcolor: 'secondary.light',
@@ -317,11 +334,16 @@ const AppLayout: FC<AppLayoutProps> = ({
                                             boxShadow:
                                                 '0 1px 3px rgba(44, 62, 80, 0.1)',
                                             '& .MuiSvgIcon-root': {
-                                                transform: 'rotate(90deg)',
+                                                transform: {
+                                                    sm: 'rotate(90deg)',
+                                                },
                                             },
                                         },
                                     }}
                                 >
+                                    {isMobile && (
+                                        <AddIcon sx={{ fontSize: 20 }} />
+                                    )}
                                     {isMobile ? (
                                         ''
                                     ) : (
