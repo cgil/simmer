@@ -1,5 +1,12 @@
 import React, { FC, useState, useCallback, useRef, useEffect } from 'react';
-import { Box, Typography, Container, Paper } from '@mui/material';
+import {
+    Box,
+    Typography,
+    Container,
+    Paper,
+    useTheme,
+    useMediaQuery,
+} from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AppLayout from '../../components/layout/AppLayout';
@@ -10,6 +17,7 @@ import {
 } from '../../lib/api';
 import { RecipeIdea } from '../../types';
 import { motion, AnimatePresence } from 'framer-motion';
+import useWakeLock from '../../hooks/useWakeLock';
 
 // Import the new components
 import MethodSwitcher from '../../components/NewRecipeSections/MethodSwitcher';
@@ -44,8 +52,8 @@ const AI_RECIPE_STEPS = [
 // --- Progress Step Timing Configuration ---
 // The progress indicator felt too quick, so we slow each step down by expanding the random
 // duration range. Feel free to tweak these values to fine-tune UX speed.
-const STEP_MIN_DURATION_MS = 8000; // 8 seconds
-const STEP_MAX_DURATION_MS = 10000; // 10 seconds
+const STEP_MIN_DURATION_MS = 9000; // 9 seconds
+const STEP_MAX_DURATION_MS = 11000; // 11 seconds
 
 const getRandomStepDuration = () =>
     Math.floor(
@@ -77,6 +85,8 @@ const getMotionVariants = (direction: number) => ({
 
 const NewRecipePage: FC = () => {
     const navigate = useNavigate();
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [activeMethod, setActiveMethod] = useState<CreationMethod>('ai');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -94,6 +104,9 @@ const NewRecipePage: FC = () => {
     const [isCreatingFromIdea, setIsCreatingFromIdea] = useState(false);
     const [aiCreateActiveStep, setAiCreateActiveStep] = useState(0);
     const [aiCreateError, setAiCreateError] = useState<string | null>(null);
+
+    // Keep screen awake on mobile during API loading states
+    useWakeLock(isMobile && (isImporting || isCreatingFromIdea));
 
     // --- Direction Tracking for Animation ---
     const previousMethodIndexRef = useRef<number>(
