@@ -128,7 +128,10 @@ export const convertRecipeIngredientMentions = (
         ...section,
         steps: section.steps.map((step) => ({
             ...step,
-            text: convertLegacyIngredientMentions(step.text, ingredients),
+            text: convertSlugReferencesToUuids(
+                convertLegacyIngredientMentions(step.text, ingredients),
+                ingredients,
+            ),
         })),
     }));
 };
