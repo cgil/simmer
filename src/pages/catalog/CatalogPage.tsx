@@ -1,5 +1,11 @@
 import { FC, useState, useEffect, useRef, useCallback, memo } from 'react';
-import { Box, Typography, useTheme, Button } from '@mui/material';
+import {
+    Box,
+    Typography,
+    useTheme,
+    Button,
+    useMediaQuery,
+} from '@mui/material';
 import AppLayout from '../../components/layout/AppLayout';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -70,6 +76,7 @@ const CatalogPage: FC = () => {
     const theme = useTheme();
     const navigate = useNavigate();
     const { collectionId } = useParams<{ collectionId?: string }>();
+    const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -346,7 +353,7 @@ const CatalogPage: FC = () => {
     // Calculate the visible recipes based on pagination
     const visibleRecipes = recipes.slice(0, page * RECIPES_PER_PAGE);
 
-    // Update handleCollectionSelect to update URL and filter recipes
+    // Update handleCollectionSelect to update URL, filter recipes, and close drawer on mobile
     const handleCollectionSelect = useCallback(
         async (collectionId: string) => {
             setSelectedCollection(collectionId);
@@ -370,8 +377,13 @@ const CatalogPage: FC = () => {
 
             // Load recipes for the selected collection
             await loadRecipesByCollection(collectionId);
+
+            // Close drawer on mobile after selection
+            if (isSmallScreen) {
+                setDrawerOpen(false);
+            }
         },
-        [navigate, searchQuery] // Dependencies: navigate, searchQuery
+        [navigate, searchQuery, isSmallScreen, setDrawerOpen]
     );
 
     // Handle drawer state change
@@ -861,7 +873,6 @@ const CatalogPage: FC = () => {
                     onDeleteCollection={handleDeleteCollection}
                     collectionsBeingRemoved={collectionsBeingRemoved}
                     isOpen={drawerOpen}
-                    // Pass the drop handler
                     onDropRecipe={handleDropRecipeOnCollection}
                 />
 
