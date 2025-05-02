@@ -806,7 +806,10 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                                 InputProps={{
                                     disableUnderline: true,
                                     sx: {
-                                        fontSize: '0.95rem',
+                                        // Ensure font size is >= 16px on mobile to prevent auto-zoom
+                                        fontSize: isSmallScreen
+                                            ? '16px'
+                                            : '0.95rem',
                                         fontWeight: 500,
                                     },
                                 }}
