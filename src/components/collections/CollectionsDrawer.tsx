@@ -501,7 +501,9 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
                     horizontal: 'left',
                 }}
                 sx={{
-                    '.MuiPopover-paper': {
+                    // Ensure picker is above edit controls on mobile
+                    zIndex: theme.zIndex.modal + 2,
+                    '& .MuiPopover-paper': {
                         overflow: 'hidden',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                         borderRadius: 3,
