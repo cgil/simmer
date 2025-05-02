@@ -1,4 +1,12 @@
-import { FC, useState, ReactNode, useRef, useEffect, useMemo } from 'react';
+import {
+    FC,
+    useState,
+    ReactNode,
+    useRef,
+    useEffect,
+    useMemo,
+    useCallback,
+} from 'react';
 import {
     Drawer,
     SwipeableDrawer,
@@ -108,6 +116,7 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
         null
     );
     const collectionItemRef = useRef<HTMLDivElement>(null);
+    const prevIsOpenRef = useRef<boolean>(isOpen); // Ref to track previous isOpen state
 
     // Sort collections: All Recipes first, then alphabetically by name
     const sortedCollections = useMemo(() => {
@@ -224,12 +233,13 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
         setSelectedEmoji(null);
     };
 
-    const handleCancelEdit = () => {
+    // Wrap handleCancelEdit in useCallback for stable reference
+    const handleCancelEdit = useCallback(() => {
         setEditingCollection(null);
         setEditingName('');
         setSelectedIcon(null);
         setSelectedEmoji(null);
-    };
+    }, []); // No external dependencies
 
     const handleOpenEmojiPicker = (
         event: React.MouseEvent<HTMLButtonElement>
@@ -268,6 +278,16 @@ const CollectionsDrawer: FC<CollectionsDrawerProps> = ({
     const handleCancelDelete = () => {
         setDeletingCollection(null);
     };
+
+    // Effect to cancel edit when drawer closes
+    useEffect(() => {
+        // Check if the drawer was open previously and is now closed
+        if (prevIsOpenRef.current && !isOpen && editingCollection !== null) {
+            handleCancelEdit(); // Call the memoized cancel function
+        }
+        // Update the ref to the current state *after* checking the transition
+        prevIsOpenRef.current = isOpen;
+    }, [isOpen, editingCollection, handleCancelEdit]); // Add dependencies
 
     // Add a utility function to get appropriate icon for the collection
     const getCollectionIcon = (collection: CollectionItem) => {
@@ -578,6 +598,7 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
     setEditingName,
     theme,
 }) => {
+    const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const [{ canDrop, isOver }, dropRef]: [
         { canDrop: boolean; isOver: boolean },
         ConnectDropTarget
@@ -647,6 +668,11 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
     // Determine if visual drop indication should be shown (not for All Recipes)
     const showDropIndication =
         isOver && canDrop && collection.id !== ALL_RECIPES_ID;
+
+    // Determine if edit button should be shown
+    const isEditable =
+        collection.id !== ALL_RECIPES_ID &&
+        (!collection.is_shared || collection.access_level === 'edit');
 
     return (
         <Collapse
@@ -851,7 +877,7 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                             <ListItemIcon
                                 sx={{
                                     minWidth: isOpen ? 36 : 0,
-                                    mr: isOpen ? 1 : 0, // Add margin when open
+                                    mr: 0,
                                     transition: theme.transitions.create(
                                         ['min-width', 'margin'],
                                         {
@@ -878,9 +904,7 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                                         <Tooltip
                                             title={`Shared collection (${
                                                 collection.access_level ===
-                                                    'edit' ||
-                                                collection.access_level ===
-                                                    'editor'
+                                                'edit'
                                                     ? 'Can edit'
                                                     : 'View only'
                                             })`}
@@ -907,9 +931,7 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                                                     {collection.name}
                                                 </Box>
                                                 {collection.access_level ===
-                                                    'edit' ||
-                                                collection.access_level ===
-                                                    'editor' ? (
+                                                'edit' ? (
                                                     <CreateIcon
                                                         fontSize="small"
                                                         sx={{
@@ -942,9 +964,62 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                                                 overflow: 'hidden',
                                                 textOverflow: 'ellipsis',
                                                 whiteSpace: 'nowrap',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                width: '100%',
                                             }}
                                         >
-                                            {collection.name}
+                                            <Box
+                                                sx={{
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap',
+                                                }}
+                                            >
+                                                {collection.name}
+                                            </Box>
+                                            {/* Add edit button for mobile that's always visible */}
+                                            {isSmallScreen &&
+                                                isOpen &&
+                                                isEditable && (
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onEditCollection(
+                                                                collection.id
+                                                            );
+                                                        }}
+                                                        sx={{
+                                                            p: 0.5,
+                                                            ml: 0.5,
+                                                            color: alpha(
+                                                                theme.palette
+                                                                    .text
+                                                                    .secondary,
+                                                                0.7
+                                                            ),
+                                                            '&:hover': {
+                                                                bgcolor: alpha(
+                                                                    theme
+                                                                        .palette
+                                                                        .primary
+                                                                        .main,
+                                                                    0.1
+                                                                ),
+                                                            },
+                                                        }}
+                                                    >
+                                                        <EditRoundedIcon
+                                                            fontSize="small"
+                                                            sx={{
+                                                                fontSize:
+                                                                    '0.875rem',
+                                                            }}
+                                                        />
+                                                    </IconButton>
+                                                )}
                                         </Box>
                                     )
                                 }
@@ -992,13 +1067,11 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                 {/* Edit/Delete controls - Hide edit/delete buttons for shared collections with view-only access */}
                 {isOpen &&
                     hoveredCollection === collection.id &&
+                    !isSmallScreen && // Don't show hover controls on mobile
                     !editingCollection &&
                     !deletingCollection &&
                     buttonPositions[collection.id] &&
-                    collection.id !== ALL_RECIPES_ID &&
-                    (!collection.is_shared ||
-                        collection.access_level === 'edit' ||
-                        collection.access_level === 'editor') && (
+                    isEditable && (
                         <Portal>
                             <Grow
                                 in={true}
@@ -1076,7 +1149,10 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
                                     display: 'flex',
                                     flexDirection: 'column',
                                     gap: 0.5,
-                                    zIndex: theme.zIndex.drawer + 1,
+                                    // Ensure buttons are above mobile drawer modal
+                                    zIndex: isSmallScreen
+                                        ? theme.zIndex.modal + 1
+                                        : theme.zIndex.drawer + 1,
                                 }}
                             >
                                 {/* Save Button */}

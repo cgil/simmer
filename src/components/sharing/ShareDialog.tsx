@@ -28,7 +28,6 @@ import CloseIcon from '@mui/icons-material/Close';
 import PublicIcon from '@mui/icons-material/Public';
 import LockIcon from '@mui/icons-material/Lock';
 import UserAvatar from '../common/UserAvatar';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 
 // Type for shared user access level
 type AccessLevel = 'view' | 'edit' | 'owner';
@@ -350,24 +349,11 @@ const UserList = memo(
                                                     user.id
                                                 )
                                             }
-                                            deleteIcon={
-                                                <MoreVertIcon fontSize="small" />
-                                            }
-                                            onDelete={(event) =>
-                                                handleOpenAccessMenu(
-                                                    event,
-                                                    user.id
-                                                )
-                                            }
                                             sx={{
                                                 fontFamily:
                                                     "'Inter', sans-serif",
                                                 fontWeight: 500,
                                                 cursor: 'pointer',
-                                                '& .MuiChip-deleteIcon': {
-                                                    color: 'text.secondary',
-                                                    margin: 0,
-                                                },
                                             }}
                                         />
                                     )}
