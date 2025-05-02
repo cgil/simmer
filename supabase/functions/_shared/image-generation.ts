@@ -64,14 +64,24 @@ export const generateGhibliRecipeImage = async (
         logger.log(`Using image prompt: ${imageGenParams.prompt}`);
 
         const imageResponse = await openai.images.generate(imageGenParams);
+
         const base64Json = imageResponse.data[0]?.b64_json;
 
         if (base64Json) {
-            logger.log("Image generation successful.");
-            return `data:image/jpeg;base64,${base64Json}`; // Assuming JPEG from original function
+            logger.log("Image generation successful (b64_json found).");
+            return `data:image/jpeg;base64,${base64Json}`;
         }
 
-        logger.warn("Image generation finished but no base64 data received.");
+        if (!imageResponse.data || imageResponse.data.length === 0) {
+            logger.warn(
+                "Image generation finished but response.data array is empty.",
+            );
+        } else if (!imageResponse.data[0]?.b64_json) {
+            logger.warn(
+                "Image generation finished but b64_json property is missing in the first data item.",
+            );
+        }
+
         return null;
     } catch (error) {
         logger.error("Error during OpenAI image generation task:", error);

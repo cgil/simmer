@@ -50,6 +50,31 @@ import { RecipeService } from '../../services/RecipeService';
 import { CollectionService } from '../../services/CollectionService';
 import { generateUuidV4, ensureUuid, isValidUuid } from '../../utils/uuid';
 import { generateRecipeImage } from '../../lib/api';
+import { UploadService, ImageUploadState } from '../../services/UploadService';
+
+// Define allowed image types for validation
+const ALLOWED_IMAGE_TYPES = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+];
+
+// Helper function to convert base64 string and content type to a File object
+function base64ToFile(
+    base64: string,
+    contentType: string,
+    filename: string
+): File {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: contentType });
+    return new File([blob], filename, { type: contentType });
+}
 
 const EditRecipePage: FC = () => {
     const location = useLocation();
@@ -80,6 +105,7 @@ const EditRecipePage: FC = () => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [images, setImages] = useState<string[]>([]);
+    const [imageUploads, setImageUploads] = useState<ImageUploadState[]>([]);
     const [servings, setServings] = useState<number>(2);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -104,6 +130,18 @@ const EditRecipePage: FC = () => {
     const [checkingPermission, setCheckingPermission] = useState<boolean>(true);
     const [isOwner, setIsOwner] = useState<boolean>(false);
     const [isGeneratingAiImage, setIsGeneratingAiImage] = useState(false);
+
+    // Clean up object URLs when component unmounts or previews change
+    useEffect(() => {
+        return () => {
+            // Clean up any preview URLs to prevent memory leaks
+            imageUploads.forEach((img) => {
+                if (img.previewUrl) {
+                    URL.revokeObjectURL(img.previewUrl);
+                }
+            });
+        };
+    }, [imageUploads]);
 
     useEffect(() => {
         const stateRecipe = location.state?.recipe as Recipe | undefined;
@@ -221,8 +259,15 @@ const EditRecipePage: FC = () => {
                 total: recipe.time_estimate?.total ?? 0,
             });
             setTags(recipe.tags || []);
+
+            // Initialize image uploads from existing images (permanent URLs)
+            const initialImageUploads = (recipe.images || []).map((url) => ({
+                id: generateUuidV4(),
+                status: 'success' as const,
+                permanentUrl: url,
+            }));
+            setImageUploads(initialImageUploads);
             setImages(recipe.images || []);
-            setServings(recipe.servings || 2);
 
             if (recipe.id === 'new') {
                 setSelectedCollections([]);
@@ -489,7 +534,7 @@ const EditRecipePage: FC = () => {
             const isSavingNewRecipe =
                 recipe.id === 'new' || !isValidUuid(recipe.id);
 
-            let currentImages = [...images];
+            const currentImages = [...images];
 
             // --- AI Image Generation Logic for New Recipes ---
             if (
@@ -501,13 +546,30 @@ const EditRecipePage: FC = () => {
                     'Attempting to generate AI image for new recipe...'
                 );
                 try {
-                    const generatedImage = await generateRecipeImage(
+                    const generatedImageUrl = await generateRecipeImage(
                         title,
                         description
                     );
-                    if (generatedImage) {
-                        console.log('AI image generated successfully.');
-                        currentImages = [generatedImage]; // Replace empty array with the generated image
+                    if (generatedImageUrl) {
+                        // Add the generated image to the uploads state manager
+                        const newImageUpload: ImageUploadState = {
+                            id: generateUuidV4(), // Give it a unique ID
+                            status: 'success' as const,
+                            permanentUrl: generatedImageUrl,
+                            // previewUrl is not needed as it's immediately permanent
+                        };
+                        setImageUploads((prevUploads) => [
+                            newImageUpload,
+                            ...prevUploads,
+                        ]);
+
+                        // Also update the main 'images' array used directly by save
+                        setImages((prevImages) => [
+                            generatedImageUrl,
+                            ...prevImages,
+                        ]);
+
+                        console.log('AI image generated successfully');
                     } else {
                         console.warn(
                             'AI image generation returned null or failed, saving without image.'
@@ -605,6 +667,7 @@ const EditRecipePage: FC = () => {
             }
 
             if (savedRecipeResult.id && isValidUuid(savedRecipeResult.id)) {
+                // First save collections if needed
                 try {
                     if (isCollectionsChanged) {
                         await saveCollections(savedRecipeResult.id);
@@ -829,25 +892,79 @@ const EditRecipePage: FC = () => {
     };
 
     const handleMoveImage = (fromIndex: number, toIndex: number) => {
-        if (toIndex < 0 || toIndex >= images.length) return;
-        const newImages = [...images];
-        const [movedImage] = newImages.splice(fromIndex, 1);
-        newImages.splice(toIndex, 0, movedImage);
-        setImages(newImages);
+        if (toIndex < 0 || toIndex >= imageUploads.length) return;
+
+        // Move the image in imageUploads array
+        const newImageUploads = [...imageUploads];
+        const [movedImage] = newImageUploads.splice(fromIndex, 1);
+        newImageUploads.splice(toIndex, 0, movedImage);
+        setImageUploads(newImageUploads);
+
+        // Update images array with permanent URLs
+        const permanentUrls = newImageUploads
+            .filter((img) => img.status === 'success' && img.permanentUrl)
+            .map((img) => img.permanentUrl as string);
+        setImages(permanentUrls);
     };
 
     const handleImageUpload = (files: FileList | null) => {
-        if (!files) return;
+        if (!files || files.length === 0) return;
+
+        // Create an array to store the new uploads
+        const newUploads: ImageUploadState[] = [];
+
+        // Process each file
         Array.from(files).forEach((file) => {
-            if (!file.type.startsWith('image/')) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const result = e.target?.result;
-                if (typeof result === 'string') {
-                    setImages((prev) => [...prev, result]);
-                }
-            };
-            reader.readAsDataURL(file);
+            // Validate file type
+            if (
+                ![
+                    'image/jpeg',
+                    'image/png',
+                    'image/webp',
+                    'image/gif',
+                ].includes(file.type)
+            ) {
+                console.warn(
+                    `Skipping unsupported file type: ${file.name} (${file.type})`
+                );
+                return;
+            }
+
+            // Validate file size (5MB limit example)
+            if (file.size > 5 * 1024 * 1024) {
+                console.warn(
+                    `Skipping large file: ${file.name} (${(
+                        file.size /
+                        1024 /
+                        1024
+                    ).toFixed(2)}MB)`
+                );
+                return;
+            }
+
+            // Create a unique ID and preview URL for this upload
+            const newImageId = generateUuidV4();
+            const previewUrl = URL.createObjectURL(file);
+
+            // Add to the array of new uploads
+            newUploads.push({
+                id: newImageId,
+                file,
+                previewUrl,
+                status: 'pending' as const,
+            });
+        });
+
+        if (newUploads.length === 0) return;
+
+        // Add all new uploads to state
+        setImageUploads((prevUploads) => [...prevUploads, ...newUploads]);
+
+        // Start the upload process for each new upload
+        newUploads.forEach((upload) => {
+            if (upload.file) {
+                startImageUploadProcess(upload.id, upload.file);
+            }
         });
     };
 
@@ -865,7 +982,10 @@ const EditRecipePage: FC = () => {
         e.preventDefault();
         e.stopPropagation();
         setIsDragging(false);
-        handleImageUpload(e.dataTransfer.files);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleImageUpload(e.dataTransfer.files);
+            e.dataTransfer.clearData();
+        }
     };
 
     const handleStepChange = (
@@ -977,23 +1097,177 @@ const EditRecipePage: FC = () => {
         setSaveError(null);
 
         try {
-            const imageDataUri = await generateRecipeImage(title, description);
+            // 1. Call the AI image generation function
+            const result = await generateRecipeImage(title, description);
 
-            if (imageDataUri) {
-                setImages([imageDataUri, ...images]);
-                console.log('AI image generated successfully');
-            } else {
-                setSaveError(
-                    'Failed to generate AI image. Try again or add your own image.'
+            // 2. Check if the result is a valid data URI string
+            if (typeof result === 'string' && result.startsWith('data:image')) {
+                // 3. Parse the data URI
+                const commaIndex = result.indexOf(',');
+                if (commaIndex === -1) {
+                    throw new Error(
+                        'Invalid data URI format returned from AI generation'
+                    );
+                }
+                const metaPart = result.substring(5, commaIndex);
+                const base64Data = result.substring(commaIndex + 1);
+                const contentType = metaPart.split(';')[0] || 'image/jpeg'; // Default if missing
+
+                // 4. Validate extracted content type
+                if (!ALLOWED_IMAGE_TYPES.includes(contentType.toLowerCase())) {
+                    throw new Error(
+                        `Unsupported image type generated: ${contentType}`
+                    );
+                }
+
+                // 5. Convert base64 to File
+                const filename = `ai-generated-${generateUuidV4()}.${
+                    contentType.split('/')[1] || 'jpeg'
+                }`;
+                const aiImageFile = base64ToFile(
+                    base64Data,
+                    contentType,
+                    filename
                 );
-                console.warn('AI image generation returned null');
+
+                // 6. Prepare for upload management
+                const newImageId = generateUuidV4();
+                const previewUrl = URL.createObjectURL(aiImageFile);
+
+                // 7. Add to imageUploads state
+                const newUpload: ImageUploadState = {
+                    id: newImageId,
+                    file: aiImageFile,
+                    previewUrl,
+                    status: 'pending' as const,
+                };
+                // Prepend the new image so it appears first
+                setImageUploads((prevUploads) => [newUpload, ...prevUploads]);
+
+                // 8. Start the actual upload process via Edge function
+                // Use await here to ensure the process starts before potentially exiting the try block
+                await startImageUploadProcess(newImageId, aiImageFile);
+            } else {
+                // Handle cases where the result is not a data URI or is null/undefined
+                setSaveError(
+                    'Failed to generate AI image or invalid format returned. Try again or add your own image.'
+                );
             }
-        } catch (error) {
-            console.error('Error generating AI image:', error);
-            setSaveError('Error generating AI image. Please try again.');
+        } catch (error: unknown) {
+            console.error(
+                'Error during AI image generation or upload process:',
+                error
+            );
+            const message =
+                error instanceof Error ? error.message : 'Unknown error';
+            setSaveError(
+                `Error generating AI image: ${message}. Please try again.`
+            );
         } finally {
             setIsGeneratingAiImage(false);
         }
+    };
+
+    // Helper function to initiate and manage the upload steps for a single image
+    const startImageUploadProcess = async (imageId: string, file: File) => {
+        try {
+            // 1. Set status to 'uploading'
+            setImageUploads((prev) =>
+                prev.map((img) =>
+                    img.id === imageId
+                        ? {
+                              ...img,
+                              status: 'uploading' as const,
+                              error: undefined,
+                          }
+                        : img
+                )
+            );
+
+            // 2. Upload file via Edge function
+            const { permanentUrl } = await UploadService.uploadFileViaFunction(
+                file
+            );
+
+            // 3. Update state on success
+            setImageUploads((prev) => {
+                const updatedUploads = prev.map((img) =>
+                    img.id === imageId
+                        ? {
+                              ...img,
+                              status: 'success' as const,
+                              permanentUrl,
+                              file: undefined, // Remove file object after success to free memory
+                          }
+                        : img
+                );
+
+                // Also update the images array used for saving
+                const permanentUrls = updatedUploads
+                    .filter(
+                        (img) => img.status === 'success' && img.permanentUrl
+                    )
+                    .map((img) => img.permanentUrl as string);
+                setImages(permanentUrls);
+
+                return updatedUploads;
+            });
+        } catch (err) {
+            console.error(`Upload failed for image ${imageId}:`, err);
+            // 5. Update state on error
+            setImageUploads((prev) =>
+                prev.map((img) =>
+                    img.id === imageId
+                        ? {
+                              ...img,
+                              status: 'error' as const,
+                              error:
+                                  err instanceof Error
+                                      ? err.message
+                                      : 'Upload failed',
+                          }
+                        : img
+                )
+            );
+        }
+    };
+
+    // Function to allow retrying a failed upload
+    const handleRetryUpload = (imageId: string) => {
+        const imageToRetry = imageUploads.find((img) => img.id === imageId);
+        if (imageToRetry?.file && imageToRetry.status === 'error') {
+            startImageUploadProcess(imageId, imageToRetry.file);
+        } else {
+            console.warn(
+                `Could not retry upload for image ID: ${imageId}. Invalid state or file missing.`
+            );
+        }
+    };
+
+    // Add function to delete an image by ID
+    const handleDeleteImage = (imageId: string) => {
+        setImageUploads((prevUploads) => {
+            // Find the image to delete
+            const imageToDelete = prevUploads.find((img) => img.id === imageId);
+
+            // If the image has a preview URL, revoke it to free memory
+            if (imageToDelete?.previewUrl) {
+                URL.revokeObjectURL(imageToDelete.previewUrl);
+            }
+
+            // Filter out the deleted image
+            const updatedUploads = prevUploads.filter(
+                (img) => img.id !== imageId
+            );
+
+            // Update the images array with permanent URLs
+            const permanentUrls = updatedUploads
+                .filter((img) => img.status === 'success' && img.permanentUrl)
+                .map((img) => img.permanentUrl as string);
+            setImages(permanentUrls);
+
+            return updatedUploads;
+        });
     };
 
     const headerContent = (
@@ -1416,9 +1690,9 @@ const EditRecipePage: FC = () => {
                                             }}
                                         ></Box>
                                     )}
-                                    {images.map((imageUrl, index) => (
+                                    {imageUploads.map((imageState, index) => (
                                         <Box
-                                            key={index}
+                                            key={imageState.id}
                                             sx={{
                                                 position: 'relative',
                                                 aspectRatio: '4/3',
@@ -1431,111 +1705,240 @@ const EditRecipePage: FC = () => {
                                                 },
                                             }}
                                         >
-                                            <Box
-                                                component="img"
-                                                src={imageUrl}
-                                                alt={`Recipe image ${
-                                                    index + 1
-                                                }`}
-                                                sx={{
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    objectFit: 'cover',
-                                                }}
-                                            />
-                                            <Box
-                                                className="image-actions"
-                                                sx={{
-                                                    position: 'absolute',
-                                                    top: 0,
-                                                    left: 0,
-                                                    right: 0,
-                                                    bottom: 0,
-                                                    bgcolor:
-                                                        'rgba(0, 0, 0, 0.3)',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    gap: 1,
-                                                    opacity: 0,
-                                                    transition:
-                                                        'opacity 0.2s ease-in-out',
-                                                }}
-                                            >
-                                                <IconButton
-                                                    onClick={() =>
-                                                        handleMoveImage(
-                                                            index,
-                                                            index - 1
-                                                        )
+                                            {/* Show image based on status */}
+                                            {imageState.status === 'success' ? (
+                                                <Box
+                                                    component="img"
+                                                    src={
+                                                        imageState.permanentUrl
                                                     }
-                                                    disabled={index === 0}
-                                                    size="small"
+                                                    alt={`Recipe image ${
+                                                        index + 1
+                                                    }`}
                                                     sx={{
-                                                        color: 'white',
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        objectFit: 'cover',
+                                                    }}
+                                                />
+                                            ) : imageState.previewUrl ? (
+                                                <Box
+                                                    component="img"
+                                                    src={imageState.previewUrl}
+                                                    alt={`Recipe image ${
+                                                        index + 1
+                                                    } (preview)`}
+                                                    sx={{
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        objectFit: 'cover',
+                                                        opacity:
+                                                            imageState.status ===
+                                                            'uploading'
+                                                                ? 0.7
+                                                                : 1,
+                                                    }}
+                                                />
+                                            ) : (
+                                                <Box
+                                                    sx={{
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent:
+                                                            'center',
                                                         bgcolor:
-                                                            'rgba(0, 0, 0, 0.5)',
-                                                        '&:hover': {
-                                                            bgcolor:
-                                                                'rgba(0, 0, 0, 0.7)',
-                                                        },
-                                                        '&.Mui-disabled': {
-                                                            opacity: 0.3,
-                                                        },
+                                                            'background.paper',
                                                     }}
                                                 >
-                                                    <ArrowBackIcon fontSize="small" />
-                                                </IconButton>
-                                                <IconButton
-                                                    onClick={() =>
-                                                        setImages(
-                                                            images.filter(
-                                                                (_, i) =>
-                                                                    i !== index
+                                                    <ImageIcon
+                                                        sx={{
+                                                            fontSize: 40,
+                                                            color: 'text.disabled',
+                                                        }}
+                                                    />
+                                                </Box>
+                                            )}
+
+                                            {/* Loading indicator */}
+                                            {imageState.status ===
+                                                'uploading' && (
+                                                <Box
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        top: 0,
+                                                        left: 0,
+                                                        right: 0,
+                                                        bottom: 0,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent:
+                                                            'center',
+                                                        bgcolor:
+                                                            'rgba(255, 255, 255, 0.5)',
+                                                    }}
+                                                >
+                                                    <CircularProgress
+                                                        size={40}
+                                                    />
+                                                </Box>
+                                            )}
+
+                                            {/* Error overlay */}
+                                            {imageState.status === 'error' && (
+                                                <Box
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        top: 0,
+                                                        left: 0,
+                                                        right: 0,
+                                                        bottom: 0,
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        alignItems: 'center',
+                                                        justifyContent:
+                                                            'center',
+                                                        bgcolor:
+                                                            'rgba(255, 0, 0, 0.7)',
+                                                        color: 'white',
+                                                        p: 2,
+                                                    }}
+                                                >
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{
+                                                            mb: 2,
+                                                            textAlign: 'center',
+                                                        }}
+                                                    >
+                                                        Upload Failed
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="caption"
+                                                        sx={{
+                                                            mb: 2,
+                                                            textAlign: 'center',
+                                                        }}
+                                                    >
+                                                        {imageState.error ||
+                                                            'Unknown error'}
+                                                    </Typography>
+                                                    <Button
+                                                        variant="contained"
+                                                        size="small"
+                                                        onClick={() =>
+                                                            handleRetryUpload(
+                                                                imageState.id
                                                             )
-                                                        )
-                                                    }
-                                                    size="small"
+                                                        }
+                                                        sx={{
+                                                            bgcolor: 'white',
+                                                            color: 'error.main',
+                                                        }}
+                                                    >
+                                                        Retry
+                                                    </Button>
+                                                </Box>
+                                            )}
+
+                                            {/* Action buttons */}
+                                            {(imageState.status === 'success' ||
+                                                imageState.status ===
+                                                    'pending') && (
+                                                <Box
+                                                    className="image-actions"
                                                     sx={{
-                                                        color: 'white',
+                                                        position: 'absolute',
+                                                        top: 0,
+                                                        left: 0,
+                                                        right: 0,
+                                                        bottom: 0,
                                                         bgcolor:
-                                                            'rgba(0, 0, 0, 0.5)',
-                                                        '&:hover': {
-                                                            bgcolor:
-                                                                'rgba(0, 0, 0, 0.7)',
-                                                        },
+                                                            'rgba(0, 0, 0, 0.3)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent:
+                                                            'center',
+                                                        gap: 1,
+                                                        opacity: 0,
+                                                        transition:
+                                                            'opacity 0.2s ease-in-out',
                                                     }}
                                                 >
-                                                    <DeleteOutlineIcon fontSize="small" />
-                                                </IconButton>
-                                                <IconButton
-                                                    onClick={() =>
-                                                        handleMoveImage(
-                                                            index,
-                                                            index + 1
-                                                        )
-                                                    }
-                                                    disabled={
-                                                        index ===
-                                                        images.length - 1
-                                                    }
-                                                    size="small"
-                                                    sx={{
-                                                        color: 'white',
-                                                        bgcolor:
-                                                            'rgba(0, 0, 0, 0.5)',
-                                                        '&:hover': {
+                                                    <IconButton
+                                                        onClick={() =>
+                                                            handleMoveImage(
+                                                                index,
+                                                                index - 1
+                                                            )
+                                                        }
+                                                        disabled={index === 0}
+                                                        size="small"
+                                                        sx={{
+                                                            color: 'white',
                                                             bgcolor:
-                                                                'rgba(0, 0, 0, 0.7)',
-                                                        },
-                                                        '&.Mui-disabled': {
-                                                            opacity: 0.3,
-                                                        },
-                                                    }}
-                                                >
-                                                    <ArrowForwardIcon fontSize="small" />
-                                                </IconButton>
-                                            </Box>
+                                                                'rgba(0, 0, 0, 0.5)',
+                                                            '&:hover': {
+                                                                bgcolor:
+                                                                    'rgba(0, 0, 0, 0.7)',
+                                                            },
+                                                            '&.Mui-disabled': {
+                                                                opacity: 0.3,
+                                                            },
+                                                        }}
+                                                    >
+                                                        <ArrowBackIcon fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        onClick={() =>
+                                                            handleDeleteImage(
+                                                                imageState.id
+                                                            )
+                                                        }
+                                                        size="small"
+                                                        sx={{
+                                                            color: 'white',
+                                                            bgcolor:
+                                                                'rgba(0, 0, 0, 0.5)',
+                                                            '&:hover': {
+                                                                bgcolor:
+                                                                    'rgba(0, 0, 0, 0.7)',
+                                                            },
+                                                        }}
+                                                    >
+                                                        <DeleteOutlineIcon fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        onClick={() =>
+                                                            handleMoveImage(
+                                                                index,
+                                                                index + 1
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            index ===
+                                                            imageUploads.length -
+                                                                1
+                                                        }
+                                                        size="small"
+                                                        sx={{
+                                                            color: 'white',
+                                                            bgcolor:
+                                                                'rgba(0, 0, 0, 0.5)',
+                                                            '&:hover': {
+                                                                bgcolor:
+                                                                    'rgba(0, 0, 0, 0.7)',
+                                                            },
+                                                            '&.Mui-disabled': {
+                                                                opacity: 0.3,
+                                                            },
+                                                        }}
+                                                    >
+                                                        <ArrowForwardIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Box>
+                                            )}
                                         </Box>
                                     ))}
                                     <Box

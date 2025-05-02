@@ -3,6 +3,7 @@ import { OpenAI } from "https://esm.sh/openai@4.96.0";
 import { zodResponseFormat } from "https://deno.land/x/openai@v4.55.1/helpers/zod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { decode as base64Decode } from "https://deno.land/std@0.177.0/encoding/base64.ts";
 import {
     generateId,
     IngredientWithId,
@@ -11,6 +12,7 @@ import {
     validateIngredientMentions,
 } from "../_shared/recipe-schemas.ts";
 import { generateGhibliRecipeImage } from "../_shared/image-generation.ts";
+import { uploadDataToGCS } from "../_shared/gcs-upload.ts";
 
 // Simple environment-aware logger
 const isProduction = Deno.env.get("ENVIRONMENT") === "production";
@@ -31,14 +33,33 @@ const logger = {
     },
 };
 
-logger.log("Recipe Creation function initializing.");
-
+// Minimal logging for request start if needed in future
 serve(async (req) => {
-    logger.log("Function received a request.");
+    // --- Logging Start ---
+    try {
+        const headerObject: Record<string, string> = {};
+        req.headers.forEach((value, key) => {
+            // Sanitize sensitive headers like Authorization for logging
+            if (key.toLowerCase() === "authorization") {
+                headerObject[key] = value
+                    ? `Bearer [present, length=${value.length - 7}]`
+                    : "[missing]";
+            } else if (key.toLowerCase() === "apikey") {
+                headerObject[key] = value
+                    ? `[present, length=${value.length}]`
+                    : "[missing]";
+            } else {
+                headerObject[key] = value;
+            }
+        });
+        // Removed header logging
+    } catch (e) {
+        logger.error("Error logging request headers:", e);
+    }
+    // --- Logging End ---
 
     // Handle CORS preflight requests
     if (req.method === "OPTIONS") {
-        logger.log("Handling OPTIONS preflight request.");
         return new Response(null, {
             status: 204,
             headers: {
@@ -49,17 +70,53 @@ serve(async (req) => {
     }
 
     try {
+        // Authenticate user first
+        const authorization = req.headers.get("Authorization");
+        if (!authorization) {
+            logger.error(
+                "Authorization header is missing from the incoming request.",
+            );
+            throw new Error("Missing authorization header");
+        }
+        const token = authorization.replace("Bearer ", "");
+
+        // *** Initialize Supabase client WITHOUT global headers for auth ***
+        const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+        const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+
+        if (!supabaseUrl || !supabaseAnonKey) {
+            logger.error("Missing Supabase URL or Anon Key");
+            throw new Error("Internal Server Error: Missing Supabase config");
+        }
+
+        // Initialize client with URL and Key ONLY
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+        // *** Use the token directly with getUser ***
+        const { data: { user }, error: authError } = await supabase.auth
+            .getUser(token); // Pass the token here
+
+        if (authError || !user) {
+            logger.error("Auth error (getUser):", authError);
+            // Provide more specific error logging if available
+            if (authError) {
+                console.error(
+                    "getUser Specific Error:",
+                    authError.message,
+                    authError.status,
+                    authError.code,
+                );
+            }
+            throw new Error("Unauthorized - Failed to validate token"); // More specific error
+        }
+        // Log success
+        logger.log(`Successfully authenticated user: ${user.id}`);
+
         const { recipeIdea, originalPrompt } = await req.json();
-        logger.log(`Processing request for idea: ${recipeIdea?.title}`);
 
         if (!recipeIdea || !recipeIdea.title || !recipeIdea.description) {
             throw new Error(
                 "Recipe idea with title and description is required",
-            );
-        }
-        if (!originalPrompt) {
-            logger.warn(
-                "Original prompt not provided, may affect image quality.",
             );
         }
 
@@ -67,12 +124,6 @@ serve(async (req) => {
         const openai = new OpenAI({
             apiKey: Deno.env.get("OPENAI_API_KEY") || "",
         });
-
-        // Initialize Supabase client for caching
-        const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
-            "";
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
         // Check cache first - optional but recommended
         const cacheKey = `recipe-creation:${
@@ -85,7 +136,6 @@ serve(async (req) => {
             .maybeSingle();
 
         if (!cacheError && cachedData?.data) {
-            logger.log(`Cache hit for key: ${cacheKey}.`);
             return new Response(JSON.stringify(cachedData.data), {
                 headers: {
                     ...corsHeaders,
@@ -98,15 +148,23 @@ serve(async (req) => {
             logger.error("Cache check error:", cacheError);
             // Proceed without cache, but log the error
         }
-        logger.log(
-            `Cache miss for key: ${cacheKey}. Proceeding with generation.`,
-        );
+
+        // Define interfaces for the data structure before validation if needed
+        interface RawIngredient {
+            name: string;
+            quantity?: number | null;
+            unit?: string | null;
+            notes?: string | null;
+        }
+        interface RawSection {
+            section_title: string;
+            steps: { text: string }[]; // Assuming steps have at least a text property
+        }
 
         // --- Asynchronous Task Definitions ---
 
         // Task 1: Generate Recipe Details
         const generateRecipeDetails = async () => {
-            logger.log("Starting generateRecipeDetails task.");
             try {
                 const completion = await openai.chat.completions.create({
                     model: "o4-mini",
@@ -243,7 +301,6 @@ serve(async (req) => {
                 if (!result) {
                     throw new Error("No recipe content generated");
                 }
-                logger.log("Finished generateRecipeDetails task successfully.");
                 return JSON.parse(result);
             } catch (error) {
                 logger.error("Error in generateRecipeDetails:", error);
@@ -251,70 +308,117 @@ serve(async (req) => {
             }
         };
 
-        // Task 2: Generate Recipe Image (Uses shared utility)
-        const generateImageTask = () =>
-            generateGhibliRecipeImage(
-                recipeIdea.title,
-                recipeIdea.description,
-                originalPrompt || null, // Pass context
-            );
+        // Task 2: Generate and Upload Image
+        const generateAndUploadImage = async () => {
+            try {
+                const imageDataUri = await generateGhibliRecipeImage(
+                    recipeIdea.title,
+                    originalPrompt || recipeIdea.description,
+                );
+
+                // Check for a valid *JPEG* data URI (matching image-generation function)
+                if (
+                    !imageDataUri ||
+                    !imageDataUri.startsWith("data:image/jpeg;base64,")
+                ) {
+                    logger.warn( // Still useful to warn if image gen fails
+                        "No valid image data URI generated (expected JPEG).",
+                    );
+                    return null; // Indicate no image was generated/uploaded
+                }
+
+                // Decode base64 data
+                const base64Data = imageDataUri.replace(
+                    /^data:image\/jpeg;base64,/,
+                    "",
+                );
+                const imageBytes = base64Decode(base64Data);
+                const contentType = "image/jpeg"; // Set correct content type for upload
+
+                // Generate GCS path
+                const gcsBucketName = Deno.env.get("GCS_BUCKET_NAME");
+                if (!gcsBucketName) {
+                    logger.error("GCS_BUCKET_NAME not set for image upload.");
+                    throw new Error(
+                        "Server configuration error for image upload.",
+                    );
+                }
+                const fileName = `${crypto.randomUUID()}.jpeg`;
+                const destinationPath = `uploads/${user.id}/${fileName}`;
+
+                // Upload directly to GCS
+                const permanentUrl = await uploadDataToGCS(
+                    imageBytes,
+                    destinationPath,
+                    contentType,
+                );
+                return permanentUrl;
+            } catch (error) {
+                logger.error("Error in generateAndUploadImage:", error);
+                return null; // Return null on error to not block recipe creation
+            }
+        };
 
         // --- Execute Tasks Concurrently ---
-        logger.log("Starting Promise.all for recipe and image.");
-        const [recipeResult, imageDataUri] = await Promise.all([
+        const [detailsResult, imageResult] = await Promise.allSettled([
             generateRecipeDetails(),
-            generateImageTask(), // Call the task wrapper
+            generateAndUploadImage(),
         ]);
-        logger.log("Finished Promise.all.");
 
         // --- Process Results ---
-        const parsedResult = recipeResult;
-        if (!parsedResult) {
-            // Handle case where recipe generation failed but didn't throw in Promise.all
-            throw new Error("Recipe generation failed to return data.");
+
+        // Handle Recipe Details
+        if (detailsResult.status === "rejected") {
+            logger.error(
+                "Recipe details generation failed:",
+                detailsResult.reason,
+            );
+            throw new Error("Failed to generate recipe details");
         }
+        const recipeData = detailsResult.value;
 
-        // Generate IDs for the recipe and instruction sections
-        parsedResult.id = generateId(parsedResult.title);
-
-        // Ensure IDs are properly formatted for instruction sections
-        parsedResult.instructions = parsedResult.instructions.map(
-            (section: InstructionSection) => ({
-                ...section,
-                id: generateId(section.section_title),
-            }),
-        );
-
-        // Generate IDs for ingredients ensuring they follow the kebab-case format
-        parsedResult.ingredients = parsedResult.ingredients.map(
-            (ingredient: IngredientWithId) => ({
+        // Generate IDs and validate
+        recipeData.id = generateId(recipeData.title);
+        recipeData.ingredients = (recipeData.ingredients || []).map(
+            (ingredient: RawIngredient) => ({
                 ...ingredient,
                 id: generateId(ingredient.name),
+                quantity: ingredient.quantity ?? null,
+                unit: ingredient.unit ?? null,
+                notes: ingredient.notes ?? null,
             }),
+        ) as IngredientWithId[];
+        recipeData.instructions = (recipeData.instructions || []).map(
+            (section: RawSection) => ({
+                ...section,
+                id: generateId(section.section_title),
+                steps: (section.steps || []).map((step) => ({ ...step })),
+            }),
+        ) as InstructionSection[];
+
+        recipeData.instructions = validateIngredientMentions(
+            recipeData.instructions,
+            recipeData.ingredients,
         );
 
-        // Validate ingredient mentions in instruction steps
-        try {
-            parsedResult.instructions = validateIngredientMentions(
-                parsedResult.instructions,
-                parsedResult.ingredients,
-            );
-            logger.log("Validated ingredient mentions.");
-        } catch (validationError) {
+        const validatedRecipe = RecipeSchema.parse(recipeData);
+
+        // Handle Image Result
+        let permanentImageUrl: string | null = null;
+        if (imageResult.status === "fulfilled") {
+            permanentImageUrl = imageResult.value;
+        } else {
             logger.error(
-                "Ingredient mention validation failed:",
-                validationError,
+                "Image generation/upload task rejected:",
+                imageResult.reason,
             );
-            // Decide how to handle: return error, or proceed with potentially bad mentions?
-            // For now, let's proceed but log the error.
         }
 
-        // Add the generated image data URI if available
-        parsedResult.images = imageDataUri ? [imageDataUri] : [];
-
-        // Final validation with Zod schema
-        const validatedRecipe = RecipeSchema.parse(parsedResult);
-        logger.log("Final recipe structure validated.");
+        if (permanentImageUrl) {
+            validatedRecipe.images = [permanentImageUrl];
+        } else {
+            validatedRecipe.images = []; // Ensure images is an empty array if no image was generated/uploaded
+        }
 
         // Store in cache
         try {
@@ -325,37 +429,29 @@ serve(async (req) => {
                     data: validatedRecipe,
                     created_at: new Date().toISOString(),
                 });
-            logger.log("Stored result in cache.");
         } catch (cacheWriteError) {
             logger.error("Cache write error:", cacheWriteError);
         }
 
-        logger.log("Returning successful response.");
         return new Response(JSON.stringify(validatedRecipe), {
             headers: {
                 ...corsHeaders,
                 "Content-Type": "application/json",
-                "X-Cache": "MISS",
             },
         });
     } catch (error: unknown) {
-        logger.error("Uncaught error in main handler:", error);
+        logger.error("Request failed:", error);
         const errorMessage = error instanceof Error
             ? error.message
             : "Unknown error occurred";
+        const status = errorMessage === "Unauthorized" ? 401 : 400; // Or 500 for server errors
 
-        return new Response(
-            JSON.stringify({ error: errorMessage }),
-            {
-                status: typeof error === "object" && error !== null &&
-                        "status" in error && typeof error.status === "number"
-                    ? error.status
-                    : 500,
-                headers: {
-                    ...corsHeaders,
-                    "Content-Type": "application/json",
-                },
+        return new Response(JSON.stringify({ error: errorMessage }), {
+            status: status,
+            headers: {
+                ...corsHeaders,
+                "Content-Type": "application/json",
             },
-        );
+        });
     }
 });

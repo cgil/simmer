@@ -16,8 +16,8 @@ This document outlines the technical architecture and implementation details of 
 ### 1.2. Backend & Data
 
 -   **Database**: Supabase (PostgreSQL)
--   **Storage**: Supabase Storage for images
--   **AI Integration**: OpenAI API for recipe extraction
+-   **Storage**: Google Cloud Storage (GCS) for images (using Signed URLs)
+-   **AI Integration**: OpenAI API for recipe extraction, ideas, creation, and substitution
 -   **Authentication**: Supabase Auth
 
 ---
@@ -562,16 +562,37 @@ const recipeQueries = {
 };
 ```
 
+### 5.5. Google Cloud Storage (GCS) Integration for Images
+
+-   **Flow**:
+    1.  **User/AI Image Upload (Client-Side Trigger)**:
+        -   The client prepares the image data (e.g., reads `File` as base64).
+        -   The client calls the `upload-user-image` Supabase Edge Function via `supabase.functions.invoke`, sending the image data (e.g., base64 string and content type) in the request body (typically JSON).
+    2.  **Edge Function Processing (`upload-user-image`)**:
+        -   The function authenticates the user.
+        -   It parses the request body (e.g., decodes base64).
+        -   It validates the content type and size.
+        -   It calls the shared `uploadDataToGCS` utility function using service account credentials to upload the image bytes directly to GCS.
+        -   It returns the permanent GCS URL to the client.
+    3.  **Backend Image Upload (e.g., Recipe Extraction/Creation)**:
+        -   Backend functions (like `recipe-extraction`, `recipe-creation`) generate or download image data.
+        -   They directly call the shared `uploadDataToGCS` utility function to upload the image bytes to GCS using service account credentials.
+        -   The resulting permanent GCS URL is stored in the database.
+    4.  **Reference Storage**: The permanent GCS URL is stored in the appropriate database table (e.g., `recipes.images` array or a dedicated `recipe_images` table) when the recipe is saved or created.
+-   **CORS**: GCS bucket CORS configuration might still be necessary for allowing the browser to _display_ images directly from GCS, depending on bucket/object access settings. However, it's no longer required for the upload PUT requests from the browser.
+-   **Security**: Service account keys are stored securely as environment variables/secrets in Supabase Function settings, granting backend functions the necessary permissions to upload data via `uploadDataToGCS`.
+
 ---
 
 ## 6. Performance Considerations
 
 ### 6.1. Image Optimization
 
--   Automatic image resizing on upload
--   Lazy loading for recipe images
--   Responsive image sizes
--   WebP format support
+-   **Client-Side Resizing**: Consider resizing images on the client before uploading to reduce upload time and storage costs.
+-   **GCS Features**: Leverage GCS features like Object Lifecycle Management for potential future optimizations (e.g., moving older images to cheaper storage classes).
+-   **Lazy Loading**: Lazy loading for recipe images in the frontend.
+-   **Responsive Image Sizes**: Frontend retrieves appropriate image sizes if different versions are stored or generated (potentially via GCS functions/triggers later).
+-   **Format**: Standard web formats like JPEG, PNG, WebP.
 
 ### 6.2. State Management
 

@@ -10,6 +10,96 @@ import {
     RecipeSchema,
     validateIngredientMentions,
 } from "../_shared/recipe-schemas.ts";
+import { uploadDataToGCS } from "../_shared/gcs-upload.ts";
+import { getMimeExtension } from "../_shared/mime-helpers.ts";
+
+// List of allowed image MIME types for upload
+const ALLOWED_IMAGE_TYPES_FOR_UPLOAD = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+];
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB limit
+
+// Simple environment-aware logger
+const isProduction = Deno.env.get("ENVIRONMENT") === "production";
+const logger = {
+    log: (...args: unknown[]) => {
+        if (!isProduction) console.log("[Info]", ...args);
+    },
+    warn: (...args: unknown[]) => {
+        if (!isProduction) console.warn("[Warn]", ...args);
+    },
+    error: (...args: unknown[]) => {
+        console.error("[Error]", ...args);
+    },
+};
+
+// Helper function to process a single image URL: download and upload to GCS
+async function downloadAndUploadImage(
+    imageUrl: string,
+    userId: string,
+): Promise<string | null> {
+    try {
+        logger.log(`Processing image URL: ${imageUrl}`);
+        const response = await fetch(imageUrl, { method: "GET" });
+
+        if (!response.ok) {
+            logger.warn(
+                `Failed to fetch image ${imageUrl}: Status ${response.status}`,
+            );
+            return null;
+        }
+
+        const contentType = response.headers.get("content-type")?.toLowerCase();
+        if (
+            !contentType ||
+            !ALLOWED_IMAGE_TYPES_FOR_UPLOAD.includes(contentType)
+        ) {
+            logger.warn(
+                `Skipping image ${imageUrl}: Invalid content type ${contentType}`,
+            );
+            return null;
+        }
+
+        const fileExtension = getMimeExtension(contentType);
+        if (!fileExtension) {
+            logger.warn(
+                `Skipping image ${imageUrl}: Could not determine extension for ${contentType}`,
+            );
+            return null;
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        if (arrayBuffer.byteLength > MAX_IMAGE_SIZE_BYTES) {
+            logger.warn(
+                `Skipping image ${imageUrl}: Exceeds size limit (${arrayBuffer.byteLength} bytes)`,
+            );
+            return null;
+        }
+        if (arrayBuffer.byteLength === 0) {
+            logger.warn(`Skipping image ${imageUrl}: Empty file data.`);
+            return null;
+        }
+
+        const imageBytes = new Uint8Array(arrayBuffer);
+        const uniqueFileName = `${crypto.randomUUID()}${fileExtension}`;
+        const destinationPath = `uploads/${userId}/${uniqueFileName}`;
+
+        logger.log(`Uploading image from ${imageUrl} to ${destinationPath}`);
+        const permanentUrl = await uploadDataToGCS(
+            imageBytes,
+            destinationPath,
+            contentType,
+        );
+        logger.log(`Successfully uploaded image to: ${permanentUrl}`);
+        return permanentUrl;
+    } catch (error) {
+        logger.error(`Error processing image URL ${imageUrl}:`, error);
+        return null; // Return null on any failure during processing
+    }
+}
 
 // Update the RawRecipe interface to include id property
 interface RawIngredient {
@@ -29,9 +119,15 @@ interface RawInstructionSection {
 
 interface RawRecipe {
     title: string;
+    description?: string;
     ingredients: RawIngredient[];
     instructions: RawInstructionSection[];
     id?: string; // Make id optional since we add it later
+    images?: string[];
+    tags?: string[];
+    servings?: number;
+    time_estimate?: { prep: number; cook: number; rest: number; total: number };
+    notes?: string[];
 }
 
 interface ExtractedContent {
@@ -327,6 +423,8 @@ serve(async (req) => {
         });
     }
 
+    let userId = "anonymous"; // Default user ID
+
     try {
         const { url } = await req.json();
 
@@ -334,14 +432,48 @@ serve(async (req) => {
             throw new Error("URL is required");
         }
 
-        // Initialize Supabase client
-        const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+        // --- Authentication Start ---
+        const authorization = req.headers.get("Authorization");
         const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
             "";
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+        const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+
+        if (!supabaseUrl || !anonKey) {
+            logger.error("Missing Supabase URL or Anon Key");
+            throw new Error("Server configuration error.");
+        }
+
+        const supabase = createClient(supabaseUrl, anonKey, {
+            global: { headers: { Authorization: authorization || "" } },
+            auth: { persistSession: false },
+        });
+
+        if (authorization) {
+            const token = authorization.replace("Bearer ", "");
+            const { data: { user }, error: authError } = await supabase.auth
+                .getUser(token);
+            if (authError) {
+                logger.error("Auth error validating token:", authError.message);
+                // Allow proceeding as anonymous for extraction, but log error
+            } else if (user) {
+                userId = user.id;
+                logger.log(`Authenticated user: ${userId}`);
+            } else {
+                logger.warn("Token provided but user not found.");
+            }
+        } else {
+            logger.log(
+                "No authorization header found, proceeding as anonymous.",
+            );
+        }
+        // --- Authentication End ---
+
+        // Initialize Supabase client FOR SERVICE ROLE needed for cache
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
         // Check cache first
-        const { data: cachedData, error: cacheError } = await supabase.rpc(
+        const { data: cachedData, error: cacheError } = await supabaseAdmin.rpc(
             "get_or_set_recipe_cache",
             {
                 p_url: url,
@@ -350,7 +482,7 @@ serve(async (req) => {
         );
 
         if (cacheError) {
-            console.error("Cache error:", cacheError);
+            logger.error("Cache check error:", cacheError);
         } else if (cachedData) {
             // Return cached data if available
             return new Response(JSON.stringify(cachedData), {
@@ -370,12 +502,18 @@ serve(async (req) => {
         try {
             // Fetch webpage content
             const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(
+                    `Failed to fetch URL: ${response.status} ${response.statusText}`,
+                );
+            }
             const html = await response.text();
 
-            // Extract main content and images
-            const { text: mainContent, images } = extractMainContent(html, url);
+            // Extract main content and original image URLs
+            const { text: mainContent, images: originalImageUrls } =
+                extractMainContent(html, url);
 
-            // Extract recipe using OpenAI with Zod schema
+            // Extract recipe using OpenAI
             const completion = await openai.chat.completions.create({
                 model: "o4-mini",
                 reasoning_effort: "high",
@@ -464,9 +602,10 @@ serve(async (req) => {
                             - Capture all necessary steps and instructions.
                             - The url provided may include unrelated content, focus on the recipe content. Often there's a recipe instructions and ingredients section as the core content, and some notes and tips which may be useful spread throughout the page.
                             - Use the following image URLs in your response: ${
-                                JSON.stringify(images)
+                                JSON.stringify(originalImageUrls)
                             }
-                            - For the images list, pick a maximum of 10 images relevant to the recipe, and avoid duplicates, including duplicates at different size, opt for the best quality images.
+                            - From the images list, select up to 10 recipe images relevant to the recipe, and avoid duplicates, including duplicates at different size, opt for the best quality images. Don't analyze the images just select the best ones based on the info in the url. If the url does not provide helful context then return up to 10 images from the list.
+                            - Return ONLY the selected image URLs in the 'images' field of the JSON response. Do not include URLs not from the provided list.
                             - Tags should be relevant to the recipe and should be thoughtful and provide value to a user searching for a recipe, such as as the following examples but think of tags specific to the recipe:
                                 - "Healthy"
                                 - "Low Calorie"
@@ -494,11 +633,49 @@ serve(async (req) => {
 
             const result = completion.choices[0].message?.content;
             if (!result) {
-                throw new Error("No content in response");
+                throw new Error("No content in response from OpenAI");
             }
 
-            // Parse and validate the response
+            // Parse and validate the initial response
             const parsedResult = JSON.parse(result) as RawRecipe;
+
+            // --- Image Processing Step ---
+            let uploadedImageUrls: string[] = [];
+            if (
+                parsedResult.images && parsedResult.images.length > 0 &&
+                userId !== "anonymous"
+            ) {
+                logger.log(
+                    `Attempting to process ${parsedResult.images.length} images for user ${userId}...`,
+                );
+                const imageProcessingPromises = parsedResult.images.map((
+                    imageUrl: string,
+                ) => downloadAndUploadImage(imageUrl, userId));
+                const settledResults = await Promise.allSettled(
+                    imageProcessingPromises,
+                );
+
+                uploadedImageUrls = settledResults
+                    .filter((
+                        res: PromiseSettledResult<string | null>,
+                    ): res is PromiseFulfilledResult<string> =>
+                        res.status === "fulfilled" && res.value !== null
+                    )
+                    .map((res) => res.value);
+
+                logger.log(
+                    `Successfully processed ${uploadedImageUrls.length} images.`,
+                );
+            } else if (userId === "anonymous") {
+                logger.log("Skipping image processing for anonymous user.");
+                // Keep original (or OpenAI selected) images for anonymous
+                uploadedImageUrls = parsedResult.images || [];
+            } else {
+                logger.log("No images found or selected by OpenAI.");
+            }
+            // Replace the images array with the uploaded GCS URLs (or original if anonymous/failed)
+            parsedResult.images = uploadedImageUrls;
+            // --- End Image Processing Step ---
 
             // Generate IDs for the recipe and ingredients
             parsedResult.id = generateId(parsedResult.title);
@@ -535,8 +712,8 @@ serve(async (req) => {
 
             const validatedRecipe = RecipeSchema.parse(parsedResult);
 
-            // Store in cache
-            await supabase.rpc("get_or_set_recipe_cache", {
+            // Store in cache (using admin client)
+            await supabaseAdmin.rpc("get_or_set_recipe_cache", {
                 p_url: url,
                 p_data: validatedRecipe,
             });
@@ -547,7 +724,7 @@ serve(async (req) => {
                     headers: {
                         ...corsHeaders,
                         "Content-Type": "application/json",
-                        "X-Cache": "MISS",
+                        "X-Cache": "MISS", // Indicate cache miss since we processed it
                     },
                 },
             );

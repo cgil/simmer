@@ -29,6 +29,7 @@ Simmer is a modern web application that brings the warmth and personality of a p
 -   [Supabase CLI](https://supabase.com/docs/guides/cli) installed globally
 -   Docker Desktop (required for Supabase local development)
 -   OpenAI API key
+-   [Google Cloud SDK (`gcloud`)](https://cloud.google.com/sdk/docs/install) installed and authenticated (for GCS CORS setup)
 
 ### Environment Setup
 
@@ -53,8 +54,20 @@ cp .env.example .env.production    # For production deployment
 ```
 
 4. Configure your environment files:
-    - `.env.local`: Used for local development with Supabase running locally
-    - `.env.production`: Used for production deployment with your Supabase cloud project
+    - `.env.local`: Used for local development with Supabase running locally.
+    - `.env.production`: Used for production deployment with your Supabase cloud project.
+    - **Critical GCS Variables**: You will need to obtain a Google Cloud Service Account JSON key file with appropriate permissions (`Storage Object Creator`, `Storage Object Viewer`) for your GCS bucket. Add the following variables derived from the key file to **both** `.env.local` and `.env.production` (or configure them directly in your deployment environments):
+        ```env
+        # Google Cloud Storage Configuration
+        GCS_BUCKET_NAME=your-gcs-bucket-name
+        GCS_PROJECT_ID=your-gcp-project-id
+        GCS_CLIENT_EMAIL=your-service-account-email@your-project.iam.gserviceaccount.com
+        # Ensure the private key is handled securely, especially in .env.production
+        # For multi-line keys, you might need to wrap in quotes or use special syntax
+        # depending on your environment/deployment service.
+        GCS_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_CONTENT\n-----END PRIVATE KEY-----\n"
+        ```
+    - **Security Note**: Do NOT commit your service account key file or the `.env.production` file containing the private key directly to your Git repository. Use environment variable management provided by your hosting platforms (Supabase Functions Secrets, Vercel Environment Variables) for production.
 
 ### Starting the Development Environment
 
@@ -167,45 +180,53 @@ The built files will be in the `dist` directory.
 
 ### Environment Setup
 
-We use two environment files:
+We use two primary environment files locally:
 
-1. `.env.local` - Local development
-2. `.env.production` - Production deployment
+1.  `.env.local` - Local development
+2.  `.env.production` - Base for production deployment variables (DO NOT COMMIT SENSITIVE KEYS HERE)
 
-Each file should contain:
+For deployment, **critical environment variables must be set directly in your hosting providers**: Vercel for the frontend and Supabase for the Edge Functions.
 
-```env
-# Supabase Configuration
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+**Required Environment Variables:**
 
-# OpenAI Configuration
-OPENAI_API_KEY=your_openai_api_key
+-   **Vercel (Frontend)**:
 
-# Environment Configuration
-ENVIRONMENT=development|production
+    -   `VITE_SUPABASE_URL`
+    -   `VITE_SUPABASE_ANON_KEY`
+        // Frontend generally doesn't need GCS variables directly as uploads go via Edge Functions.
 
-# JWT Configuration
-SUPABASE_JWT_SECRET=your_jwt_secret  # Required for production
+-   **Supabase (Edge Functions Secrets)**:
+    -   `SUPABASE_URL` (Often available implicitly)
+    -   `SUPABASE_ANON_KEY` (Often available implicitly)
+    -   `SUPABASE_SERVICE_ROLE_KEY` (If needed by functions)
+    -   `OPENAI_API_KEY`
+    -   `SUPABASE_JWT_SECRET` (Required for production JWT verification)
+    -   `ENVIRONMENT=production`
+    -   `GCS_BUCKET_NAME`
+    -   `GCS_PROJECT_ID`
+    -   `GCS_CLIENT_EMAIL`
+    -   `GCS_PRIVATE_KEY` (Store securely as a secret)
 
-# Additional configurations as needed
-```
+**Setup Steps:**
+
+1.  **Vercel Environment Variables**: Configure the required `VITE_` variables in your Vercel project settings.
+2.  **Supabase Function Secrets**: Navigate to your Supabase project dashboard -> Project Settings -> Functions -> Set Secrets. Add the `OPENAI_API_KEY`, `SUPABASE_JWT_SECRET`, and all `GCS_*` variables here. Pay special attention to formatting the `GCS_PRIVATE_KEY` correctly.
 
 ### Deploying to Vercel
 
-1. Install Vercel CLI:
+1.  Install Vercel CLI:
 
 ```bash
 npm i -g vercel
 ```
 
-2. Configure environment variables in Vercel:
+2.  Configure environment variables in Vercel:
 
 ```bash
 vercel env pull .env.production
 ```
 
-3. Deploy:
+3.  Deploy:
 
 ```bash
 npm run deploy
@@ -217,100 +238,18 @@ npm run deploy
 npm run functions:deploy:prod
 ```
 
-This command deploys the following functions configured for production:
+This command deploys the following functions configured for production (ensure any new functions interacting with GCS are included):
 
 -   recipe-extraction
 -   recipe-ideas-generation
 -   recipe-creation
 -   link-shares-on-signup
 -   ingredient-substitution
+-   generate-recipe-image
+-   `upload-user-image` # Handles user image uploads
 
 ### Deployment Checklist
 
-1. Update environment variables
-2. Run database migrations
-3. Deploy Supabase functions
-4. Deploy frontend to Vercel
-5. Test the deployment
-
-### Monitoring
-
--   Check Supabase logs in the dashboard
--   Monitor OpenAI API usage
--   Set up error tracking (recommended: Sentry)
--   Monitor Vercel deployment status
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
--   Material-UI for the component library
--   OpenAI for recipe extraction capabilities
--   Supabase for backend services
--   Vercel for hosting and deployment
-
-### Recent Updates
-
-#### Dynamic OpenGraph Previews for Recipe Sharing
-
--   Added Vercel Edge Middleware to generate dynamic OpenGraph tags for recipe links
--   Enabled rich previews when sharing recipe URLs in iMessage, social apps, and messaging platforms
--   Optimized approach that only runs for crawler user agents to minimize function costs
--   Included fallback image for recipes without photos
--   Added caching for improved performance
-
-#### Recipe Collections
-
--   Added support for organizing recipes into user-defined collections
--   Implemented persistent drawer UI for collection navigation
--   Custom emoji picker for personalizing collection icons
--   Smooth animations for adding, removing, and updating collections
--   Database schema with proper relationships and row-level security
--   Collection-specific recipe browsing with search support
--   Special "All Recipes" view to see recipes across all collections
-
-#### User Profile Avatar Integration
-
--   Added support for displaying user profile pictures from authentication providers
--   Implemented fallback mechanisms for when profile images aren't available
--   Created a dedicated UserAvatar component with proper error handling
-
-#### Improved Ingredient Reference Handling
-
--   Enhanced saving process to ensure all ingredient references use proper UUID format
--   Proactive conversion of any slug-based references during recipe save
--   Improved visual feedback for different types of ingredient references
--   Enhanced error detection for invalid or missing ingredient references
--   Better tooltip information when hovering over ingredient mentions
--   Support for multiple ingredient reference formats in instructions
-
-#### Time Handling Improvements
-
--   Support for zero prep and cook times
--   Automatic total time calculation
--   Enhanced time display in recipe cards and details
--   Flexible time input validation
-
-#### Recipe Extraction Enhancements
-
--   Improved extraction reliability
--   Whimsical loading states during extraction
--   Better error handling and user feedback
--   Enhanced progress tracking with themed steps
-
-#### Ingredient Reference System
-
--   @-mention style references for ingredients in instructions
--   Visual highlighting of referenced ingredients
--   Auto-formatting of ingredient quantities and units
--   Easy ingredient selection via dropdown or carrot button
+1.  Configure environment variables/secrets in Vercel and Supabase.
+2.  Ensure GCS bucket exists and CORS is configured correctly for your GCS bucket. Note: CORS rules are less critical for the current Edge Function upload approach compared to direct browser uploads, but may still be needed for displaying images depending on configuration.
+3.  Run database migrations if needed (`supabase db push`
