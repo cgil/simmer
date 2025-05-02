@@ -676,8 +676,22 @@ const EditRecipePage: FC = () => {
             const textToInsert = `@[${ingredient.name}](${ingredientId})`;
 
             const stepId = `${sectionIndex}-${stepIndex}`;
-            const cursorPos =
+            const originalCursorPos =
                 cursorPositions[stepId] ?? currentStep.text.length;
+
+            // Adjust cursor position: if it falls inside an existing mention, move it to the end of that mention + 1 (space)
+            let cursorPos = originalCursorPos;
+            const mentionRegex = /@\[[^\]]+\]\([^)]*\)/g;
+            let match: RegExpExecArray | null;
+            while ((match = mentionRegex.exec(currentStep.text)) !== null) {
+                const start = match.index;
+                const end = start + match[0].length; // end is exclusive
+                if (cursorPos > start && cursorPos < end) {
+                    // Cursor is inside an existing mention
+                    cursorPos = Math.min(end + 1, currentStep.text.length);
+                    break;
+                }
+            }
 
             const newText =
                 currentStep.text.substring(0, cursorPos) +
@@ -772,7 +786,34 @@ const EditRecipePage: FC = () => {
     };
 
     const handleDeleteIngredient = (ingredientId: string) => {
+        // Remove ingredient from list
         setIngredients(ingredients.filter((ing) => ing.id !== ingredientId));
+
+        // Build RegExp to match mentions for this ingredient (with optional surrounding whitespace)
+        const mentionRegex = new RegExp(
+            `\\s*@\\[[^\\]]+\\]\\(${ingredientId}\\)\\s*`,
+            'g'
+        );
+
+        // Remove mentions entirely and tidy up extra spaces
+        const cleanedInstructions = instructions.map((section) => ({
+            ...section,
+            steps: section.steps.map((step) => ({
+                ...step,
+                text: step.text
+                    .replace(mentionRegex, ' ') // remove mention and leave single space
+                    .replace(/\s{2,}/g, ' ') // collapse multiple spaces
+                    .trim(),
+            })),
+        }));
+
+        // Debug log
+        console.log(
+            '[handleDeleteIngredient] Removed references for',
+            ingredientId
+        );
+
+        setInstructions(cleanedInstructions);
     };
 
     const handleDeleteSection = (sectionIndex: number) => {
