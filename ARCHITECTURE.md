@@ -12,6 +12,7 @@ This document outlines the technical architecture and implementation details of 
 -   **State Management**: React Context
 -   **Routing**: React Router
 -   **Styling**: MUI styled-components with custom theme
+-   **Analytics**: PostHog (for product analytics, production only)
 
 ### 1.2. Backend & Data
 
@@ -581,6 +582,13 @@ const recipeQueries = {
     4.  **Reference Storage**: The permanent GCS URL is stored in the appropriate database table (e.g., `recipes.images` array or a dedicated `recipe_images` table) when the recipe is saved or created.
 -   **CORS**: GCS bucket CORS configuration might still be necessary for allowing the browser to _display_ images directly from GCS, depending on bucket/object access settings. However, it's no longer required for the upload PUT requests from the browser.
 -   **Security**: Service account keys are stored securely as environment variables/secrets in Supabase Function settings, granting backend functions the necessary permissions to upload data via `uploadDataToGCS`.
+
+### 5.6. PostHog Analytics Integration
+
+-   **Initialization**: PostHog is initialized in `src/main.tsx` only when the application runs in the production environment (`config.environment === 'production'`). It requires `VITE_POSTHOG_KEY` and `VITE_POSTHOG_HOST` environment variables set in the deployment environment (e.g., Vercel).
+-   **User Identification**: User identification is handled within `src/context/AuthContext.tsx`. When the Supabase authentication state changes (`onAuthStateChange`), if a user is logged in (and in production), `posthog.identify()` is called with the user's ID, email, and name (if available in metadata). If the user logs out, `posthog.reset()` is called.
+-   **Automatic Capture**: PostHog automatically captures page view events.
+-   **Custom Events**: Custom events can be captured using the `usePostHog` hook or `posthog.capture()` directly.
 
 ---
 

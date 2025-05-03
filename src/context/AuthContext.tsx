@@ -8,6 +8,7 @@ import {
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import config from '../config';
+import posthog from 'posthog-js';
 
 type AuthContextType = {
     user: User | null;
@@ -60,8 +61,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, newSession) => {
             setSession(newSession);
-            setUser(newSession?.user ?? null);
+            const currentUser = newSession?.user ?? null;
+            setUser(currentUser);
             setIsLoading(false);
+
+            // Identify user or reset PostHog in production
+            if (config.environment === 'production' && config.posthog?.key) {
+                if (currentUser) {
+                    posthog.identify(currentUser.id, {
+                        email: currentUser.email,
+                        // Add name if available in user_metadata
+                        name: currentUser.user_metadata?.full_name,
+                    });
+                } else {
+                    posthog.reset();
+                }
+            }
         });
 
         return () => {

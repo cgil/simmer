@@ -246,6 +246,11 @@ The app follows a "Paper Notebook Recipe Journal" aesthetic with these key eleme
 -   Automatic token management in frontend
 -   Protected routes and API endpoints
 
+### 5.5 Analytics
+
+-   User behavior tracking and product analytics via PostHog (production only).
+-   Identification of authenticated users.
+
 ---
 
 ## 6. Future Considerations

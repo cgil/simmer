@@ -19,6 +19,7 @@ Simmer is a modern web application that brings the warmth and personality of a p
 -   🎨 Whimsical loading states with recipe-themed progress indicators
 -   🔖 @-mention style ingredient references in instructions
 -   👤 User profile pictures from authentication providers (Google, GitHub, etc.)
+-   📊 Product analytics via PostHog (production only)
 
 ## Local Development Setup
 
@@ -56,6 +57,12 @@ cp .env.example .env.production    # For production deployment
 4. Configure your environment files:
     - `.env.local`: Used for local development with Supabase running locally.
     - `.env.production`: Used for production deployment with your Supabase cloud project.
+    - **PostHog Variables (Optional for Local, Required for Production)**: Add your PostHog Project API Key and Host URL.
+        ```env
+        # PostHog Configuration (Optional - primarily for production)
+        VITE_POSTHOG_KEY= # Your PostHog Project API Key (leave blank locally if desired)
+        VITE_POSTHOG_HOST= # Your PostHog API Host (e.g., https://us.posthog.com)
+        ```
     - **Critical GCS Variables**: You will need to obtain a Google Cloud Service Account JSON key file with appropriate permissions (`Storage Object Creator`, `Storage Object Viewer`) for your GCS bucket. Add the following variables derived from the key file to **both** `.env.local` and `.env.production` (or configure them directly in your deployment environments):
         ```env
         # Google Cloud Storage Configuration
@@ -193,6 +200,8 @@ For deployment, **critical environment variables must be set directly in your ho
 
     -   `VITE_SUPABASE_URL`
     -   `VITE_SUPABASE_ANON_KEY`
+    -   `VITE_POSTHOG_KEY` (Your **production** PostHog Project API Key)
+    -   `VITE_POSTHOG_HOST` (Your **production** PostHog API Host URL)
         // Frontend generally doesn't need GCS variables directly as uploads go via Edge Functions.
 
 -   **Supabase (Edge Functions Secrets)**:
@@ -209,7 +218,7 @@ For deployment, **critical environment variables must be set directly in your ho
 
 **Setup Steps:**
 
-1.  **Vercel Environment Variables**: Configure the required `VITE_` variables in your Vercel project settings.
+1.  **Vercel Environment Variables**: Configure the required `VITE_` variables in your Vercel project settings, including `VITE_POSTHOG_KEY` and `VITE_POSTHOG_HOST`.
 2.  **Supabase Function Secrets**: Navigate to your Supabase project dashboard -> Project Settings -> Functions -> Set Secrets. Add the `OPENAI_API_KEY`, `SUPABASE_JWT_SECRET`, and all `GCS_*` variables here. Pay special attention to formatting the `GCS_PRIVATE_KEY` correctly.
 
 ### Deploying to Vercel
