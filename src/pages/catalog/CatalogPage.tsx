@@ -89,6 +89,7 @@ const CatalogPage: FC = () => {
     const { user } = useAuth();
     const RECIPES_PER_PAGE = 10;
     const initialLoadCompleted = useRef(false);
+    const userPreviouslyLoaded = useRef(false);
     const [selectedCollection, setSelectedCollection] = useState<string>(
         collectionId || ALL_RECIPES_ID
     );
@@ -144,7 +145,7 @@ const CatalogPage: FC = () => {
             setSelectedCollection(collectionId);
 
             // Only reload recipes if initial load is complete
-            if (initialLoadCompleted.current) {
+            if (initialLoadCompleted.current && user) {
                 loadRecipesByCollection(collectionId);
             }
         }
@@ -152,22 +153,29 @@ const CatalogPage: FC = () => {
         else if (
             !collectionId &&
             selectedCollection !== ALL_RECIPES_ID &&
-            initialLoadCompleted.current
+            initialLoadCompleted.current &&
+            user
         ) {
             setSelectedCollection(ALL_RECIPES_ID);
             loadRecipesByCollection(ALL_RECIPES_ID);
         }
-    }, [collectionId, selectedCollection]);
+    }, [collectionId, selectedCollection, user]);
 
     // Load initial collections when user is available
     useEffect(() => {
-        if (user) {
+        // Only run this effect if user state changes from null to a value or we haven't loaded before
+        if (
+            user &&
+            (!userPreviouslyLoaded.current || !initialLoadCompleted.current)
+        ) {
+            userPreviouslyLoaded.current = true;
             loadCollections();
         }
     }, [user]);
 
     // Handle initial load of recipes
     useEffect(() => {
+        // Only run this effect when user becomes available and initial load hasn't completed
         if (user && !initialLoadCompleted.current) {
             loadInitialRecipes();
         }
@@ -184,10 +192,10 @@ const CatalogPage: FC = () => {
             performSearch();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user, debouncedSearchQuery]);
+    }, [debouncedSearchQuery]);
 
-    // Function to load collections
-    const loadCollections = async () => {
+    // Function to load collections - memoized to prevent re-creation
+    const loadCollections = useCallback(async () => {
         if (!user) return;
 
         setCollectionsLoading(true);
@@ -226,62 +234,68 @@ const CatalogPage: FC = () => {
         } finally {
             setCollectionsLoading(false);
         }
-    };
+    }, [user?.id, collectionId, selectedCollection, navigate]);
 
-    // Add a new function to load recipes based on the selected collection
-    const loadRecipesByCollection = async (collectionId: string) => {
-        if (!user) return;
+    // Add a new function to load recipes based on the selected collection - memoized
+    const loadRecipesByCollection = useCallback(
+        async (collectionId: string) => {
+            if (!user) return;
 
-        setInitialLoading(true);
-        setError(null);
+            setInitialLoading(true);
+            setError(null);
 
-        try {
-            let fetchedRecipes: Recipe[] = [];
+            try {
+                let fetchedRecipes: Recipe[] = [];
 
-            // Check if this is "All Recipes" view or a specific collection
-            if (collectionId === ALL_RECIPES_ID) {
-                fetchedRecipes = await RecipeService.getRecipes(user.id);
-            } else {
-                fetchedRecipes = await CollectionService.getRecipesByCollection(
-                    user.id,
-                    collectionId
-                );
+                // Check if this is "All Recipes" view or a specific collection
+                if (collectionId === ALL_RECIPES_ID) {
+                    fetchedRecipes = await RecipeService.getRecipes(user.id);
+                } else {
+                    fetchedRecipes =
+                        await CollectionService.getRecipesByCollection(
+                            user.id,
+                            collectionId
+                        );
+                }
+
+                // If there's a search query, filter the recipes client-side
+                if (searchQuery) {
+                    const normalizedSearch = searchQuery.toLowerCase().trim();
+                    fetchedRecipes = fetchedRecipes.filter(
+                        (recipe) =>
+                            recipe.title
+                                .toLowerCase()
+                                .includes(normalizedSearch) ||
+                            (recipe.tags &&
+                                recipe.tags.some((tag) =>
+                                    tag.toLowerCase().includes(normalizedSearch)
+                                )) ||
+                            (recipe.ingredients &&
+                                recipe.ingredients.some((ing) =>
+                                    ing.name
+                                        .toLowerCase()
+                                        .includes(normalizedSearch)
+                                ))
+                    );
+                }
+
+                setRecipes(fetchedRecipes);
+
+                // Update pagination
+                setHasMore(fetchedRecipes.length > RECIPES_PER_PAGE);
+                setPage(1);
+            } catch (err) {
+                logger.error('Error loading recipes by collection:', err);
+                setError('Failed to load recipes. Please try again.');
+            } finally {
+                setInitialLoading(false);
             }
+        },
+        [user?.id, searchQuery]
+    );
 
-            // If there's a search query, filter the recipes client-side
-            if (searchQuery) {
-                const normalizedSearch = searchQuery.toLowerCase().trim();
-                fetchedRecipes = fetchedRecipes.filter(
-                    (recipe) =>
-                        recipe.title.toLowerCase().includes(normalizedSearch) ||
-                        (recipe.tags &&
-                            recipe.tags.some((tag) =>
-                                tag.toLowerCase().includes(normalizedSearch)
-                            )) ||
-                        (recipe.ingredients &&
-                            recipe.ingredients.some((ing) =>
-                                ing.name
-                                    .toLowerCase()
-                                    .includes(normalizedSearch)
-                            ))
-                );
-            }
-
-            setRecipes(fetchedRecipes);
-
-            // Update pagination
-            setHasMore(fetchedRecipes.length > RECIPES_PER_PAGE);
-            setPage(1);
-        } catch (err) {
-            logger.error('Error loading recipes by collection:', err);
-            setError('Failed to load recipes. Please try again.');
-        } finally {
-            setInitialLoading(false);
-        }
-    };
-
-    // Modify loadInitialRecipes to use the selected collection
-    const loadInitialRecipes = async () => {
+    // Modify loadInitialRecipes to use the selected collection - memoized
+    const loadInitialRecipes = useCallback(async () => {
         if (!user) return;
 
         setInitialLoading(true);
@@ -296,10 +310,10 @@ const CatalogPage: FC = () => {
         } finally {
             setInitialLoading(false);
         }
-    };
+    }, [user, selectedCollection, loadRecipesByCollection]);
 
-    // Modify performSearch to account for collection filtering
-    const performSearch = async () => {
+    // Modify performSearch to account for collection filtering - memoized
+    const performSearch = useCallback(async () => {
         if (!user) return;
 
         setSearchLoading(true);
@@ -314,9 +328,9 @@ const CatalogPage: FC = () => {
         } finally {
             setSearchLoading(false);
         }
-    };
+    }, [user, selectedCollection, loadRecipesByCollection]);
 
-    const loadMoreRecipes = async () => {
+    const loadMoreRecipes = useCallback(async () => {
         if (!user || loadingMore || !hasMore) return;
 
         setLoadingMore(true);
@@ -344,12 +358,12 @@ const CatalogPage: FC = () => {
         } finally {
             setLoadingMore(false);
         }
-    };
+    }, [user, loadingMore, hasMore, page, recipes]);
 
     // Handle search input changes
-    const handleSearchChange = (value: string) => {
+    const handleSearchChange = useCallback((value: string) => {
         setSearchQuery(value);
-    };
+    }, []);
 
     // Calculate the visible recipes based on pagination
     const visibleRecipes = recipes.slice(0, page * RECIPES_PER_PAGE);
@@ -384,7 +398,7 @@ const CatalogPage: FC = () => {
                 setDrawerOpen(false);
             }
         },
-        [navigate, searchQuery, isSmallScreen, setDrawerOpen]
+        [navigate, searchQuery, isSmallScreen, loadRecipesByCollection]
     );
 
     // Handle drawer state change

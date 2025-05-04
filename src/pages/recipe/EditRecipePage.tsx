@@ -1,4 +1,4 @@
-import { FC, useState, useEffect } from 'react';
+import { FC, useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     Box,
@@ -17,7 +17,8 @@ import { RecipeService } from '../../services/RecipeService';
 import { CollectionService } from '../../services/CollectionService';
 import { generateUuidV4, ensureUuid, isValidUuid } from '../../utils/uuid';
 import { generateRecipeImage } from '../../lib/api';
-import { ImageUploadState } from '../../services/UploadService';
+import { ImageUploadState, UploadService } from '../../services/UploadService';
+import { dataURIToBlob } from '../../utils/imageUtils';
 import EditRecipeHeader from './components/EditRecipeHeader';
 import CollectionSelector from './components/CollectionSelector';
 import RecipeTitleDescriptionEditor from './components/RecipeTitleDescriptionEditor';
@@ -27,13 +28,91 @@ import IngredientsEditor from './components/IngredientsEditor';
 import InstructionsEditor from './components/InstructionsEditor';
 import NotesEditor from './components/NotesEditor';
 
+type FetchStatus = 'idle' | 'loading' | 'success' | 'error';
+
+// --- Helper function to handle the upload process for generated images ---
+const uploadGeneratedImage = async (
+    imageDataUri: string,
+    setImageUploads: React.Dispatch<React.SetStateAction<ImageUploadState[]>>,
+    setImages: React.Dispatch<React.SetStateAction<string[]>>
+): Promise<string | null> => {
+    const blob = dataURIToBlob(imageDataUri);
+    if (!blob) {
+        console.error('Failed to convert Data URI to Blob');
+        return null;
+    }
+
+    const generatedFile = new File([blob], 'generated_recipe_image.png', {
+        type: blob.type,
+    });
+
+    const tempId = generateUuidV4();
+
+    // Add temporary uploading state
+    setImageUploads((prev) => [
+        {
+            id: tempId,
+            previewUrl: imageDataUri, // Use data URI as preview during upload
+            status: 'uploading' as const,
+            file: generatedFile, // Keep the file temporarily for potential retry
+        },
+        ...prev,
+    ]);
+
+    try {
+        const { permanentUrl } = await UploadService.uploadFileViaFunction(
+            generatedFile
+        );
+
+        // Update state on success
+        setImageUploads((prev) =>
+            prev.map((img) =>
+                img.id === tempId
+                    ? {
+                          ...img,
+                          status: 'success' as const,
+                          permanentUrl,
+                          previewUrl: undefined, // Clear preview URL
+                          file: undefined, // Clear file
+                      }
+                    : img
+            )
+        );
+
+        // Add the permanent URL to the main images array
+        setImages((prevImages) => [permanentUrl, ...prevImages]);
+        return permanentUrl;
+    } catch (err) {
+        console.error('Upload of generated image failed:', err);
+        // Update state on error
+        setImageUploads((prev) =>
+            prev.map((img) =>
+                img.id === tempId
+                    ? {
+                          ...img,
+                          status: 'error' as const,
+                          error:
+                              err instanceof Error
+                                  ? err.message
+                                  : 'Upload failed',
+                      }
+                    : img
+            )
+        );
+        return null;
+    }
+};
+
 const EditRecipePage: FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { user } = useAuth();
     const { id: routeId } = useParams<{ id?: string }>();
+    const collectionsLoaded = useRef(false); // Track if collections have been loaded at least once
 
+    // --- State ---
     const [recipe, setRecipe] = useState<Recipe | null>(null);
+    const [fetchStatus, setFetchStatus] = useState<FetchStatus>('idle');
     const [instructions, setInstructions] = useState<Recipe['instructions']>(
         []
     );
@@ -53,6 +132,7 @@ const EditRecipePage: FC = () => {
     const [servings, setServings] = useState<number>(2);
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [fetchError, setFetchError] = useState<string | null>(null);
     const [isMobileDevice, setIsMobileDevice] = useState<boolean>(false);
     const [isCollectionsChanged, setIsCollectionsChanged] =
         useState<boolean>(false);
@@ -67,14 +147,447 @@ const EditRecipePage: FC = () => {
     const [availableCollections, setAvailableCollections] = useState<
         CollectionItem[]
     >([]);
+    const [collectionsLoading, setCollectionsLoading] =
+        useState<boolean>(false);
     const [canEdit, setCanEdit] = useState<boolean>(false);
-    const [checkingPermission, setCheckingPermission] = useState<boolean>(true);
     const [isOwner, setIsOwner] = useState<boolean>(false);
     const [isGeneratingAiImage, setIsGeneratingAiImage] = useState(false);
 
+    // --- Event Handlers (Memoized) ---
+    // Define handlers at the top level, before any potential early returns
+
+    const saveCollections = useCallback(
+        async (recipeId: string) => {
+            if (!isValidUuid(recipeId)) {
+                console.error(
+                    'Cannot save collections for invalid recipe ID:',
+                    recipeId
+                );
+                return;
+            }
+
+            try {
+                const currentDbCollections = (
+                    await CollectionService.getCollectionsForRecipe(recipeId)
+                ).map((c) => c.id);
+                const currentDbSet = new Set(currentDbCollections);
+                const targetSet = new Set(selectedCollections);
+
+                const removals = currentDbCollections
+                    .filter((id) => !targetSet.has(id))
+                    .map((id) =>
+                        CollectionService.removeRecipeFromCollection(
+                            recipeId,
+                            id
+                        )
+                    );
+
+                const additions = selectedCollections
+                    .filter((id) => !currentDbSet.has(id))
+                    .map((id) =>
+                        CollectionService.addRecipeToCollection(recipeId, id)
+                    );
+
+                await Promise.all([...removals, ...additions]);
+
+                setInitialCollectionIds([...selectedCollections]);
+                setIsCollectionsChanged(false);
+            } catch (err) {
+                console.error(
+                    `Error updating collections for recipe ${recipeId}:`,
+                    err
+                );
+                setSaveError(
+                    'Failed to update recipe collections. Please try again.'
+                );
+            }
+        },
+        [selectedCollections]
+    );
+
+    const handleSave = useCallback(async () => {
+        // Ensure user and recipe exist before proceeding
+        if (!user || !recipe) {
+            setSaveError(
+                user
+                    ? 'Recipe data is not loaded.'
+                    : 'You must be logged in to save recipes'
+            );
+            return;
+        }
+
+        setIsSaving(true);
+        setSaveError(null);
+
+        try {
+            const isSavingNewRecipe =
+                recipe.id === 'new' || !isValidUuid(recipe.id);
+
+            let finalImages = [...images]; // Start with current successful images
+
+            // AI Image Generation Logic for New Recipes during Save
+            if (
+                isSavingNewRecipe &&
+                title.trim() !== '' &&
+                finalImages.length === 0 // Check if there are no existing successful images
+            ) {
+                try {
+                    const generatedImageDataUri = await generateRecipeImage(
+                        title,
+                        description
+                    );
+                    if (
+                        generatedImageDataUri &&
+                        generatedImageDataUri.startsWith('data:image')
+                    ) {
+                        // Upload the generated image
+                        const uploadedUrl = await uploadGeneratedImage(
+                            generatedImageDataUri,
+                            setImageUploads,
+                            setImages // Pass setImages to update the main array
+                        );
+                        if (uploadedUrl) {
+                            finalImages = [uploadedUrl, ...finalImages]; // Prepend the new GCS URL
+                        } else {
+                            // Upload failed, set error but continue saving without image
+                            setSaveError(
+                                'Recipe saved, but failed to upload the generated AI image.'
+                            );
+                        }
+                    } else if (generatedImageDataUri) {
+                        console.warn(
+                            'AI image generation did not return a Data URI.'
+                        );
+                    } else {
+                        console.warn(
+                            'AI image generation returned null or failed, saving without image.'
+                        );
+                    }
+                } catch (imgError) {
+                    console.error(
+                        'Error generating or uploading AI image:',
+                        imgError
+                    );
+                    setSaveError(
+                        'Recipe saved, but failed during AI image generation/upload.'
+                    );
+                }
+            }
+
+            // Process ingredients (ensure valid UUIDs)
+            const processedIngredients = ingredients
+                .filter((ing) => ing.name && ing.name.trim() !== '')
+                .map((ing) => ({
+                    ...ing,
+                    id: ensureUuid(ing.id),
+                }));
+
+            // Create mapping for instructions update
+            const idMapping = new Map<string, string>();
+            ingredients.forEach((originalIng) => {
+                const processedIng = processedIngredients.find(
+                    (p) =>
+                        (isValidUuid(originalIng.id) &&
+                            p.id === originalIng.id) ||
+                        (!isValidUuid(originalIng.id) &&
+                            p.id === ensureUuid(originalIng.id))
+                );
+                if (processedIng && processedIng.id !== originalIng.id) {
+                    idMapping.set(originalIng.id, processedIng.id);
+                }
+            });
+
+            // Process instructions
+            let processedInstructions = instructions;
+            if (idMapping.size > 0) {
+                processedInstructions = instructions.map((section) => ({
+                    ...section,
+                    steps: section.steps.map((step) => ({
+                        ...step,
+                        text: step.text.replace(
+                            /@\[([^\]]+)\]\(([^)]+)\)/g,
+                            (match, display, id) => {
+                                const newId = idMapping.get(id);
+                                return newId
+                                    ? `@[${display}](${newId})`
+                                    : match;
+                            }
+                        ),
+                    })),
+                }));
+            }
+
+            // Construct final recipe data
+            const updatedRecipeData: Recipe = {
+                ...(recipe as Recipe),
+                id: recipe.id,
+                title,
+                description,
+                ingredients: processedIngredients,
+                instructions: processedInstructions,
+                notes: notes.map((note) => note.text),
+                time_estimate: timeEstimate,
+                tags,
+                images: finalImages, // Use the potentially updated image array
+                servings,
+                user_id: user.id,
+                is_public: recipe.is_public ?? true,
+            };
+
+            // Save recipe data
+            const savedRecipeResult = await RecipeService.saveRecipe(
+                updatedRecipeData,
+                user.id,
+                isSavingNewRecipe
+            );
+
+            // Post-Save Operations
+            setRecipe(savedRecipeResult);
+            setImages(savedRecipeResult.images || []); // Update images from the *saved* result
+
+            if (savedRecipeResult.id && isValidUuid(savedRecipeResult.id)) {
+                if (isCollectionsChanged) {
+                    try {
+                        await saveCollections(savedRecipeResult.id);
+                    } catch (collectionError) {
+                        console.error(
+                            'Error managing recipe collections post-save:',
+                            collectionError
+                        );
+                        if (!saveError) {
+                            // Prioritize AI image errors if they occurred
+                            setSaveError(
+                                'Failed to update recipe collections. Please try again.'
+                            );
+                        }
+                    }
+                }
+            } else {
+                console.error(
+                    'Save operation did not return a valid UUID:',
+                    savedRecipeResult.id
+                );
+                if (!saveError) {
+                    setSaveError(
+                        'Failed to save recipe (invalid ID returned). Please try again.'
+                    );
+                }
+                setIsSaving(false);
+                return;
+            }
+
+            // Navigate after success
+            navigate(`/recipe/${savedRecipeResult.id}`, {
+                replace: isSavingNewRecipe,
+                state: { recipe: savedRecipeResult },
+            });
+        } catch (error: unknown) {
+            console.error('Error during handleSave:', error);
+            if (!saveError) {
+                let errorMessage = 'Failed to save recipe. Please try again.';
+                if (error instanceof Error) {
+                    if (error.message.includes('permission')) {
+                        errorMessage = error.message;
+                    } else if (
+                        (error as { code?: string }).code === '42501' ||
+                        error.message.includes('RLS')
+                    ) {
+                        errorMessage =
+                            'Permission denied: You cannot modify this recipe.';
+                    }
+                }
+                setSaveError(errorMessage);
+            }
+        } finally {
+            setIsSaving(false);
+        }
+    }, [
+        user,
+        recipe,
+        title,
+        description,
+        ingredients,
+        instructions,
+        notes,
+        timeEstimate,
+        tags,
+        images,
+        servings,
+        isCollectionsChanged,
+        navigate,
+        saveCollections,
+    ]);
+
+    const handleCollectionChange = useCallback(
+        (event: SelectChangeEvent<string>) => {
+            if (!isOwner) return;
+            const newCollectionId = event.target.value;
+            setSelectedCollection(newCollectionId);
+
+            if (newCollectionId === ALL_RECIPES_ID) {
+                setSelectedCollections([]);
+            } else {
+                setSelectedCollections([newCollectionId]);
+            }
+        },
+        [isOwner]
+    );
+
+    const handleGoBack = useCallback(() => {
+        if (location.state?.isNew === true) {
+            navigate('/recipe/new');
+        } else if (location.state?.from) {
+            navigate(location.state.from);
+        } else if (recipe && recipe.id && recipe.id !== 'new') {
+            navigate(`/recipe/${recipe.id}`);
+        } else {
+            navigate('/');
+        }
+    }, [location.state, recipe, navigate]);
+
+    const handleGenerateAiCoverImage = useCallback(async () => {
+        if (!title.trim()) {
+            setSaveError('Please enter a recipe title first');
+            return;
+        }
+
+        setIsGeneratingAiImage(true);
+        setSaveError(null);
+
+        try {
+            const result = await generateRecipeImage(title, description);
+
+            if (result && result.startsWith('data:image')) {
+                // We have a data URI, now upload it
+                const uploadedUrl = await uploadGeneratedImage(
+                    result,
+                    setImageUploads,
+                    setImages
+                );
+                if (!uploadedUrl) {
+                    // uploadGeneratedImage handles setting error state internally
+                    setSaveError(
+                        'Failed to upload generated image. Please try again or add your own image.'
+                    );
+                }
+                // Success is handled within uploadGeneratedImage
+            } else if (result && result.startsWith('http')) {
+                // Unexpected: API returned a direct URL?
+                console.warn(
+                    'AI image generation unexpectedly returned an HTTP URL directly:',
+                    result
+                );
+                // Handle it like a successful upload
+                const newImageUpload: ImageUploadState = {
+                    id: generateUuidV4(),
+                    status: 'success' as const,
+                    permanentUrl: result,
+                };
+                setImageUploads((prevUploads) => [
+                    newImageUpload,
+                    ...prevUploads,
+                ]);
+                setImages((prevImages) => [result, ...prevImages]);
+            } else {
+                setSaveError(
+                    'Failed to generate AI image or invalid format returned. Try again or add your own image.'
+                );
+            }
+        } catch (error: unknown) {
+            console.error('Error during AI image generation step:', error);
+            const message =
+                error instanceof Error ? error.message : 'Unknown error';
+            setSaveError(
+                `Error generating AI image: ${message}. Please try again.`
+            );
+        } finally {
+            setIsGeneratingAiImage(false);
+        }
+    }, [title, description, setImageUploads, setImages]); // Added state setters as dependencies
+
+    const handleDeleteIngredient = useCallback((ingredientId: string) => {
+        setIngredients((prevIngredients) =>
+            prevIngredients.filter((ing) => ing.id !== ingredientId)
+        );
+
+        const mentionRegex = new RegExp(
+            `\\s*@\\[[^\\]]+\\]\\(${ingredientId}\\)\\s*`,
+            'g'
+        );
+
+        setInstructions((prevInstructions) =>
+            prevInstructions.map((section) => ({
+                ...section,
+                steps: section.steps.map((step) => ({
+                    ...step,
+                    text: step.text
+                        .replace(mentionRegex, ' ')
+                        .replace(/\s{2,}/g, ' ')
+                        .trim(),
+                })),
+            }))
+        );
+    }, []);
+
+    // Memoized function to load collections data
+    const loadCollectionsData = useCallback(async () => {
+        // Ensure we have a valid, existing recipe ID and user
+        if (!user || !recipe?.id || !isValidUuid(recipe.id)) {
+            setAvailableCollections([]);
+            setInitialCollectionIds([]);
+            setSelectedCollections([]);
+            collectionsLoaded.current = true; // Mark as loaded/attempted even if skipped
+            return;
+        }
+
+        const recipeIdToLoad = recipe.id; // Capture the valid ID
+
+        setCollectionsLoading(true);
+        let available: CollectionItem[] = [];
+        let associatedIds: string[] = [];
+
+        try {
+            // Fetch available collections for the user
+            available = await CollectionService.getCollectionItems(user.id);
+            setAvailableCollections(available);
+
+            // Fetch collections this specific recipe belongs to
+            const recipeCollections =
+                await CollectionService.getCollectionsForRecipe(recipeIdToLoad);
+            associatedIds = recipeCollections.map((c) => c.id);
+        } catch (err) {
+            console.error(
+                `Error loading collections data for recipe ${recipeIdToLoad}:`,
+                err
+            );
+            // Reset on error
+            setAvailableCollections([]);
+            associatedIds = [];
+        } finally {
+            setInitialCollectionIds(associatedIds);
+            setSelectedCollections(associatedIds);
+            // Set the dropdown selection based on fetched data
+            if (associatedIds.length > 0) {
+                setSelectedCollection(associatedIds[0]);
+            } else {
+                setSelectedCollection(ALL_RECIPES_ID);
+            }
+            setCollectionsLoading(false);
+            collectionsLoaded.current = true; // Mark collections as loaded
+        }
+    }, [user, recipe?.id]); // Depend on user and stable recipe ID
+
+    // --- Effects ---
+
+    // Effect to initiate recipe loading/setup
     useEffect(() => {
+        if (fetchStatus !== 'idle') {
+            return; // Don't restart fetch if already in progress or done
+        }
+
         const stateRecipe = location.state?.recipe as Recipe | undefined;
 
+        // 1. Recipe from location state
         if (stateRecipe) {
             const validatedIngredients = (stateRecipe.ingredients || []).map(
                 (ing) => ({
@@ -83,10 +596,14 @@ const EditRecipePage: FC = () => {
                 })
             );
             setRecipe({ ...stateRecipe, ingredients: validatedIngredients });
-        } else if (routeId === 'new') {
-            if (!user) {
-                console.warn('User not yet available for new recipe template.');
-            }
+            setFetchStatus('success');
+            setCanEdit(true); // Assume editable if passed via state for now
+            setIsOwner(!!user && stateRecipe.user_id === user.id);
+            return;
+        }
+
+        // 2. New recipe template
+        if (routeId === 'new') {
             const newRecipeTemplate: Recipe = {
                 id: 'new',
                 title: '',
@@ -105,16 +622,21 @@ const EditRecipePage: FC = () => {
                 access_level: undefined,
             };
             setRecipe(newRecipeTemplate);
-        } else if (routeId && isValidUuid(routeId)) {
+            setFetchStatus('success');
+            setCanEdit(true);
+            setIsOwner(true);
+            return;
+        }
+
+        // 3. Fetch existing recipe by ID
+        if (routeId && isValidUuid(routeId)) {
+            if (!user) {
+                return;
+            }
+
             const fetchRecipeForEdit = async () => {
-                if (!user) {
-                    console.error(
-                        'User not available to fetch recipe for edit.'
-                    );
-                    navigate('/login', { state: { from: location } });
-                    return;
-                }
-                setCheckingPermission(true);
+                setFetchStatus('loading');
+                setFetchError(null);
                 try {
                     const fetchedRecipe = await RecipeService.getRecipeById(
                         routeId,
@@ -125,20 +647,31 @@ const EditRecipePage: FC = () => {
                             await RecipeService.checkEditPermission(routeId);
                         if (hasPermission) {
                             setRecipe(fetchedRecipe);
+                            setCanEdit(true);
+                            setIsOwner(fetchedRecipe.user_id === user.id);
+                            setFetchStatus('success');
                         } else {
                             console.warn(
                                 `User lacks permission to edit recipe ${routeId}. Redirecting.`
                             );
+                            setFetchError(
+                                "You don't have permission to edit this recipe."
+                            );
+                            setFetchStatus('error');
                             navigate(`/recipe/${routeId}`, {
                                 state: {
                                     error: "You don't have permission to edit this recipe.",
                                 },
+                                replace: true,
                             });
                         }
                     } else {
                         console.error(`Recipe not found for edit: ${routeId}`);
+                        setFetchError('Recipe not found.');
+                        setFetchStatus('error');
                         navigate('/', {
                             state: { error: 'Recipe not found.' },
+                            replace: true,
                         });
                     }
                 } catch (err) {
@@ -146,27 +679,33 @@ const EditRecipePage: FC = () => {
                         `Error fetching recipe ${routeId} for edit:`,
                         err
                     );
+                    setFetchError('Failed to load recipe for editing.');
+                    setFetchStatus('error');
                     navigate('/', {
                         state: { error: 'Failed to load recipe for editing.' },
+                        replace: true,
                     });
                 }
             };
+
             fetchRecipeForEdit();
-        } else {
+        } else if (routeId && routeId !== 'new') {
             console.error(
-                'EditRecipePage loaded with invalid routeId or missing state:',
+                'EditRecipePage loaded with invalid routeId:',
                 routeId
             );
-            navigate('/');
+            setFetchError('Invalid recipe ID.');
+            setFetchStatus('error');
+            navigate('/', { replace: true });
         }
-    }, [location.state, routeId, user, navigate]);
+    }, [fetchStatus, routeId, user, location.state, navigate]);
 
+    // Effect to populate form fields when recipe is successfully loaded/set
     useEffect(() => {
-        if (recipe) {
+        if (recipe && fetchStatus === 'success') {
             setTitle(recipe.title || '');
             setDescription(recipe.description || '');
             setIngredients(recipe.ingredients || []);
-
             setInstructions(
                 recipe.instructions && recipe.instructions.length > 0
                     ? convertRecipeIngredientMentions(
@@ -188,8 +727,6 @@ const EditRecipePage: FC = () => {
                 total: recipe.time_estimate?.total ?? 0,
             });
             setTags(recipe.tags || []);
-
-            // Initialize image uploads from existing images (permanent URLs)
             const initialImageUploads = (recipe.images || []).map((url) => ({
                 id: generateUuidV4(),
                 status: 'success' as const,
@@ -197,17 +734,10 @@ const EditRecipePage: FC = () => {
             }));
             setImageUploads(initialImageUploads);
             setImages(recipe.images || []);
-
-            if (recipe.id === 'new') {
-                setSelectedCollections([]);
-                setInitialCollectionIds([]);
-                setSelectedCollection(ALL_RECIPES_ID);
-            } else {
-                setSelectedCollection(ALL_RECIPES_ID);
-            }
         }
-    }, [recipe]);
+    }, [recipe, fetchStatus]);
 
+    // Effect for mobile device check
     useEffect(() => {
         const checkMobile = () => {
             setIsMobileDevice(
@@ -220,135 +750,32 @@ const EditRecipePage: FC = () => {
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
+    // Load collections data - runs when user is available and recipe fetch is successful
     useEffect(() => {
-        const loadCollectionsData = async () => {
-            if (!user || !recipe) {
-                setAvailableCollections([]);
-                setInitialCollectionIds([]);
-                setSelectedCollections([]);
-                return;
-            }
+        if (
+            user &&
+            fetchStatus === 'success' &&
+            recipe &&
+            !collectionsLoaded.current
+        ) {
+            loadCollectionsData();
+        }
+    }, [user, fetchStatus, recipe, loadCollectionsData]); // Depends on fetch status and user/recipe availability
 
-            let available: CollectionItem[] = [];
-            let associatedIds: string[] = [];
-
-            try {
-                available = await CollectionService.getCollectionItems(user.id);
-                setAvailableCollections(available);
-            } catch (err) {
-                console.error('Error fetching available collections:', err);
-                setAvailableCollections([]);
-            }
-
-            if (recipe.id !== 'new' && isValidUuid(recipe.id)) {
-                try {
-                    const recipeCollections =
-                        await CollectionService.getCollectionsForRecipe(
-                            recipe.id as string
-                        );
-                    associatedIds = recipeCollections.map((c) => c.id);
-                } catch (err) {
-                    console.error(
-                        `Error loading collections for recipe ${recipe.id}:`,
-                        err
-                    );
-                    associatedIds = [];
-                }
-            } else {
-                associatedIds = [];
-            }
-
-            setInitialCollectionIds(associatedIds);
-            setSelectedCollections(associatedIds);
-
-            if (associatedIds.length > 0) {
-                setSelectedCollection(associatedIds[0]);
-            } else {
-                setSelectedCollection(ALL_RECIPES_ID);
-            }
-        };
-
-        loadCollectionsData();
-    }, [user, recipe]);
-
+    // Effect to handle changes in selected collections vs initial
     useEffect(() => {
-        const checkEditPermission = async () => {
-            if (!user || !recipe) {
-                setCheckingPermission(true);
-                return;
-            }
-
-            setCheckingPermission(true); // Indicate check is starting
-
-            // Grant immediate edit permission for new recipes OR imported recipes (non-UUID IDs)
-            if (recipe.id === 'new' || !isValidUuid(recipe.id)) {
-                setCanEdit(true);
-                setIsOwner(true); // Treat as owner until first save
-                setCheckingPermission(false);
-                return; // Stop checks here for new/imported
-            }
-
-            // --- Proceed with checking permission only for existing recipes (valid UUID) ---
-            try {
-                const ownerCheck = recipe.user_id === user.id;
-                setIsOwner(ownerCheck);
-                if (ownerCheck) {
-                    setCanEdit(true);
-                } else {
-                    // Ensure we have a valid UUID before calling the service
-                    const recipeIdToCheck = recipe.id as string;
-                    const hasEditPermission =
-                        await RecipeService.checkEditPermission(
-                            recipeIdToCheck
-                        );
-                    setCanEdit(hasEditPermission);
-
-                    if (!hasEditPermission) {
-                        console.warn(
-                            `User lacks permission to edit recipe ${recipeIdToCheck}. Redirecting.`
-                        );
-                        navigate(`/recipe/${recipeIdToCheck}`, {
-                            state: {
-                                error: "You don't have permission to edit this recipe.",
-                            },
-                        });
-                    }
-                }
-            } catch (err) {
-                console.error(
-                    'Error checking edit permission for existing recipe:',
-                    err
-                );
-                setCanEdit(false);
-                setIsOwner(false);
-                // Use recipe.id safely here as it must be a valid UUID to reach this catch block
-                navigate(recipe.id ? `/recipe/${recipe.id}` : '/', {
-                    state: { error: 'Could not verify edit permissions' },
-                });
-            } finally {
-                setCheckingPermission(false); // Mark check as complete
-            }
-        };
-
-        checkEditPermission();
-    }, [recipe, user, navigate]); // Depends on recipe state and user
-
-    useEffect(() => {
-        if (!recipe) return;
+        if (!recipe || fetchStatus !== 'success') return;
 
         const initialSet = new Set(initialCollectionIds);
         const selectedSet = new Set(selectedCollections);
 
-        if (initialSet.size !== selectedSet.size) {
-            setIsCollectionsChanged(true);
-            return;
-        }
-
-        let changed = false;
-        for (const id of initialSet) {
-            if (!selectedSet.has(id)) {
-                changed = true;
-                break;
+        let changed = initialSet.size !== selectedSet.size;
+        if (!changed) {
+            for (const id of initialSet) {
+                if (!selectedSet.has(id)) {
+                    changed = true;
+                    break;
+                }
             }
         }
         if (!changed) {
@@ -359,61 +786,11 @@ const EditRecipePage: FC = () => {
                 }
             }
         }
-
         setIsCollectionsChanged(changed);
-    }, [selectedCollections, initialCollectionIds, recipe]);
+    }, [selectedCollections, initialCollectionIds, recipe, fetchStatus]);
 
-    const saveCollections = async (recipeId: string) => {
-        if (!isValidUuid(recipeId)) {
-            console.error(
-                'Cannot save collections for invalid recipe ID:',
-                recipeId
-            );
-            return;
-        }
-
-        try {
-            const currentDbCollections = (
-                await CollectionService.getCollectionsForRecipe(recipeId)
-            ).map((c) => c.id);
-            const currentDbSet = new Set(currentDbCollections);
-            const targetSet = new Set(selectedCollections);
-
-            for (const collectionId of currentDbCollections) {
-                if (!targetSet.has(collectionId)) {
-                    await CollectionService.removeRecipeFromCollection(
-                        recipeId,
-                        collectionId
-                    );
-                }
-            }
-
-            for (const collectionId of selectedCollections) {
-                if (!currentDbSet.has(collectionId)) {
-                    await CollectionService.addRecipeToCollection(
-                        recipeId,
-                        collectionId
-                    );
-                }
-            }
-            setInitialCollectionIds([...selectedCollections]);
-            setIsCollectionsChanged(false);
-        } catch (err) {
-            console.error(
-                `Error updating collections for recipe ${recipeId}:`,
-                err
-            );
-            setSaveError(
-                'Failed to update recipe collections. Please try again.'
-            );
-        }
-    };
-
-    const isLoading = checkingPermission || !recipe;
-
-    // Determine if this is a new recipe
-    const isNewRecipe =
-        recipe?.id === 'new' || (recipe && !isValidUuid(recipe.id));
+    // --- Loading / Error States ---
+    const isLoading = fetchStatus === 'loading' || fetchStatus === 'idle';
 
     if (isLoading) {
         return (
@@ -427,341 +804,44 @@ const EditRecipePage: FC = () => {
                     }}
                 >
                     <Typography variant="h6" sx={{ mb: 2 }}>
-                        {checkingPermission && !recipe
+                        {fetchStatus === 'loading'
                             ? 'Loading recipe...'
-                            : checkingPermission
-                            ? 'Checking permissions...'
-                            : !recipe
-                            ? 'Initializing...'
-                            : 'Loading...'}
+                            : 'Initializing...'}
                     </Typography>
                 </Box>
             </AppLayout>
         );
     }
 
-    if (!recipe || !canEdit) {
-        return null;
+    if (fetchStatus === 'error') {
+        return (
+            <AppLayout>
+                <Box sx={{ p: 3 }}>
+                    <Alert severity="error">
+                        {fetchError || 'An unexpected error occurred.'}
+                    </Alert>
+                </Box>
+            </AppLayout>
+        );
     }
 
-    const handleSave = async () => {
-        if (!user) {
-            setSaveError('You must be logged in to save recipes');
-            return;
-        }
-        if (!recipe) {
-            setSaveError('Recipe data is not loaded.');
-            return;
-        }
-
-        setIsSaving(true);
-        setSaveError(null);
-
-        try {
-            // Determine if saving a new recipe based on state
-            // A recipe is new if its ID is 'new' OR if it's not a valid UUID (imported case)
-            const isSavingNewRecipe =
-                recipe.id === 'new' || !isValidUuid(recipe.id);
-
-            const currentImages = [...images];
-
-            // --- AI Image Generation Logic for New Recipes ---
-            if (
-                isSavingNewRecipe &&
-                title.trim() !== '' &&
-                currentImages.length === 0
-            ) {
-                console.log(
-                    'Attempting to generate AI image for new recipe...'
-                );
-                try {
-                    const generatedImageUrl = await generateRecipeImage(
-                        title,
-                        description
-                    );
-                    if (generatedImageUrl) {
-                        // Add the generated image to the uploads state manager
-                        const newImageUpload: ImageUploadState = {
-                            id: generateUuidV4(), // Give it a unique ID
-                            status: 'success' as const,
-                            permanentUrl: generatedImageUrl,
-                            // previewUrl is not needed as it's immediately permanent
-                        };
-                        setImageUploads((prevUploads) => [
-                            newImageUpload,
-                            ...prevUploads,
-                        ]);
-
-                        // Also update the main 'images' array used directly by save
-                        setImages((prevImages) => [
-                            generatedImageUrl,
-                            ...prevImages,
-                        ]);
-
-                        console.log('AI image generated successfully');
-                    } else {
-                        console.warn(
-                            'AI image generation returned null or failed, saving without image.'
-                        );
-                    }
-                } catch (imgError) {
-                    console.error('Error generating AI image:', imgError);
-                    // Non-fatal: Log error and continue saving without the AI image
-                    setSaveError(
-                        'Recipe saved, but failed to generate AI image.'
-                    ); // Optional: inform user
-                }
-            }
-            // --- End AI Image Generation Logic ---
-
-            const processedIngredients = ingredients
-                .filter(
-                    (ingredient) =>
-                        ingredient.name && ingredient.name.trim() !== ''
-                )
-                .map((ingredient) => {
-                    if (!isValidUuid(ingredient.id)) {
-                        console.warn(
-                            `Correcting invalid ingredient ID ${ingredient.id} for ${ingredient.name} on save.`
-                        );
-                        return {
-                            ...ingredient,
-                            id: ensureUuid(ingredient.id),
-                        };
-                    }
-                    return ingredient;
-                });
-
-            const idMapping = new Map<string, string>();
-            ingredients.forEach((originalIngredient) => {
-                const processed = processedIngredients.find(
-                    (p) =>
-                        (isValidUuid(originalIngredient.id) &&
-                            p.id === originalIngredient.id) ||
-                        (!isValidUuid(originalIngredient.id) &&
-                            p.id === ensureUuid(originalIngredient.id))
-                );
-                if (processed && processed.id !== originalIngredient.id) {
-                    idMapping.set(originalIngredient.id, processed.id);
-                }
-            });
-
-            let processedInstructions = instructions;
-            if (idMapping.size > 0) {
-                processedInstructions = instructions.map((section) => ({
-                    ...section,
-                    steps: section.steps.map((step) => ({
-                        ...step,
-                        text: step.text.replace(
-                            /@\[([^\]]+)\]\(([^)]+)\)/g,
-                            (match, display, id) => {
-                                const newId = idMapping.get(id);
-                                return newId
-                                    ? `@[${display}](${newId})`
-                                    : match;
-                            }
-                        ),
-                    })),
-                }));
-            }
-
-            const updatedRecipeData: Recipe = {
-                ...recipe,
-                id: recipe.id, // Preserve original ID ('new' or existing UUID)
-                title,
-                description,
-                ingredients: processedIngredients,
-                instructions: processedInstructions,
-                notes: notes.map((note) => note.text),
-                time_estimate: timeEstimate,
-                tags,
-                images: currentImages, // Use potentially updated images array
-                servings,
-                user_id: recipe.user_id || user.id,
-                is_public: recipe.is_public ?? true,
-            };
-
-            const savedRecipeResult = await RecipeService.saveRecipe(
-                updatedRecipeData,
-                user.id,
-                isSavingNewRecipe // Pass the flag to the service
-            );
-
-            // Update local state with the truly saved recipe (including new ID and potentially AI image)
-            setRecipe(savedRecipeResult);
-
-            // Update images state explicitly if an AI image was added
-            if (currentImages.length > images.length) {
-                setImages(currentImages);
-            }
-
-            if (savedRecipeResult.id && isValidUuid(savedRecipeResult.id)) {
-                // First save collections if needed
-                try {
-                    if (isCollectionsChanged) {
-                        await saveCollections(savedRecipeResult.id);
-                    }
-                } catch (collectionError) {
-                    console.error(
-                        'Error managing recipe collections post-save:',
-                        collectionError
-                    );
-                    // Keep the specific image generation error if it exists, otherwise show collection error
-                    if (!saveError) {
-                        setSaveError(
-                            'Failed to update recipe collections. Please try again.'
-                        );
-                    }
-                }
-            } else {
-                console.error(
-                    'Save operation did not return a valid UUID:',
-                    savedRecipeResult.id
-                );
-                // Keep the specific image generation error if it exists, otherwise show save error
-                if (!saveError) {
-                    setSaveError(
-                        'Failed to save recipe (invalid ID returned). Please try again.'
-                    );
-                }
-                setIsSaving(false);
-                return; // Stop execution here if save failed fundamentally
-            }
-
-            // Navigate only after successful save and collection update (if applicable)
-            navigate(`/recipe/${savedRecipeResult.id}`, {
-                replace: isSavingNewRecipe, // Replace history if it was a new recipe
-                state: { recipe: savedRecipeResult }, // Pass the final saved recipe state
-            });
-        } catch (error: unknown) {
-            console.error('Error during handleSave:', error);
-            // Keep the specific image generation error if it exists, otherwise show generic save error
-            if (!saveError) {
-                let errorMessage = 'Failed to save recipe. Please try again.';
-                if (error instanceof Error) {
-                    if (error.message.includes('permission')) {
-                        errorMessage = error.message;
-                    } else if (
-                        (error as { code?: string }).code === '42501' ||
-                        error.message.includes('RLS')
-                    ) {
-                        errorMessage =
-                            'Permission denied: You cannot modify this recipe.';
-                    }
-                }
-                setSaveError(errorMessage);
-            }
-        } finally {
-            // Always ensure isSaving is reset
-            setIsSaving(false);
-        }
-    };
-
-    const handleCollectionChange = (event: SelectChangeEvent<string>) => {
-        if (!isOwner) return;
-        const newCollectionId = event.target.value;
-        setSelectedCollection(newCollectionId);
-
-        if (newCollectionId === ALL_RECIPES_ID) {
-            setSelectedCollections([]);
-        } else {
-            setSelectedCollections([newCollectionId]);
-        }
-    };
-
-    const handleGoBack = () => {
-        // Use location.state.isNew to identify unsaved AI/Blank recipes
-        if (location.state?.isNew === true) {
-            // Go back to the creation page
-            navigate('/recipe/new');
-        } else if (location.state?.from) {
-            // If navigated from somewhere specific (like login redirect)
-            navigate(location.state.from);
-        } else if (recipe && recipe.id && recipe.id !== 'new') {
-            // If editing an existing recipe, go to its view page
-            navigate(`/recipe/${recipe.id}`);
-        } else {
-            // Default fallback (e.g., imported recipe, or direct access without state)
-            navigate('/');
-        }
-    };
-
-    const handleGenerateAiCoverImage = async () => {
-        if (!title.trim()) {
-            setSaveError('Please enter a recipe title first');
-            return;
-        }
-
-        setIsGeneratingAiImage(true);
-        setSaveError(null);
-
-        try {
-            // Call the AI image generation function
-            const result = await generateRecipeImage(title, description);
-
-            // If we get a valid URL (not a data URI), use it directly
-            if (typeof result === 'string' && result.startsWith('http')) {
-                // Add the generated image to the uploads state manager
-                const newImageUpload: ImageUploadState = {
-                    id: generateUuidV4(),
-                    status: 'success' as const,
-                    permanentUrl: result,
-                };
-
-                // Prepend the new image so it appears first
-                setImageUploads((prevUploads) => [
-                    newImageUpload,
-                    ...prevUploads,
-                ]);
-
-                // Update the images array used for saving
-                setImages((prevImages) => [result, ...prevImages]);
-
-                console.log('AI image generated successfully');
-            }
-            // For data URIs, we would need to convert and process them, but that's handled in the component now
-            else {
-                setSaveError(
-                    'Failed to generate AI image or invalid format returned. Try again or add your own image.'
-                );
-            }
-        } catch (error: unknown) {
-            console.error('Error during AI image generation:', error);
-            const message =
-                error instanceof Error ? error.message : 'Unknown error';
-            setSaveError(
-                `Error generating AI image: ${message}. Please try again.`
-            );
-        } finally {
-            setIsGeneratingAiImage(false);
-        }
-    };
-
-    const handleDeleteIngredient = (ingredientId: string) => {
-        // Remove ingredient from list
-        setIngredients(ingredients.filter((ing) => ing.id !== ingredientId));
-
-        // Build RegExp to match mentions for this ingredient (with optional surrounding whitespace)
-        const mentionRegex = new RegExp(
-            `\\s*@\\[[^\\]]+\\]\\(${ingredientId}\\)\\s*`,
-            'g'
+    // At this point, fetchStatus must be 'success'
+    if (!recipe || !canEdit) {
+        return (
+            <AppLayout>
+                <Box sx={{ p: 3 }}>
+                    <Alert severity="error">
+                        Could not load recipe for editing or permission denied.
+                    </Alert>
+                </Box>
+            </AppLayout>
         );
+    }
 
-        // Remove mentions entirely and tidy up extra spaces
-        const cleanedInstructions = instructions.map((section) => ({
-            ...section,
-            steps: section.steps.map((step) => ({
-                ...step,
-                text: step.text
-                    .replace(mentionRegex, ' ') // remove mention and leave single space
-                    .replace(/\s{2,}/g, ' ') // collapse multiple spaces
-                    .trim(),
-            })),
-        }));
+    // Determine if this is a new recipe (must be done after recipe is loaded)
+    const isNewRecipe = recipe.id === 'new' || !isValidUuid(recipe.id);
 
-        setInstructions(cleanedInstructions);
-    };
-
+    // --- Render Logic ---
     return (
         <AppLayout
             headerContent={
@@ -816,14 +896,16 @@ const EditRecipePage: FC = () => {
                         zIndex: 2,
                     }}
                 >
-                    <CollectionSelector
-                        selectedCollection={selectedCollection}
-                        onCollectionChange={handleCollectionChange}
-                        availableCollections={availableCollections}
-                        isOwner={isOwner}
-                        isLoading={isLoading}
-                        allRecipesId={ALL_RECIPES_ID}
-                    />
+                    {isOwner && (
+                        <CollectionSelector
+                            selectedCollection={selectedCollection}
+                            onCollectionChange={handleCollectionChange}
+                            availableCollections={availableCollections}
+                            isOwner={isOwner}
+                            isLoading={collectionsLoading} // Use specific loading state for collections
+                            allRecipesId={ALL_RECIPES_ID}
+                        />
+                    )}
                 </Box>
 
                 <Collapse in={!!saveError}>
@@ -858,6 +940,7 @@ const EditRecipePage: FC = () => {
                         },
                     }}
                 >
+                    {/* Main content grid - relies on recipe being loaded */}
                     <Grid container spacing={4}>
                         <Grid item xs={12}>
                             <RecipeTitleDescriptionEditor
@@ -874,7 +957,7 @@ const EditRecipePage: FC = () => {
                                 setImageUploads={setImageUploads}
                                 images={images}
                                 setImages={setImages}
-                                isNewRecipe={!!isNewRecipe}
+                                isNewRecipe={isNewRecipe}
                                 title={title}
                                 onGenerateAiImage={handleGenerateAiCoverImage}
                                 isGeneratingAiImage={isGeneratingAiImage}

@@ -4,6 +4,8 @@ import {
     useState,
     useEffect,
     ReactNode,
+    useCallback,
+    useMemo,
 } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
@@ -39,18 +41,56 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper function for deep equality check of user objects
+const isUserEqual = (
+    currentUser: User | null,
+    newUser: User | null
+): boolean => {
+    if (currentUser === newUser) return true;
+    if (!currentUser || !newUser) return false;
+
+    return (
+        currentUser.id === newUser.id &&
+        currentUser.email === newUser.email &&
+        currentUser.role === newUser.role &&
+        JSON.stringify(currentUser.user_metadata) ===
+            JSON.stringify(newUser.user_metadata)
+    );
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Update user state only if the user data has actually changed
+    const updateUser = useCallback((newUser: User | null) => {
+        setUser((currentUser) => {
+            if (isUserEqual(currentUser, newUser)) {
+                // console.log('User data unchanged, preserving reference'); // DEBUG
+                return currentUser; // Return same reference if equal
+            }
+            // console.log('User data changed, updating reference'); // DEBUG
+            return newUser;
+        });
+    }, []);
+
     useEffect(() => {
         // Get session from Supabase on mount
         const getSession = async () => {
             setIsLoading(true);
+            // console.log('Getting initial session'); // DEBUG
             const { data } = await supabase.auth.getSession();
-            setSession(data.session);
-            setUser(data.session?.user ?? null);
+            setSession((prevSession) => {
+                // Only update if session ID changed
+                if (prevSession?.access_token === data.session?.access_token) {
+                    // console.log('Session unchanged, preserving reference'); // DEBUG
+                    return prevSession;
+                }
+                // console.log('Session changed, updating reference'); // DEBUG
+                return data.session;
+            });
+            updateUser(data.session?.user ?? null);
             setIsLoading(false);
         };
 
@@ -60,9 +100,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, newSession) => {
-            setSession(newSession);
+            // console.log('Auth state change detected, event:', _event); // DEBUG
+
+            setSession((prevSession) => {
+                // Only update if session ID changed
+                if (prevSession?.access_token === newSession?.access_token) {
+                    // console.log('Session unchanged in auth state change, preserving reference'); // DEBUG
+                    return prevSession;
+                }
+                // console.log('Session changed in auth state change, updating reference'); // DEBUG
+                return newSession;
+            });
+
             const currentUser = newSession?.user ?? null;
-            setUser(currentUser);
+            updateUser(currentUser);
             setIsLoading(false);
 
             // Identify user or reset PostHog in production
@@ -82,17 +133,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return () => {
             subscription.unsubscribe();
         };
-    }, []);
+    }, [updateUser]);
 
-    const signIn = async (email: string, password: string) => {
+    const signIn = useCallback(async (email: string, password: string) => {
         const { error } = await supabase.auth.signInWithPassword({
             email,
             password,
         });
         return { error };
-    };
+    }, []);
 
-    const signInWithGoogle = async () => {
+    const signInWithGoogle = useCallback(async () => {
         // Use our dedicated callback route so we can parse the hash and then send the user to /collection/all
         let redirectTo = `${window.location.origin}/auth/callback`;
 
@@ -133,9 +184,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         : new Error('Unknown error during sign-in'),
             };
         }
-    };
+    }, []);
 
-    const signUp = async (email: string, password: string) => {
+    const signUp = useCallback(async (email: string, password: string) => {
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -144,21 +195,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             },
         });
         return { data, error };
-    };
+    }, []);
 
-    const signOut = async () => {
+    const signOut = useCallback(async () => {
         await supabase.auth.signOut();
-    };
+    }, []);
 
-    const value = {
-        user,
-        session,
-        isLoading,
-        signIn,
-        signInWithGoogle,
-        signUp,
-        signOut,
-    };
+    // Memoize the context value to prevent unnecessary re-renders
+    const value = useMemo(
+        () => ({
+            user,
+            session,
+            isLoading,
+            signIn,
+            signInWithGoogle,
+            signUp,
+            signOut,
+        }),
+        [user, session, isLoading, signIn, signInWithGoogle, signUp, signOut]
+    );
 
     return (
         <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

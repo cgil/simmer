@@ -679,7 +679,6 @@ const CollectionListItem: FC<CollectionListItemProps> = ({
     return (
         <Collapse
             in={!collectionsBeingRemoved.includes(collection.id)}
-            appear={true}
             timeout={{ enter: 400, exit: 300 }}
             unmountOnExit
             sx={{
