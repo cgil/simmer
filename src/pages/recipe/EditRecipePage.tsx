@@ -198,7 +198,7 @@ const EditRecipePage: FC = () => {
                     err
                 );
                 setSaveError(
-                    'Failed to update recipe collections. Please try again.'
+                    'Your Recipe Collection was not updated. Please try again.'
                 );
             }
         },
@@ -210,7 +210,7 @@ const EditRecipePage: FC = () => {
         if (!user || !recipe) {
             setSaveError(
                 user
-                    ? 'Recipe data is not loaded.'
+                    ? 'Unfortunately your recipe did not load.'
                     : 'You must be logged in to save recipes'
             );
             return;
@@ -251,7 +251,7 @@ const EditRecipePage: FC = () => {
                         } else {
                             // Upload failed, set error but continue saving without image
                             setSaveError(
-                                'Recipe saved, but failed to upload the generated AI image.'
+                                'Your Recipe was saved, but failed to upload the Sketched image.'
                             );
                         }
                     } else if (generatedImageDataUri) {
@@ -447,7 +447,7 @@ const EditRecipePage: FC = () => {
 
     const handleGenerateAiCoverImage = useCallback(async () => {
         if (!title.trim()) {
-            setSaveError('Please enter a recipe title first');
+            setSaveError('Please enter a recipe title first.');
             return;
         }
 
