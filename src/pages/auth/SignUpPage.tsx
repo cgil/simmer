@@ -162,39 +162,13 @@ const SignUpPage = () => {
                 maxWidth: '100%',
                 margin: 0,
                 padding: 0,
-                backgroundColor: '#F8F7FA',
-                backgroundImage: 'none',
+                backgroundColor: 'paper.light',
+                backgroundImage: `url('https://storage.googleapis.com/simmer-recipe-images/public/simmer-signup-background.png')`,
                 backgroundSize: 'cover',
+                backgroundPosition: 'center center',
+                backgroundRepeat: 'no-repeat',
                 position: 'relative',
                 overflow: 'hidden',
-                '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    boxShadow: 'inset 0 0 100px rgba(62, 28, 0, 0.03)',
-                    pointerEvents: 'none',
-                },
-                '&::after': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    opacity: 0.3,
-                    pointerEvents: 'none',
-                    backgroundImage: `
-                        linear-gradient(rgba(62, 28, 0, 0.03) 1px, transparent 1px),
-                        linear-gradient(90deg, rgba(62, 28, 0, 0.03) 1px, transparent 1px),
-                        radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.03) 1px, transparent 1px)
-                    `,
-                    backgroundSize: '24px 24px, 24px 24px, 12px 12px',
-                    backgroundPosition: '-1px -1px, -1px -1px, -1px -1px',
-                    mixBlendMode: 'multiply',
-                },
             }}
         >
             <StyledPaper elevation={3}>
