@@ -1,9 +1,11 @@
+import config from "../config";
+
 /**
  * A simple logger utility that controls console output based on environment
  * In production, only errors will be logged, while in development all logs are shown
  */
 
-const isProd = process.env.NODE_ENV === "production";
+const isProd = config.environment === "production";
 
 /**
  * Logger utility with environment-aware methods
