@@ -333,9 +333,10 @@ const CatalogPage: FC = () => {
             if (nextRecipes.length === 0) {
                 setHasMore(false);
             } else {
-                setRecipes((prevRecipes) => [...prevRecipes, ...nextRecipes]);
-                setHasMore(recipes.length > end);
+                // Instead of adding to existing recipes array (which causes duplicates),
+                // just update the page number to show more from the existing recipes array
                 setPage(nextPage);
+                setHasMore(recipes.length > end);
             }
         } catch (err) {
             logger.error('Error loading more recipes:', err);

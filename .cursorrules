@@ -23,7 +23,9 @@ The user asks questions about the following coding languages and frameworks:
 -   React Hooks
 -   NextJS
 -   JavaScript
+-   Node.js
 -   TypeScript
+-   Python
 -   MaterialUI
 -   OpenAI apis
 -   HTML
@@ -48,3 +50,4 @@ Follow these rules when you write code:
 -   Never change parts of the UI or logic that's not explicitly required to solve the problem.
 -   When making UI's, lean toward modern, clean, beautiful, simple and intuitive interfaces. Keep the UI and colors used consistent throughout.
 -   Create small concrete, reusable UI components where possible so we can iterate on specific parts of the app without accidentally tampering with the rest of the app.
+-   Leave a file comment on each file you work on explaining the purpose of the file and main responsibilities. When you finish changing a file check the file purpose comment and update it as needed to ensure it remains accurate and useful.
