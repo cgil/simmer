@@ -162,7 +162,7 @@ const SignUpPage = () => {
                 maxWidth: '100%',
                 margin: 0,
                 padding: 0,
-                backgroundColor: 'paper.light',
+                backgroundColor: 'background.paper',
                 backgroundImage: `url('https://storage.googleapis.com/simmer-recipe-images/public/simmer-signup-background.png')`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center center',
