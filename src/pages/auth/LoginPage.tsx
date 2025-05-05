@@ -11,6 +11,7 @@ import {
     InputAdornment,
     IconButton,
     Divider,
+    Stack,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import GoogleIcon from '@mui/icons-material/Google';
@@ -18,52 +19,220 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { useAuth } from '../../context/AuthContext';
 
-// Custom styled components to match the paper notebook aesthetic
-const StyledPaper = styled(Paper)(({ theme }) => ({
+// Custom styled components with enhanced paper notebook aesthetic
+const NotebookPaper = styled(Paper)({
     position: 'relative',
-    padding: theme.spacing(5),
-    maxWidth: 500,
+    padding: '48px 40px',
+    maxWidth: 480,
     width: 'calc(100% - 32px)',
     margin: '0 auto',
-    backgroundColor: theme.palette.background.paper,
-    backgroundImage: 'none',
-    backgroundSize: 'cover',
-    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-    borderRadius: theme.spacing(1),
+    backgroundColor: '#FFFDF9',
+    boxShadow:
+        '0 15px 35px rgba(50, 50, 93, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07)',
+    borderRadius: '3px',
+    overflow: 'hidden',
     '&::before': {
         content: '""',
         position: 'absolute',
-        inset: 0,
-        backdropFilter: 'blur(8px)',
-        backgroundColor: 'rgba(255, 255, 255, 0.7)',
-        zIndex: 0,
-        borderRadius: 'inherit',
-        border: '1px solid',
-        borderColor: theme.palette.divider,
+        top: 0,
+        left: 36,
+        height: '100%',
+        width: '1px',
+        backgroundColor: 'rgba(216, 134, 90, 0.15)',
     },
+    '&::after': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        height: '100%',
+        width: '100%',
+        backgroundImage:
+            'linear-gradient(rgba(240, 238, 230, 0.5) 1px, transparent 1px)',
+        backgroundSize: '100% 25px',
+        pointerEvents: 'none',
+        zIndex: 1,
+    },
+});
+
+const PaperEdge = styled(Box)({
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: '15px',
+    height: '100%',
+    background:
+        'linear-gradient(to right, transparent, rgba(0, 0, 0, 0.03) 40%, rgba(0, 0, 0, 0.05))',
+    borderTopRightRadius: '3px',
+    borderBottomRightRadius: '3px',
+    zIndex: 3,
+});
+
+const NotebookHole = styled(Box)<{ top: number }>((props) => ({
+    position: 'absolute',
+    left: '18px',
+    top: `${props.top}px`,
+    width: '16px',
+    height: '16px',
+    borderRadius: '50%',
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    boxShadow: 'inset 0 0 4px rgba(0, 0, 0, 0.15)',
+    zIndex: 2,
 }));
 
 const ContentBox = styled(Box)({
     position: 'relative',
-    zIndex: 1,
+    zIndex: 3,
+    marginLeft: '30px',
 });
 
-const StyledButton = styled(Button)(({ theme }) => ({
-    marginTop: theme.spacing(2),
-    borderRadius: theme.spacing(0.75),
-    padding: theme.spacing(1.25, 2),
-    textTransform: 'none',
-    boxShadow: 'none',
+const HandwrittenTitle = styled(Typography)(({ theme }) => ({
     fontFamily: '"Kalam", cursive',
     fontWeight: 'bold',
-    '&:focus': {
-        outline: 'none',
-        boxShadow: 'none',
-    },
-    '&.MuiButtonBase-root:focus-visible': {
-        outline: 'none',
+    color: theme.palette.primary.main,
+    position: 'relative',
+    display: 'inline-block',
+    '&::after': {
+        content: '""',
+        position: 'absolute',
+        bottom: '2px',
+        left: '0',
+        width: '100%',
+        height: '6px',
+        background: 'rgba(241, 196, 15, 0.3)',
+        zIndex: -1,
+        transformOrigin: 'bottom left',
     },
 }));
+
+const StyledTextField = styled(TextField)(({ theme }) => ({
+    marginTop: theme.spacing(2.5),
+    marginBottom: theme.spacing(0.5),
+    '& .MuiOutlinedInput-root': {
+        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+        borderRadius: '2px',
+        transition: '0.3s',
+        border: '1px solid rgba(0, 0, 0, 0.1)',
+        boxShadow: 'none',
+
+        '&:hover': {
+            border: '1px solid rgba(0, 0, 0, 0.2)',
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+        },
+        '&.Mui-focused': {
+            border: '1px solid rgba(44, 62, 80, 0.3)',
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            boxShadow: '0 0 0 3px rgba(241, 196, 15, 0.15)',
+        },
+        '& fieldset': {
+            borderColor: 'transparent',
+            transition: 'border-color 0.2s',
+        },
+        '&:hover fieldset': {
+            borderColor: 'transparent',
+        },
+        '&.Mui-focused fieldset': {
+            borderColor: 'transparent',
+            borderWidth: 0,
+        },
+    },
+    '& .MuiInputLabel-root': {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '0.9rem',
+        color: theme.palette.primary.main,
+        opacity: 0.8,
+
+        '&.Mui-focused': {
+            color: theme.palette.primary.main,
+            opacity: 1,
+        },
+    },
+    '& .MuiInputBase-input': {
+        padding: theme.spacing(1.5, 2),
+    },
+}));
+
+const NotebookButton = styled(Button)(({ theme }) => ({
+    marginTop: theme.spacing(3),
+    padding: theme.spacing(1.25, 2),
+    borderRadius: '2px',
+    textTransform: 'none',
+    fontFamily: '"Kalam", cursive',
+    fontWeight: 'bold',
+    fontSize: '1rem',
+    letterSpacing: '0.5px',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.08)',
+    transition: 'all 0.3s ease',
+    position: 'relative',
+    overflow: 'hidden',
+
+    '&:hover': {
+        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.15)',
+        transform: 'translateY(-1px)',
+    },
+    '&:active': {
+        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+        transform: 'translateY(1px)',
+    },
+    '&::after': {
+        content: '""',
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        background:
+            'linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.1) 100%)',
+        pointerEvents: 'none',
+    },
+}));
+
+const GoogleNotebookButton = styled(NotebookButton)(({ theme }) => ({
+    backgroundColor: '#ffffff',
+    color: theme.palette.primary.main,
+    border: '1px solid rgba(0, 0, 0, 0.1)',
+    '&:hover': {
+        backgroundColor: '#f8f8f8',
+        borderColor: 'rgba(0, 0, 0, 0.2)',
+    },
+}));
+
+const PageDivider = styled(Divider)(({ theme }) => ({
+    margin: theme.spacing(3, 0),
+    '&::before, &::after': {
+        borderColor: 'rgba(0, 0, 0, 0.1)',
+    },
+    '& .MuiDivider-wrapper': {
+        fontFamily: '"Kalam", cursive',
+        fontSize: '0.875rem',
+        color: theme.palette.text.secondary,
+        paddingTop: '4px',
+    },
+}));
+
+const StyledLink = styled(RouterLink)({
+    color: '#F1C40F',
+    textDecoration: 'none',
+    fontWeight: 600,
+    position: 'relative',
+    display: 'inline-block',
+    '&::after': {
+        content: '""',
+        position: 'absolute',
+        bottom: '-2px',
+        left: 0,
+        width: '100%',
+        height: '2px',
+        backgroundColor: '#F1C40F',
+        transform: 'scaleX(0)',
+        transformOrigin: 'bottom right',
+        transition: 'transform 0.3s ease',
+    },
+    '&:hover::after': {
+        transform: 'scaleX(1)',
+        transformOrigin: 'bottom left',
+    },
+});
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
@@ -137,7 +306,7 @@ const LoginPage = () => {
                 maxWidth: '100%',
                 margin: 0,
                 padding: 0,
-                backgroundColor: 'background.paper',
+                backgroundColor: '#FBF6E8',
                 backgroundImage: `url('https://storage.googleapis.com/simmer-recipe-images/public/simmer-login-background.png')`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center center',
@@ -146,29 +315,35 @@ const LoginPage = () => {
                 overflow: 'hidden',
             }}
         >
-            <StyledPaper elevation={3}>
-                <ContentBox>
-                    <Typography
-                        variant="h4"
-                        align="center"
-                        gutterBottom
-                        sx={{
-                            fontFamily: '"Kalam", cursive',
-                            fontWeight: 'bold',
-                            color: 'primary.main',
-                            mb: 3,
-                        }}
-                    >
-                        Welcome to Simmer
-                    </Typography>
+            <NotebookPaper elevation={0}>
+                {/* Notebook holes */}
+                <NotebookHole top={60} />
+                <NotebookHole top={140} />
+                <NotebookHole top={220} />
+                <NotebookHole top={300} />
+                <NotebookHole top={380} />
 
-                    <Typography
-                        variant="body1"
-                        align="center"
-                        sx={{ mb: 4, color: 'text.secondary' }}
-                    >
-                        Your digital recipe notebook
-                    </Typography>
+                {/* Curved paper edge */}
+                <PaperEdge />
+
+                <ContentBox>
+                    <Stack spacing={1} alignItems="center" mb={3}>
+                        <HandwrittenTitle variant="h4">
+                            Welcome to Simmer
+                        </HandwrittenTitle>
+                        <Typography
+                            variant="body1"
+                            align="center"
+                            sx={{
+                                color: 'text.secondary',
+                                mt: 1,
+                                fontFamily: '"Inter", sans-serif',
+                                fontSize: '0.95rem',
+                            }}
+                        >
+                            Your personal recipe notebook
+                        </Typography>
+                    </Stack>
 
                     {error && (
                         <Alert
@@ -187,6 +362,7 @@ const LoginPage = () => {
                                     color: (theme) =>
                                         theme.palette.error.contrastText,
                                     fontWeight: 500,
+                                    fontFamily: '"Inter", sans-serif',
                                 },
                             }}
                         >
@@ -199,18 +375,15 @@ const LoginPage = () => {
                             severity="info"
                             sx={{
                                 mb: 2,
-                                backgroundColor: (theme) =>
-                                    theme.palette.secondary.main,
-                                border: (theme) =>
-                                    `1px solid ${theme.palette.secondary.main}`,
+                                backgroundColor: 'rgba(241, 196, 15, 0.1)',
+                                border: '1px solid rgba(241, 196, 15, 0.3)',
                                 '& .MuiAlert-icon': {
-                                    color: (theme) =>
-                                        theme.palette.secondary.contrastText,
+                                    color: 'rgba(44, 62, 80, 0.8)',
                                 },
                                 '& .MuiAlert-message': {
-                                    color: (theme) =>
-                                        theme.palette.secondary.contrastText,
+                                    color: 'rgba(44, 62, 80, 0.8)',
                                     fontWeight: 500,
+                                    fontFamily: '"Inter", sans-serif',
                                 },
                             }}
                         >
@@ -218,45 +391,34 @@ const LoginPage = () => {
                         </Alert>
                     )}
 
-                    <StyledButton
+                    <GoogleNotebookButton
                         fullWidth
-                        variant="contained"
-                        color="primary"
+                        variant="outlined"
                         startIcon={<GoogleIcon />}
                         onClick={handleGoogleLogin}
                         disabled={isLoading}
-                        sx={{ mb: 1 }}
                     >
-                        Sign in with Google
-                    </StyledButton>
+                        Continue with Google
+                    </GoogleNotebookButton>
 
-                    <Divider sx={{ my: 3, color: 'text.secondary' }}>
-                        or continue with email
-                    </Divider>
+                    <PageDivider>or sign in with email</PageDivider>
 
                     <form onSubmit={handleEmailLogin}>
-                        <TextField
+                        <StyledTextField
                             label="Email"
                             type="email"
                             fullWidth
                             variant="outlined"
-                            margin="normal"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             disabled={isLoading}
                             required
-                            sx={{
-                                '& .MuiOutlinedInput-root': {
-                                    borderRadius: 1,
-                                },
-                            }}
                         />
-                        <TextField
+                        <StyledTextField
                             label="Password"
                             type={showPassword ? 'text' : 'password'}
                             fullWidth
                             variant="outlined"
-                            margin="normal"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             disabled={isLoading}
@@ -284,13 +446,8 @@ const LoginPage = () => {
                                     </InputAdornment>
                                 ),
                             }}
-                            sx={{
-                                '& .MuiOutlinedInput-root': {
-                                    borderRadius: 1,
-                                },
-                            }}
                         />
-                        <StyledButton
+                        <NotebookButton
                             type="submit"
                             fullWidth
                             variant="contained"
@@ -298,11 +455,11 @@ const LoginPage = () => {
                             disabled={isLoading}
                         >
                             {isLoading ? (
-                                <CircularProgress size={24} />
+                                <CircularProgress size={24} color="inherit" />
                             ) : (
-                                'Sign In'
+                                'Open Notebook'
                             )}
-                        </StyledButton>
+                        </NotebookButton>
                     </form>
 
                     <Box
@@ -310,24 +467,20 @@ const LoginPage = () => {
                             mt: 3,
                             display: 'flex',
                             justifyContent: 'center',
+                            fontFamily: '"Inter", sans-serif',
                         }}
                     >
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ fontFamily: '"Inter", sans-serif' }}
+                        >
                             Don't have an account?{' '}
-                            <RouterLink
-                                to="/signup"
-                                style={{
-                                    color: '#F1C40F',
-                                    textDecoration: 'none',
-                                    fontWeight: 500,
-                                }}
-                            >
-                                Sign up
-                            </RouterLink>
+                            <StyledLink to="/signup">Sign up</StyledLink>
                         </Typography>
                     </Box>
                 </ContentBox>
-            </StyledPaper>
+            </NotebookPaper>
         </Box>
     );
 };
