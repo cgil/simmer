@@ -45,10 +45,29 @@ const TimeEstimate: React.FC<TimeEstimateProps> = ({ timeEstimate }) => {
         <Paper
             elevation={0}
             sx={{
-                p: { xs: 2, sm: 3 },
+                p: { xs: 2.5, sm: 3 },
                 borderRadius: 2,
-                bgcolor: 'background.paper',
+                bgcolor: 'paper.main',
+                border: '1px solid',
+                borderColor: 'divider',
                 boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(255,255,255,0.6)',
+                    backdropFilter: 'blur(4px)',
+                    zIndex: 0,
+                },
+                '& > *': {
+                    position: 'relative',
+                    zIndex: 1,
+                },
             }}
         >
             <Stack
@@ -93,7 +112,6 @@ const TimeEstimate: React.FC<TimeEstimateProps> = ({ timeEstimate }) => {
                                         item.label === 'Total Time'
                                             ? 'primary.main'
                                             : 'text.primary',
-                                    // whiteSpace: 'nowrap',
                                 }}
                             >
                                 {formatTimeDisplay(item.value)}

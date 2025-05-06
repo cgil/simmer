@@ -494,7 +494,7 @@ const RecipePage: FC = () => {
                                 sx={{
                                     textAlign: 'center',
                                     mb: 4,
-                                    mt: 4,
+                                    mt: 2,
                                     maxWidth: 800,
                                     mx: 'auto',
                                 }}
@@ -559,26 +559,11 @@ const RecipePage: FC = () => {
                             <Paper
                                 elevation={0}
                                 sx={{
-                                    borderRadius: 1,
+                                    borderRadius: 2,
                                     overflow: 'hidden',
                                     position: 'relative',
                                     bgcolor: 'paper.main',
-                                    '&::before': {
-                                        content: '""',
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: '100%',
-                                        background: 'rgba(255,255,255,0.6)',
-                                        backdropFilter: 'blur(4px)',
-                                        borderRadius: 1,
-                                        zIndex: 0,
-                                    },
-                                    '& > *': {
-                                        position: 'relative',
-                                        zIndex: 1,
-                                    },
+                                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
                                 }}
                             >
                                 <RecipeGallery images={recipe.images} />
@@ -587,164 +572,30 @@ const RecipePage: FC = () => {
 
                         {/* Time Estimate Section */}
                         <Grid item xs={12}>
-                            <Paper
-                                elevation={0}
-                                sx={{
-                                    p: { xs: 2, sm: 3 },
-                                    borderRadius: 1,
-                                    position: 'relative',
-                                    bgcolor: 'paper.main',
-                                    boxShadow: `
-                                        0 1px 2px rgba(0,0,0,0.03),
-                                        0 4px 20px rgba(0,0,0,0.06),
-                                        inset 0 0 0 1px rgba(255,255,255,0.9)
-                                    `,
-                                    '&::before': {
-                                        content: '""',
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: '100%',
-                                        background: 'rgba(255,255,255,0.5)',
-                                        backdropFilter: 'blur(4px)',
-                                        borderRadius: 1,
-                                        zIndex: 0,
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                    },
-                                    '& > *': {
-                                        position: 'relative',
-                                        zIndex: 1,
-                                    },
-                                }}
-                            >
-                                <TimeEstimate
-                                    timeEstimate={recipe.time_estimate}
-                                />
-                            </Paper>
+                            <TimeEstimate timeEstimate={recipe.time_estimate} />
                         </Grid>
 
                         {/* Ingredients Section */}
                         <Grid item xs={12} md={4}>
-                            <Paper
-                                elevation={0}
-                                sx={{
-                                    p: { xs: 2, sm: 3 },
-                                    borderRadius: 1,
-                                    position: 'relative',
-                                    bgcolor: 'paper.main',
-                                    boxShadow: `
-                                        0 1px 2px rgba(0,0,0,0.03),
-                                        0 4px 20px rgba(0,0,0,0.06),
-                                        inset 0 0 0 1px rgba(255,255,255,0.9)
-                                    `,
-                                    '&::before': {
-                                        content: '""',
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: '100%',
-                                        background: 'rgba(255,255,255,0.5)',
-                                        backdropFilter: 'blur(4px)',
-                                        borderRadius: 1,
-                                        zIndex: 0,
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                    },
-                                    '& > *': {
-                                        position: 'relative',
-                                        zIndex: 1,
-                                    },
-                                }}
-                            >
-                                <IngredientsList
-                                    recipe={recipe}
-                                    servings={servings}
-                                    onServingsChange={setServings}
-                                />
-                            </Paper>
+                            <IngredientsList
+                                recipe={recipe}
+                                servings={servings}
+                                onServingsChange={setServings}
+                            />
                         </Grid>
 
                         {/* Instructions Section */}
                         <Grid item xs={12} md={8}>
-                            <Paper
-                                elevation={0}
-                                sx={{
-                                    p: { xs: 2, sm: 3 },
-                                    borderRadius: 1,
-                                    position: 'relative',
-                                    bgcolor: 'paper.main',
-                                    boxShadow: `
-                                        0 1px 2px rgba(0,0,0,0.03),
-                                        0 4px 20px rgba(0,0,0,0.06),
-                                        inset 0 0 0 1px rgba(255,255,255,0.9)
-                                    `,
-                                    '&::before': {
-                                        content: '""',
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: '100%',
-                                        background: 'rgba(255,255,255,0.5)',
-                                        backdropFilter: 'blur(4px)',
-                                        borderRadius: 1,
-                                        zIndex: 0,
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                    },
-                                    '& > *': {
-                                        position: 'relative',
-                                        zIndex: 1,
-                                    },
-                                }}
-                            >
-                                <CookingInstructions
-                                    recipe={recipe}
-                                    servings={servings}
-                                />
-                            </Paper>
+                            <CookingInstructions
+                                recipe={recipe}
+                                servings={servings}
+                            />
                         </Grid>
 
                         {/* Notes Section */}
                         {recipe.notes && recipe.notes.length > 0 && (
                             <Grid item xs={12}>
-                                <Paper
-                                    elevation={0}
-                                    sx={{
-                                        p: { xs: 2, sm: 3 },
-                                        borderRadius: 1,
-                                        position: 'relative',
-                                        bgcolor: 'paper.main',
-                                        boxShadow: `
-                                            0 1px 2px rgba(0,0,0,0.03),
-                                            0 4px 20px rgba(0,0,0,0.06),
-                                            inset 0 0 0 1px rgba(255,255,255,0.9)
-                                        `,
-                                        '&::before': {
-                                            content: '""',
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            right: 0,
-                                            height: '100%',
-                                            background: 'rgba(255,255,255,0.5)',
-                                            backdropFilter: 'blur(4px)',
-                                            borderRadius: 1,
-                                            zIndex: 0,
-                                            border: '1px solid',
-                                            borderColor: 'divider',
-                                        },
-                                        '& > *': {
-                                            position: 'relative',
-                                            zIndex: 1,
-                                        },
-                                    }}
-                                >
-                                    <RecipeNotes recipe={recipe} />
-                                </Paper>
+                                <RecipeNotes recipe={recipe} />
                             </Grid>
                         )}
                     </Grid>
