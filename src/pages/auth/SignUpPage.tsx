@@ -26,7 +26,7 @@ const NotebookPaper = styled(Paper)(({ theme }) => ({
     maxWidth: 480,
     width: 'calc(100% - 32px)',
     margin: '0 auto',
-    backgroundColor: '#FFFDF9',
+    backgroundColor: 'white',
     boxShadow:
         '0 15px 35px rgba(50, 50, 93, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07)',
     borderRadius: '3px',
@@ -70,7 +70,7 @@ const PaperEdge = styled(Box)({
 
 const NotebookHole = styled(Box)<{ top: number }>((props) => ({
     position: 'absolute',
-    left: '18px',
+    left: '12px',
     top: `${props.top}px`,
     width: '16px',
     height: '16px',
@@ -348,6 +348,8 @@ const SignUpPage = () => {
                 <NotebookHole top={300} />
                 <NotebookHole top={380} />
                 <NotebookHole top={460} />
+                <NotebookHole top={540} />
+                <NotebookHole top={620} />
 
                 {/* Curved paper edge */}
                 <PaperEdge />
