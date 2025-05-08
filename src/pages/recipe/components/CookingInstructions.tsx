@@ -1,9 +1,21 @@
+// src/pages/recipe/components/CookingInstructions.tsx
+// This component displays cooking instructions with an elegant, contemporary culinary magazine style
+// that creates intuitive visual separation between sections and steps.
+
 import { FC } from 'react';
-import { Box, Typography, Paper } from '@mui/material';
+import {
+    Box,
+    Typography,
+    Paper,
+    useTheme,
+    Stack,
+    alpha,
+    Tooltip,
+} from '@mui/material';
 import { Recipe } from '../../../types';
 import { parseIngredientReferences } from '../../../utils/recipe';
 import HighlightedInstruction from './HighlightedInstruction';
-import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { formatTimeDisplay } from '../../../utils/time';
 
 interface CookingInstructionsProps {
@@ -11,58 +23,94 @@ interface CookingInstructionsProps {
     servings: number;
 }
 
+// Helper function to format time in a compact way
+const formatCompactTime = (minutes: number): string => {
+    if (minutes < 60) {
+        return `${minutes}m`;
+    } else if (minutes % 60 === 0) {
+        // Clean hours with no minutes
+        return `${Math.floor(minutes / 60)}h`;
+    } else {
+        const hours = Math.floor(minutes / 60);
+        const remainingMinutes = minutes % 60;
+        return `${hours}h${remainingMinutes}m`;
+    }
+};
+
+// Formats time even more compactly for very long ranges
+const formatSmartCompactTime = (min: number, max: number): string => {
+    const minCompact = formatCompactTime(min);
+    const maxCompact = formatCompactTime(max);
+
+    // If the combined text would be too long, we'll make it even more compact
+    const combinedLength = minCompact.length + maxCompact.length;
+
+    if (combinedLength > 8) {
+        // For hour + minute combinations where both have hours, abbreviate further
+        if (min >= 60 && max >= 60) {
+            const minHours = Math.floor(min / 60);
+            const maxHours = Math.floor(max / 60);
+            const minMinutes = min % 60;
+            const maxMinutes = max % 60;
+
+            // If hours are the same, just show the minute difference
+            if (minHours === maxHours) {
+                return `${minHours}h${minMinutes} - ${maxMinutes}m`;
+            }
+
+            // If minutes are small or zero, just show the hours
+            if (minMinutes === 0 && maxMinutes === 0) {
+                return `${minHours} - ${maxHours}h`;
+            }
+
+            // Otherwise show compact hour-minute notation
+            return `${minHours}h${minMinutes} - ${maxHours}h${maxMinutes}`;
+        }
+    }
+
+    // Default format
+    return `${minCompact} - ${maxCompact}`;
+};
+
 const CookingInstructions: FC<CookingInstructionsProps> = ({
     recipe,
     servings,
 }) => {
-    // Keep track of overall step number across sections
+    const theme = useTheme();
     let stepNumber = 1;
 
-    // Handle case where instructions are undefined or empty
+    const cardSx = {
+        p: { xs: 2.5, sm: 3 },
+        height: '100%',
+        borderRadius: theme.shape.borderRadius * 2,
+        bgcolor: 'background.paper',
+        boxShadow: '0px 8px 24px rgba(0,0,0,0.08)',
+        display: 'flex',
+        flexDirection: 'column',
+        overflowY: 'auto',
+    };
+
     if (!recipe.instructions || recipe.instructions.length === 0) {
         return (
-            <Paper
-                elevation={0}
-                sx={{
-                    p: { xs: 2.5, sm: 3.5 },
-                    height: '100%',
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    bgcolor: 'paper.main',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'rgba(255,255,255,0.6)',
-                        backdropFilter: 'blur(4px)',
-                        zIndex: 0,
-                    },
-                    '& > *': {
-                        position: 'relative',
-                        zIndex: 1,
-                    },
-                }}
-            >
+            <Paper sx={cardSx}>
                 <Typography
                     variant="h5"
                     component="h2"
                     sx={{
                         fontWeight: 700,
                         color: 'primary.main',
-                        mb: 4,
+                        mb: 2,
                         fontSize: { xs: '1.25rem', sm: '1.5rem' },
+                        fontFamily: "'Kalam', cursive",
                     }}
                 >
                     Instructions
                 </Typography>
-                <Typography variant="body1" color="text.secondary">
+                <Typography
+                    variant="body1"
+                    color="text.secondary"
+                    sx={{ fontFamily: "'Inter', sans-serif" }}
+                >
                     No instructions available for this recipe.
                 </Typography>
             </Paper>
@@ -70,192 +118,336 @@ const CookingInstructions: FC<CookingInstructionsProps> = ({
     }
 
     return (
-        <Paper
-            elevation={0}
-            sx={{
-                p: { xs: 2.5, sm: 3.5 },
-                height: '100%',
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'divider',
-                bgcolor: 'paper.main',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                position: 'relative',
-                overflow: 'hidden',
-                '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(255,255,255,0.6)',
-                    backdropFilter: 'blur(4px)',
-                    zIndex: 0,
-                },
-                '& > *': {
-                    position: 'relative',
-                    zIndex: 1,
-                },
-            }}
-        >
+        <Paper sx={cardSx}>
             <Typography
                 variant="h5"
                 component="h2"
                 sx={{
                     fontWeight: 700,
                     color: 'primary.main',
-                    mb: 4,
-                    fontSize: { xs: '1.25rem', sm: '1.5rem' },
+                    mb: 3.5,
+                    fontSize: { xs: '1.4rem', sm: '1.7rem' },
+                    fontFamily: "'Kalam', cursive",
+                    flexShrink: 0,
+                    position: 'relative',
+                    display: 'inline-block',
+                    '&:after': {
+                        content: '""',
+                        position: 'absolute',
+                        left: 0,
+                        bottom: -8,
+                        width: '80px',
+                        height: '2px',
+                        background: `linear-gradient(90deg, ${
+                            theme.palette.primary.main
+                        } 0%, ${alpha(theme.palette.primary.main, 0.2)} 100%)`,
+                    },
                 }}
             >
                 Instructions
             </Typography>
 
-            {recipe.instructions.map((section, sectionIndex) => (
-                <Box
-                    key={`section-${sectionIndex}-${section.section_title}`}
-                    sx={{ mb: 4 }}
-                >
-                    <Typography
-                        variant="subtitle1"
-                        sx={{
-                            fontWeight: 600,
-                            mb: 2,
-                            color: 'text.primary',
-                            fontSize: { xs: '1.1rem', sm: '1.2rem' },
-                        }}
-                    >
-                        {section.section_title}
-                    </Typography>
+            <Box sx={{ flexGrow: 1, overflowY: 'auto', pr: 1 }}>
+                {recipe.instructions.map((section, sectionIndex) => (
                     <Box
-                        component="ol"
+                        key={`section-${sectionIndex}-${section.section_title}`}
                         sx={{
-                            m: 0,
-                            p: 0,
-                            listStyle: 'none',
+                            mb:
+                                sectionIndex === recipe.instructions.length - 1
+                                    ? 3
+                                    : 5,
+                            position: 'relative',
                         }}
                     >
-                        {section.steps.map((step, index) => {
-                            const currentStepNumber = stepNumber++;
-                            return (
-                                <Box
-                                    component="li"
-                                    key={index}
+                        {section.section_title && (
+                            <Box sx={{ mb: 2.5 }}>
+                                <Typography
+                                    variant="h6"
+                                    component="h3"
                                     sx={{
+                                        color: 'primary.dark',
+                                        fontFamily: "'Kalam', cursive",
+                                        fontWeight: 700,
                                         fontSize: {
-                                            xs: '0.9rem',
-                                            sm: '1rem',
+                                            xs: '1.15rem',
+                                            sm: '1.25rem',
                                         },
-                                        lineHeight: 1.6,
-                                        color: 'text.primary',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: { xs: 1, sm: 1.5 },
-                                        mb: { xs: 3, sm: 4 },
-                                        '&:last-child': {
-                                            mb: 0,
-                                        },
+                                        display: 'inline-block',
+                                        pr: 2,
+                                        position: 'relative',
+                                        zIndex: 2,
+                                        backgroundColor:
+                                            theme.palette.background.paper,
                                     }}
                                 >
-                                    {/* Header row with step number and timing */}
+                                    {section.section_title}
+                                </Typography>
+                                <Box
+                                    sx={{
+                                        height: '1px',
+                                        width: '100%',
+                                        backgroundColor: alpha(
+                                            theme.palette.primary.main,
+                                            0.12
+                                        ),
+                                        position: 'relative',
+                                        top: '-12px',
+                                        zIndex: 1,
+                                    }}
+                                />
+                            </Box>
+                        )}
+
+                        <Stack spacing={3.5}>
+                            {section.steps.map((step, index) => {
+                                const currentStepNumber = stepNumber++;
+                                const hasTimer = !!step.timing;
+                                const timing = step.timing || {
+                                    min: 0,
+                                    max: 0,
+                                };
+
+                                const isLongRange =
+                                    hasTimer && timing.min !== timing.max;
+                                const timeText = hasTimer
+                                    ? timing.min === timing.max
+                                        ? formatCompactTime(timing.min)
+                                        : formatSmartCompactTime(
+                                              timing.min,
+                                              timing.max
+                                          )
+                                    : '';
+
+                                return (
                                     <Box
+                                        component="li"
+                                        key={index}
                                         sx={{
                                             display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            width: '100%',
+                                            flexDirection: {
+                                                xs: 'row',
+                                                sm: 'row',
+                                            },
+                                            gap: { xs: 1.5, sm: 2 },
+                                            listStyle: 'none',
+                                            alignItems: 'flex-start',
                                         }}
                                     >
-                                        <Typography
-                                            sx={{
-                                                color: 'primary.main',
-                                                fontFamily: "'Kalam', cursive",
-                                                fontSize: {
-                                                    xs: '1.0rem',
-                                                    sm: '1.0rem',
-                                                },
-                                                fontWeight: 700,
-                                                lineHeight: 1.4,
-                                            }}
+                                        <Tooltip
+                                            title={
+                                                hasTimer
+                                                    ? timing.min === timing.max
+                                                        ? `${formatTimeDisplay(
+                                                              timing.min
+                                                          )}`
+                                                        : `${formatTimeDisplay(
+                                                              timing.min
+                                                          )} - ${formatTimeDisplay(
+                                                              timing.max
+                                                          )}`
+                                                    : ''
+                                            }
+                                            arrow
+                                            placement="top"
+                                            disableHoverListener={!hasTimer}
                                         >
-                                            Step {currentStepNumber}.
-                                        </Typography>
-                                        {step.timing && (
                                             <Box
                                                 sx={{
+                                                    width: { xs: 70, sm: 74 },
+                                                    minWidth: {
+                                                        xs: 60,
+                                                        sm: 65,
+                                                    },
                                                     display: 'flex',
+                                                    flexDirection: 'column',
                                                     alignItems: 'center',
-                                                    gap: 0.5,
-                                                    color: 'text.secondary',
-                                                    fontSize: '0.85em',
-                                                    bgcolor: 'grey.50',
-                                                    p: 0.5,
-                                                    px: 1.5,
-                                                    borderRadius: '12px',
-                                                    border: '1px solid',
-                                                    borderColor: 'grey.100',
-                                                    boxShadow:
-                                                        '0 1px 2px rgba(0,0,0,0.05)',
+                                                    justifyContent:
+                                                        'flex-start',
+                                                    position: 'relative',
+                                                    mt: 0.75,
                                                 }}
                                             >
-                                                <TimerOutlinedIcon
+                                                {/* Step Number Circle */}
+                                                <Box
                                                     sx={{
-                                                        fontSize: '1.1em',
-                                                        opacity: 0.8,
+                                                        width: {
+                                                            xs: 30,
+                                                            sm: 32,
+                                                        },
+                                                        height: {
+                                                            xs: 30,
+                                                            sm: 32,
+                                                        },
+                                                        borderRadius: '50%',
+                                                        bgcolor:
+                                                            'background.paper',
+                                                        border: '1px solid',
+                                                        borderColor: alpha(
+                                                            theme.palette
+                                                                .primary.main,
+                                                            0.25
+                                                        ),
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent:
+                                                            'center',
+                                                        position: 'relative',
+                                                        boxShadow: 'none',
+                                                        transition:
+                                                            'all 0.2s ease',
+                                                        zIndex: 1,
                                                     }}
-                                                />
-                                                <span>
-                                                    {step.timing.min ===
-                                                    step.timing.max
-                                                        ? formatTimeDisplay(
-                                                              step.timing.min
-                                                          )
-                                                        : `${formatTimeDisplay(
-                                                              step.timing.min
-                                                          )} - ${formatTimeDisplay(
-                                                              step.timing.max
-                                                          )}`}
-                                                </span>
-                                            </Box>
-                                        )}
-                                    </Box>
+                                                >
+                                                    <Typography
+                                                        sx={{
+                                                            fontFamily:
+                                                                "'Kalam', cursive",
+                                                            fontSize: {
+                                                                xs: '0.95rem',
+                                                                sm: '1rem',
+                                                            },
+                                                            fontWeight: 600,
+                                                            color: alpha(
+                                                                theme.palette
+                                                                    .primary
+                                                                    .main,
+                                                                0.75
+                                                            ),
+                                                            lineHeight: 1,
+                                                        }}
+                                                    >
+                                                        {currentStepNumber}
+                                                    </Typography>
+                                                </Box>
 
-                                    {/* Instruction text */}
-                                    <Typography
-                                        component="div"
-                                        sx={{
-                                            color: 'text.primary',
-                                            fontSize: {
-                                                xs: '0.9rem',
-                                                sm: '1rem',
-                                            },
-                                            lineHeight: 1.8,
-                                            pl: { xs: 1, sm: 2 },
-                                            borderLeft: '2px solid',
-                                            borderColor: 'grey.100',
-                                        }}
-                                    >
-                                        <HighlightedInstruction
-                                            text={
-                                                // First apply any scaling to ingredient quantities
-                                                parseIngredientReferences(
+                                                {/* Timing Badge */}
+                                                {hasTimer && (
+                                                    <Box
+                                                        sx={{
+                                                            position:
+                                                                'absolute',
+                                                            top: {
+                                                                xs: 20,
+                                                                sm: 22,
+                                                            },
+                                                            display: 'flex',
+                                                            alignItems:
+                                                                'center',
+                                                            justifyContent:
+                                                                'center',
+                                                            fontSize:
+                                                                isLongRange
+                                                                    ? '0.6rem'
+                                                                    : '0.65rem',
+                                                            fontWeight: 500,
+                                                            color: alpha(
+                                                                theme.palette
+                                                                    .primary
+                                                                    .dark,
+                                                                0.75
+                                                            ),
+                                                            fontFamily:
+                                                                "'Inter', sans-serif",
+                                                            bgcolor: alpha(
+                                                                theme.palette
+                                                                    .background
+                                                                    .paper,
+                                                                0.95
+                                                            ),
+                                                            borderRadius: '8px',
+                                                            padding: '2px 6px',
+                                                            minWidth: {
+                                                                xs: 36,
+                                                                sm: 40,
+                                                            },
+                                                            maxWidth: {
+                                                                xs: '120%',
+                                                                sm: '130%',
+                                                            },
+                                                            whiteSpace:
+                                                                'nowrap',
+                                                            overflow: 'visible',
+                                                            border: '1px solid',
+                                                            borderColor: alpha(
+                                                                theme.palette
+                                                                    .primary
+                                                                    .main,
+                                                                0.15
+                                                            ),
+                                                            boxShadow: `0 1px 2px ${alpha(
+                                                                theme.palette
+                                                                    .common
+                                                                    .black,
+                                                                0.03
+                                                            )}`,
+                                                            letterSpacing:
+                                                                isLongRange
+                                                                    ? '-0.01em'
+                                                                    : 'normal',
+                                                            zIndex: 2,
+                                                            transition:
+                                                                'all 0.2s ease',
+                                                        }}
+                                                    >
+                                                        <AccessTimeIcon
+                                                            sx={{
+                                                                fontSize:
+                                                                    isLongRange
+                                                                        ? '0.6rem'
+                                                                        : '0.65rem',
+                                                                mr: 0.5,
+                                                                opacity: 0.6,
+                                                                flexShrink: 0,
+                                                                color: alpha(
+                                                                    theme
+                                                                        .palette
+                                                                        .primary
+                                                                        .main,
+                                                                    0.85
+                                                                ),
+                                                            }}
+                                                        />
+                                                        <span>{timeText}</span>
+                                                    </Box>
+                                                )}
+                                            </Box>
+                                        </Tooltip>
+
+                                        <Typography
+                                            component="div"
+                                            sx={{
+                                                color: 'text.primary',
+                                                fontSize: {
+                                                    xs: '0.95rem',
+                                                    sm: '1.05rem',
+                                                },
+                                                lineHeight: 1.8,
+                                                flex: 1,
+                                                fontFamily:
+                                                    "'Inter', sans-serif",
+                                                pt: 0.5,
+                                            }}
+                                        >
+                                            <HighlightedInstruction
+                                                text={parseIngredientReferences(
                                                     step.text,
                                                     recipe,
                                                     servings
-                                                )
-                                            }
-                                            ingredients={recipe.ingredients}
-                                            servings={servings}
-                                            originalServings={recipe.servings}
-                                        />
-                                    </Typography>
-                                </Box>
-                            );
-                        })}
+                                                )}
+                                                ingredients={recipe.ingredients}
+                                                servings={servings}
+                                                originalServings={
+                                                    recipe.servings
+                                                }
+                                            />
+                                        </Typography>
+                                    </Box>
+                                );
+                            })}
+                        </Stack>
                     </Box>
-                </Box>
-            ))}
+                ))}
+            </Box>
         </Paper>
     );
 };

@@ -1,6 +1,18 @@
+// src/pages/recipe/components/IngredientsList.tsx
+// This component displays the list of ingredients for a recipe, allowing users to adjust servings.
+// It's styled as a floating card with a modern magazine aesthetic for the recipe page redesign.
+
 import { FC } from 'react';
-import { Box, Typography, Paper, Slider, Stack } from '@mui/material';
-import { Recipe } from '../../../types';
+import {
+    Box,
+    Typography,
+    Paper,
+    Slider,
+    Stack,
+    useTheme,
+    alpha,
+} from '@mui/material';
+import { Recipe, Ingredient } from '../../../types';
 import IngredientItemWithSubstitution from '../../../components/substitution/IngredientItemWithSubstitution';
 import { useIngredientSubstitution } from '../../../components/substitution/IngredientSubstitutionContext';
 import { SubstituteOption } from '../../../types/substitution';
@@ -16,7 +28,7 @@ const IngredientsList: FC<IngredientsListProps> = ({
     servings,
     onServingsChange,
 }) => {
-    // Access the substitution context
+    const theme = useTheme();
     const {
         addSubstitution,
         removeSubstitution,
@@ -29,12 +41,10 @@ const IngredientsList: FC<IngredientsListProps> = ({
         onServingsChange(value as number);
     };
 
-    // Handle substitution request
     const handleSubstitute = (
         ingredientId: string,
         substituteOption: SubstituteOption
     ) => {
-        // Find the original ingredient
         const originalIngredient = recipe.ingredients.find(
             (i) => i.id === ingredientId
         );
@@ -43,42 +53,27 @@ const IngredientsList: FC<IngredientsListProps> = ({
         }
     };
 
-    // Handle substitution removal
     const handleRevertSubstitution = (ingredientId: string) => {
         removeSubstitution(ingredientId);
     };
 
-    // Calculate dynamic max serving size based on recipe's default serving size
     const defaultServings = recipe.servings || 4;
     const maxServings = defaultServings >= 6 ? defaultServings * 2 : 10;
 
-    // Generate dynamic marks based on maxServings
     const generateMarks = () => {
         const marks = [];
-
-        // For small ranges (max 10), show all numbers
         if (maxServings <= 10) {
             for (let i = 1; i <= maxServings; i++) {
                 marks.push({ value: i, label: i.toString() });
             }
             return marks;
         }
-
-        // For larger ranges, we need a consistent interval approach
-        // Always show 1 as the minimum
         marks.push({ value: 1, label: '1' });
-
-        // Determine the appropriate interval
-        // We want even intervals (typically 2) unless the range is very large
         const interval =
             maxServings <= 20 ? 2 : Math.ceil(maxServings / 10) * 2;
-
-        // Add marks at regular intervals starting from 2 (not 1)
         for (let i = interval; i <= maxServings; i += interval) {
             marks.push({ value: i, label: i.toString() });
         }
-
-        // Always include the default recipe servings if not already included
         if (
             !marks.some((mark) => mark.value === defaultServings) &&
             defaultServings > 1
@@ -88,98 +83,25 @@ const IngredientsList: FC<IngredientsListProps> = ({
                 label: defaultServings.toString(),
             });
         }
-
-        // Always include the max value if not already included
         if (!marks.some((mark) => mark.value === maxServings)) {
             marks.push({ value: maxServings, label: maxServings.toString() });
         }
-
-        // Sort marks by value and return
         return marks.sort((a, b) => a.value - b.value);
     };
 
-    // Handle empty ingredients array
+    const cardSx = {
+        p: { xs: 2.5, sm: 3 },
+        height: '100%',
+        borderRadius: theme.shape.borderRadius * 2,
+        bgcolor: 'background.paper',
+        boxShadow: '0px 8px 24px rgba(0,0,0,0.08)',
+        display: 'flex',
+        flexDirection: 'column',
+    };
+
     if (!recipe.ingredients || recipe.ingredients.length === 0) {
         return (
-            <Paper
-                elevation={0}
-                sx={{
-                    p: { xs: 2.5, sm: 3.5 },
-                    height: '100%',
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    bgcolor: 'paper.main',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'rgba(255,255,255,0.6)',
-                        backdropFilter: 'blur(4px)',
-                        zIndex: 0,
-                    },
-                    '& > *': {
-                        position: 'relative',
-                        zIndex: 1,
-                    },
-                }}
-            >
-                <Typography
-                    variant="h5"
-                    component="h2"
-                    sx={{
-                        fontWeight: 700,
-                        color: 'primary.main',
-                        mb: 4,
-                        fontSize: { xs: '1.25rem', sm: '1.5rem' },
-                    }}
-                >
-                    Ingredients
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                    No ingredients available for this recipe.
-                </Typography>
-            </Paper>
-        );
-    }
-
-    return (
-        <Paper
-            elevation={0}
-            sx={{
-                p: { xs: 2.5, sm: 3.5 },
-                height: '100%',
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'divider',
-                bgcolor: 'paper.main',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                position: 'relative',
-                overflow: 'hidden',
-                '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(255,255,255,0.6)',
-                    backdropFilter: 'blur(4px)',
-                    zIndex: 0,
-                },
-                '& > *': {
-                    position: 'relative',
-                    zIndex: 1,
-                },
-            }}
-        >
-            <Stack spacing={3}>
+            <Paper sx={cardSx}>
                 <Typography
                     variant="h5"
                     component="h2"
@@ -188,46 +110,96 @@ const IngredientsList: FC<IngredientsListProps> = ({
                         color: 'primary.main',
                         mb: 2,
                         fontSize: { xs: '1.25rem', sm: '1.5rem' },
+                        fontFamily: "'Kalam', cursive",
+                    }}
+                >
+                    Ingredients
+                </Typography>
+                <Typography
+                    variant="body1"
+                    color="text.secondary"
+                    sx={{
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: { xs: '0.95rem', sm: '1.05rem' },
+                    }}
+                >
+                    No ingredients available for this recipe.
+                </Typography>
+            </Paper>
+        );
+    }
+
+    return (
+        <Paper sx={cardSx}>
+            <Stack spacing={3} sx={{ flexGrow: 1 }}>
+                <Typography
+                    variant="h5"
+                    component="h2"
+                    sx={{
+                        fontWeight: 700,
+                        color: 'primary.main',
+                        fontSize: { xs: '1.4rem', sm: '1.7rem' },
+                        fontFamily: "'Kalam', cursive",
+                        textAlign: 'left',
+                        mb: 3.5,
+                        position: 'relative',
+                        display: 'inline-block',
+                        '&:after': {
+                            content: '""',
+                            position: 'absolute',
+                            left: 0,
+                            bottom: -8,
+                            width: '80px',
+                            height: '2px',
+                            background: `linear-gradient(90deg, ${
+                                theme.palette.primary.main
+                            } 0%, ${alpha(
+                                theme.palette.primary.main,
+                                0.2
+                            )} 100%)`,
+                        },
                     }}
                 >
                     Ingredients
                 </Typography>
 
-                {/* Servings Control */}
-                <Box sx={{ px: { xs: 0.5, sm: 2 } }}>
+                <Box sx={{ px: { xs: 0, sm: 1 } }}>
                     <Box
                         sx={{
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
-                            mb: 2,
+                            mb: 1,
                             flexWrap: 'wrap',
                             gap: 1,
                         }}
                     >
                         <Typography
-                            id="servings-slider"
+                            id="servings-slider-label"
                             sx={{
                                 color: 'text.secondary',
                                 fontWeight: 500,
-                                fontSize: { xs: '0.9rem', sm: '1rem' },
+                                fontSize: { xs: '1rem', sm: '1rem' },
+                                fontFamily: "'Inter', sans-serif",
                             }}
                         >
-                            Adjust servings
+                            Servings:
                         </Typography>
                         <Typography
                             variant="body1"
+                            aria-live="polite"
                             sx={{
                                 fontWeight: 600,
                                 bgcolor: 'primary.main',
                                 color: 'primary.contrastText',
-                                px: { xs: 2, sm: 2.5 },
-                                py: { xs: 0.5, sm: 0.75 },
-                                borderRadius: 2,
-                                minWidth: 45,
+                                px: 2,
+                                py: 0.5,
+                                borderRadius: '8px',
+                                minWidth: 40,
                                 textAlign: 'center',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                                fontSize: { xs: '0.9rem', sm: '1rem' },
+                                boxShadow: theme.shadows[1],
+                                fontSize: { xs: '1rem', sm: '1.05rem' },
+                                fontFamily: "'Inter', sans-serif",
                             }}
                         >
                             {servings}
@@ -236,83 +208,118 @@ const IngredientsList: FC<IngredientsListProps> = ({
                     <Slider
                         value={servings}
                         onChange={handleServingsChange}
-                        aria-labelledby="servings-slider"
+                        aria-labelledby="servings-slider-label"
                         step={1}
                         marks={generateMarks()}
                         min={1}
                         max={maxServings}
                         valueLabelDisplay="off"
                         sx={{
+                            color: 'primary.main',
+                            height: { xs: 6, sm: 8 },
                             '& .MuiSlider-thumb': {
-                                width: { xs: 10, sm: 12 },
-                                height: { xs: 10, sm: 12 },
-                                transition: '0.2s',
+                                width: { xs: 16, sm: 20 },
+                                height: { xs: 16, sm: 20 },
+                                backgroundColor: 'primary.main',
+                                border: `2px solid ${theme.palette.common.white}`,
                                 '&:hover, &.Mui-focusVisible': {
-                                    boxShadow: '0 0 0 8px rgba(0,0,0,0.1)',
+                                    boxShadow: `0px 0px 0px 8px ${theme.palette.action.hover}`,
+                                },
+                                '&.Mui-active': {
+                                    boxShadow: `0px 0px 0px 14px ${theme.palette.action.hover}`,
                                 },
                             },
                             '& .MuiSlider-track': {
-                                height: { xs: 3, sm: 4 },
+                                height: { xs: 6, sm: 8 },
+                                borderRadius: 4,
                             },
                             '& .MuiSlider-rail': {
-                                height: { xs: 3, sm: 4 },
-                            },
-                            '& .MuiSlider-mark': {
-                                width: { xs: 2, sm: 3 },
-                                height: { xs: 2, sm: 3 },
+                                height: { xs: 6, sm: 8 },
+                                borderRadius: 4,
+                                opacity: 0.3,
                             },
                             '& .MuiSlider-markLabel': {
-                                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                                fontFamily: "'Inter', sans-serif",
+                                fontSize: { xs: '0.875rem', sm: '0.9rem' },
+                                color: 'text.secondary',
                             },
-                            mb: 4,
+                            mb: 1,
                         }}
                     />
                 </Box>
 
-                {/* Ingredients List */}
                 <Box
                     component="ul"
                     sx={{
-                        pl: { xs: 1, sm: 2 },
-                        listStyleType: 'none',
+                        listStyle: 'none',
+                        p: 0,
                         m: 0,
+                        flexGrow: 1,
+                        overflowY: 'auto',
+                        width: '100%',
                     }}
                 >
-                    {recipe.ingredients.map((item) => {
-                        const isSubstituted = hasSubstitution(item.id);
-                        const substituteInfo = isSubstituted
-                            ? getSubstituteInfo(item.id)
-                            : undefined;
-                        const originalIngredient = isSubstituted
-                            ? getOriginalIngredient(item.id)
-                            : undefined;
+                    {recipe.ingredients.map(
+                        (ingredient: Ingredient, index: number) => {
+                            const isSubstituted = hasSubstitution(
+                                ingredient.id
+                            );
+                            const currentSubstituteInfo =
+                                getSubstituteInfo(ingredient.id) || undefined;
+                            const currentOriginalIngredient =
+                                getOriginalIngredient(ingredient.id) ||
+                                undefined;
 
-                        return (
-                            <IngredientItemWithSubstitution
-                                key={item.id}
-                                id={item.id}
-                                name={item.name}
-                                quantity={item.quantity}
-                                unit={item.unit}
-                                originalServings={recipe.servings || 2}
-                                currentServings={servings}
-                                isSubstituted={isSubstituted}
-                                onSubstitute={handleSubstitute}
-                                onRevertSubstitution={handleRevertSubstitution}
-                                substituteInfo={substituteInfo || undefined}
-                                originalIngredient={
-                                    originalIngredient
-                                        ? {
-                                              name: originalIngredient.name,
-                                              quantity:
-                                                  originalIngredient.quantity,
-                                              unit: originalIngredient.unit,
-                                          }
-                                        : undefined
-                                }
-                            />
-                        );
-                    })}
+                            return (
+                                <Box
+                                    component="li"
+                                    key={ingredient.id || index}
+                                    sx={{
+                                        py: { xs: 1.2, sm: 1.5 },
+                                        borderBottom:
+                                            index ===
+                                            recipe.ingredients.length - 1
+                                                ? 'none'
+                                                : `1px solid ${theme.palette.divider}`,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        width: '100%',
+                                    }}
+                                >
+                                    <Box sx={{ width: '100%' }}>
+                                        <IngredientItemWithSubstitution
+                                            id={ingredient.id}
+                                            name={ingredient.name}
+                                            quantity={ingredient.quantity}
+                                            unit={ingredient.unit}
+                                            originalServings={
+                                                recipe.servings || 2
+                                            }
+                                            currentServings={servings}
+                                            isSubstituted={isSubstituted}
+                                            onSubstitute={handleSubstitute}
+                                            onRevertSubstitution={
+                                                handleRevertSubstitution
+                                            }
+                                            substituteInfo={
+                                                currentSubstituteInfo
+                                            }
+                                            originalIngredient={
+                                                currentOriginalIngredient
+                                                    ? {
+                                                          name: currentOriginalIngredient.name,
+                                                          quantity:
+                                                              currentOriginalIngredient.quantity,
+                                                          unit: currentOriginalIngredient.unit,
+                                                      }
+                                                    : undefined
+                                            }
+                                        />
+                                    </Box>
+                                </Box>
+                            );
+                        }
+                    )}
                 </Box>
             </Stack>
         </Paper>

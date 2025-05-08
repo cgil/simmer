@@ -1,5 +1,10 @@
+// src/pages/recipe/components/TimeEstimate.tsx
+// This component displays the prep, rest, cook, and total times for a recipe.
+// For the "magazine" redesign, it's styled as a banner to be overlaid on the hero image,
+// adapting its text and icon colors based on the hero image's dominant colors.
+
 import React from 'react';
-import { Box, Typography, Paper, Stack } from '@mui/material';
+import { Box, Typography, Stack, alpha, useTheme } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import KitchenIcon from '@mui/icons-material/Kitchen';
@@ -9,75 +14,104 @@ import { formatTimeDisplay } from '../../../utils/time';
 
 interface TimeEstimateProps {
     timeEstimate: TimeEstimateType | undefined;
+    baseTextColor?: string; // To be provided from RecipePage (heroTextColor)
 }
 
-const TimeEstimate: React.FC<TimeEstimateProps> = ({ timeEstimate }) => {
+const TimeEstimate: React.FC<TimeEstimateProps> = ({
+    timeEstimate,
+    baseTextColor,
+}) => {
+    const theme = useTheme();
+    // Fallback to theme's text primary if baseTextColor is not provided
+    const textColor = baseTextColor || theme.palette.text.primary;
+    // Use the same text color for icons to ensure consistency
+    const iconColor = textColor;
+
     if (!timeEstimate) return null;
 
     const timeItems = [
         {
             label: 'Prep Time',
             value: timeEstimate.prep,
-            icon: <RestaurantIcon color="primary" />,
-            show: true,
+            icon: (
+                <RestaurantIcon
+                    sx={{
+                        color: iconColor,
+                        fontSize: { xs: '1.2rem', sm: '1.4rem' },
+                    }}
+                />
+            ),
+            show: timeEstimate.prep > 0, // Only show if prep time is explicitly set
         },
         {
             label: 'Rest Time',
             value: timeEstimate.rest,
-            icon: <AccessTimeIcon color="primary" />,
+            icon: (
+                <AccessTimeIcon
+                    sx={{
+                        color: iconColor,
+                        fontSize: { xs: '1.2rem', sm: '1.4rem' },
+                    }}
+                />
+            ),
             show: timeEstimate.rest > 0,
         },
         {
             label: 'Cook Time',
             value: timeEstimate.cook,
-            icon: <KitchenIcon color="primary" />,
-            show: true,
+            icon: (
+                <KitchenIcon
+                    sx={{
+                        color: iconColor,
+                        fontSize: { xs: '1.2rem', sm: '1.4rem' },
+                    }}
+                />
+            ),
+            show: timeEstimate.cook > 0, // Only show if cook time is explicitly set
         },
         {
             label: 'Total Time',
             value: timeEstimate.total,
-            icon: <TimerOutlinedIcon color="primary" />,
-            show: true,
+            icon: (
+                <TimerOutlinedIcon
+                    sx={{
+                        color: iconColor,
+                        fontSize: { xs: '1.2rem', sm: '1.4rem' },
+                    }}
+                />
+            ),
+            show: true, // Always show total time
         },
     ].filter((item) => item.show);
 
+    // If no time items are visible (e.g. only total time which might be 0 if others are 0)
+    // or if total time is 0 and other times are not shown, render nothing or a minimal message.
+    if (
+        timeItems.length === 0 ||
+        (timeItems.length === 1 &&
+            timeItems[0].label === 'Total Time' &&
+            timeItems[0].value === 0)
+    ) {
+        return null;
+    }
+
     return (
-        <Paper
-            elevation={0}
+        <Box
             sx={{
-                p: { xs: 2.5, sm: 3 },
-                borderRadius: 2,
-                bgcolor: 'paper.main',
-                border: '1px solid',
-                borderColor: 'divider',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                position: 'relative',
-                overflow: 'hidden',
-                '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(255,255,255,0.6)',
-                    backdropFilter: 'blur(4px)',
-                    zIndex: 0,
-                },
-                '& > *': {
-                    position: 'relative',
-                    zIndex: 1,
-                },
+                py: { xs: 1.5, sm: 2 },
+                px: { xs: 2, sm: 3 },
+                backdropFilter: 'blur(5px)',
+                backgroundColor: alpha('#FFFFFF', 0.05), // Subtle white overlay
+                borderRadius: '12px',
+                width: '100%',
             }}
         >
             <Stack
                 direction="row"
-                spacing={{ xs: 2, sm: 3, md: 4 }}
-                justifyContent="space-around"
-                alignItems="center"
+                spacing={{ xs: 2, sm: 3 }}
                 sx={{
-                    flexWrap: { xs: 'wrap', md: 'nowrap' },
-                    gap: { xs: 2, sm: 3 },
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
                 }}
             >
                 {timeItems.map((item) => (
@@ -86,10 +120,11 @@ const TimeEstimate: React.FC<TimeEstimateProps> = ({ timeEstimate }) => {
                         sx={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: 1.5,
-                            ml: '0 !important',
-                            flex: { xs: '1 1 40%', sm: '1 1 auto' },
-                            justifyContent: 'start',
+                            gap: 1,
+                            py: 0.5,
+                            flex: {
+                                sm: '0 0 auto', // Auto width on larger screens
+                            },
                         }}
                     >
                         {item.icon}
@@ -97,21 +132,23 @@ const TimeEstimate: React.FC<TimeEstimateProps> = ({ timeEstimate }) => {
                             <Typography
                                 variant="caption"
                                 sx={{
-                                    color: 'text.secondary',
+                                    color: alpha(textColor, 0.85), // Slightly less prominent label
                                     display: 'block',
-                                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                                    fontSize: { xs: '0.65rem', sm: '0.75rem' }, // Smaller for magazine style
+                                    lineHeight: 1.2,
+                                    textTransform: 'uppercase', // Magazine style for labels
+                                    letterSpacing: '0.5px',
                                 }}
                             >
                                 {item.label}
                             </Typography>
                             <Typography
                                 sx={{
-                                    fontWeight: 600,
-                                    fontSize: { xs: '1rem', sm: '1.125rem' },
-                                    color:
-                                        item.label === 'Total Time'
-                                            ? 'primary.main'
-                                            : 'text.primary',
+                                    fontWeight:
+                                        item.label === 'Total Time' ? 700 : 500, // Bolder total time
+                                    fontSize: { xs: '0.85rem', sm: '1rem' }, // Clean, readable size
+                                    color: textColor,
+                                    lineHeight: 1.3,
                                 }}
                             >
                                 {formatTimeDisplay(item.value)}
@@ -120,7 +157,7 @@ const TimeEstimate: React.FC<TimeEstimateProps> = ({ timeEstimate }) => {
                     </Box>
                 ))}
             </Stack>
-        </Paper>
+        </Box>
     );
 };
 

@@ -80,6 +80,15 @@ const IngredientItemWithSubstitution: FC<
         setIsItemActive(false); // Reset mobile active state when closing popover
     };
 
+    // Handle reverting to original ingredient with propagation stop for mobile
+    const handleRevertWithStopPropagation = (
+        event: React.MouseEvent<HTMLElement>
+    ) => {
+        // Stop propagation for mobile to prevent row click
+        event.stopPropagation();
+        handleRevertSubstitution();
+    };
+
     // Handle substitution selection
     const handleSubstitute = (substituteOption: SubstituteOption) => {
         if (onSubstitute) {
@@ -137,15 +146,16 @@ const IngredientItemWithSubstitution: FC<
 
     // To render a regular ingredient
     const renderRegularIngredient = () => (
-        <Box sx={{ flex: 1, overflow: 'hidden', pr: isMobile ? 0 : 1 }}>
+        <Box sx={{ flex: 1, overflow: 'hidden' }}>
             <Typography
                 component="span"
                 sx={{
                     display: 'inline',
-                    fontSize: { xs: '0.9rem', sm: '1rem' },
+                    fontSize: { xs: '1rem', sm: '1.05rem' },
                     lineHeight: 1.5,
                     color: 'text.primary',
                     wordBreak: 'break-word',
+                    overflowWrap: 'break-word',
                 }}
             >
                 {friendlyQuantity !== null && (
@@ -174,12 +184,12 @@ const IngredientItemWithSubstitution: FC<
             substituteInfo.ingredients.length > 1;
 
         return (
-            <Box sx={{ flex: 1, overflow: 'hidden', pr: isMobile ? 0 : 1 }}>
+            <Box sx={{ flex: 1, overflow: 'hidden' }}>
                 {/* Original ingredient with strikethrough */}
                 <Typography
                     component="div"
                     sx={{
-                        fontSize: { xs: '0.9rem', sm: '1rem' },
+                        fontSize: { xs: '1rem', sm: '1.05rem' },
                         lineHeight: 1.5,
                         color: 'text.secondary',
                         textDecoration: 'line-through',
@@ -212,7 +222,7 @@ const IngredientItemWithSubstitution: FC<
                 <Typography
                     component="div"
                     sx={{
-                        fontSize: { xs: '0.8rem', sm: '0.85rem' },
+                        fontSize: { xs: '0.875rem', sm: '0.95rem' },
                         color: 'primary.main',
                         fontFamily: "'Kalam', cursive",
                         fontWeight: 600,
@@ -229,8 +239,8 @@ const IngredientItemWithSubstitution: FC<
                             component="div"
                             sx={{
                                 fontSize: {
-                                    xs: '0.875rem',
-                                    sm: '0.9rem',
+                                    xs: '1rem',
+                                    sm: '1.05rem',
                                 },
                                 lineHeight: 1.5,
                                 color: 'text.primary',
@@ -298,8 +308,8 @@ const IngredientItemWithSubstitution: FC<
                                         component="div"
                                         sx={{
                                             fontSize: {
-                                                xs: '0.875rem',
-                                                sm: '0.9rem',
+                                                xs: '1rem',
+                                                sm: '1.05rem',
                                             },
                                             color: 'text.primary',
                                             display: 'flex',
@@ -380,6 +390,7 @@ const IngredientItemWithSubstitution: FC<
             sx={{
                 position: 'relative',
                 mb: 2,
+                width: '100%',
                 '&:last-child': {
                     mb: 0,
                 },
@@ -407,28 +418,40 @@ const IngredientItemWithSubstitution: FC<
                     alignItems: 'flex-start',
                     position: 'relative',
                     cursor: isMobile ? 'pointer' : 'default',
+                    width: '100%',
+                    justifyContent: 'space-between',
                 }}
             >
-                {/* Bullet point */}
                 <Box
                     sx={{
-                        width: { xs: 4, sm: 6 },
-                        height: { xs: 4, sm: 6 },
-                        bgcolor: isSubstituted
-                            ? alpha(theme.palette.primary.main, 0.6)
-                            : 'primary.main',
-                        borderRadius: '50%',
-                        mr: 2,
-                        mt: '0.5em',
-                        opacity: 0.7,
-                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        flex: 1,
+                        minWidth: 0,
+                        overflow: 'hidden',
                     }}
-                />
+                >
+                    {/* Bullet point */}
+                    <Box
+                        sx={{
+                            width: { xs: 4, sm: 6 },
+                            height: { xs: 4, sm: 6 },
+                            bgcolor: isSubstituted
+                                ? alpha(theme.palette.primary.main, 0.6)
+                                : 'primary.main',
+                            borderRadius: '50%',
+                            mr: 2,
+                            mt: '0.5em',
+                            opacity: 0.7,
+                            flexShrink: 0,
+                        }}
+                    />
 
-                {/* Ingredient content - either regular or substituted */}
-                {isSubstituted
-                    ? renderSubstitutedIngredient()
-                    : renderRegularIngredient()}
+                    {/* Ingredient content - either regular or substituted */}
+                    {isSubstituted
+                        ? renderSubstitutedIngredient()
+                        : renderRegularIngredient()}
+                </Box>
 
                 {/* Swap button for regular ingredients or revert button for substituted ingredients */}
                 {!isMobile &&
@@ -438,11 +461,11 @@ const IngredientItemWithSubstitution: FC<
                                 size="small"
                                 onClick={handleRevertSubstitution}
                                 sx={{
-                                    position: 'absolute',
-                                    right: 0,
-                                    top: 0,
+                                    alignSelf: 'flex-start',
                                     opacity: isHovered ? 1 : 0.6,
                                     color: 'text.secondary',
+                                    ml: 2,
+                                    flexShrink: 0,
                                     '&:hover': {
                                         bgcolor: alpha(
                                             theme.palette.primary.main,
@@ -463,12 +486,11 @@ const IngredientItemWithSubstitution: FC<
                                 size="small"
                                 onClick={handleOpenSubstitutionPopover}
                                 sx={{
-                                    position: 'absolute',
-                                    right: 0,
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
+                                    alignSelf: 'center',
                                     opacity: isHovered ? 1 : 0,
                                     color: 'text.secondary',
+                                    ml: 2,
+                                    flexShrink: 0,
                                     '&:hover': {
                                         bgcolor: alpha(
                                             theme.palette.primary.main,
@@ -489,7 +511,7 @@ const IngredientItemWithSubstitution: FC<
                     <Box
                         sx={{
                             display: 'flex',
-                            alignSelf: 'flex-start',
+                            alignSelf: 'center', // Center vertically
                             mt: 0,
                             ml: 1,
                             flexShrink: 0,
@@ -498,15 +520,16 @@ const IngredientItemWithSubstitution: FC<
                         {isSubstituted ? (
                             <IconButton
                                 size="small"
-                                onClick={handleRevertSubstitution}
+                                onClick={handleRevertWithStopPropagation}
                                 sx={{
-                                    p: '2px',
+                                    p: '4px', // Slightly larger padding for better tap target
                                     color: alpha(
                                         theme.palette.primary.main,
                                         0.6
                                     ),
-                                    opacity: 0.7,
+                                    opacity: 0.8, // Higher opacity for better visibility
                                     transition: 'all 0.2s ease',
+                                    flexShrink: 0,
                                     '&:hover': {
                                         color: 'primary.main',
                                         opacity: 1,
@@ -515,36 +538,45 @@ const IngredientItemWithSubstitution: FC<
                                             0.05
                                         ),
                                     },
+                                    '&:active': {
+                                        bgcolor: alpha(
+                                            theme.palette.primary.main,
+                                            0.1
+                                        ),
+                                    },
                                 }}
                             >
                                 <UndoIcon fontSize="small" />
                             </IconButton>
                         ) : (
-                            <>
-                                {isHovered && (
-                                    <IconButton
-                                        ref={buttonRef}
-                                        size="small"
-                                        onClick={handleOpenSubstitutionPopover}
-                                        sx={{
-                                            p: '2px',
-                                            color: 'text.secondary',
-                                            opacity: 0.7,
-                                            transition: 'all 0.2s ease',
-                                            '&:hover': {
-                                                color: 'primary.main',
-                                                opacity: 1,
-                                                bgcolor: alpha(
-                                                    theme.palette.primary.main,
-                                                    0.05
-                                                ),
-                                            },
-                                        }}
-                                    >
-                                        <SwapHorizRoundedIcon fontSize="small" />
-                                    </IconButton>
-                                )}
-                            </>
+                            <IconButton
+                                ref={buttonRef}
+                                size="small"
+                                onClick={handleOpenSubstitutionPopover}
+                                sx={{
+                                    p: '4px', // Slightly larger padding for better tap target
+                                    color: 'text.secondary',
+                                    opacity: 0.8, // Higher opacity for better visibility
+                                    transition: 'all 0.2s ease',
+                                    flexShrink: 0,
+                                    '&:hover': {
+                                        color: 'primary.main',
+                                        opacity: 1,
+                                        bgcolor: alpha(
+                                            theme.palette.primary.main,
+                                            0.05
+                                        ),
+                                    },
+                                    '&:active': {
+                                        bgcolor: alpha(
+                                            theme.palette.primary.main,
+                                            0.1
+                                        ),
+                                    },
+                                }}
+                            >
+                                <SwapHorizRoundedIcon fontSize="small" />
+                            </IconButton>
                         )}
                     </Box>
                 )}

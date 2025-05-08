@@ -1,14 +1,12 @@
-import { FC, useState, useEffect } from 'react';
+import { FC, useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
     Box,
     Typography,
-    Grid,
     Chip,
     Button,
     useTheme,
     useMediaQuery,
-    Paper,
     CircularProgress,
     IconButton,
     Menu,
@@ -18,6 +16,7 @@ import {
     DialogContentText,
     DialogTitle,
     Divider,
+    Container,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
@@ -37,6 +36,18 @@ import ShareMenuItem from '../../components/sharing/ShareMenuItem';
 import ShareDialogContainer from '../../components/sharing/ShareDialogContainer';
 import { IngredientSubstitutionProvider } from '../../components/substitution/IngredientSubstitutionContext';
 import useWakeLock from '../../hooks/useWakeLock';
+import { FastAverageColor } from 'fast-average-color';
+import { getOptimalTextColor } from '../../utils/colorUtils';
+
+const fac = new FastAverageColor();
+
+const hexToRgba = (hex: string, alpha: number): string => {
+    const bigint = parseInt(hex.startsWith('#') ? hex.slice(1) : hex, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 
 const RecipePage: FC = () => {
     const { id } = useParams();
@@ -46,10 +57,8 @@ const RecipePage: FC = () => {
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const { user } = useAuth();
 
-    // Keep screen awake on mobile while viewing a recipe
     useWakeLock(isMobile);
 
-    // Check if recipe was passed through location state (from CatalogPage)
     const initialRecipe = location.state?.recipe as Recipe | undefined;
 
     const [recipe, setRecipe] = useState<Recipe | null>(initialRecipe || null);
@@ -60,34 +69,216 @@ const RecipePage: FC = () => {
     const [servings, setServings] = useState<number>(
         initialRecipe?.servings || 2
     );
-    // State to track edit permission
     const [canEdit, setCanEdit] = useState<boolean>(false);
 
-    // State for menu and dialogs
     const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
-    // Menu handlers
-    const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
-        setMenuAnchorEl(event.currentTarget);
+    const [dominantColor, setDominantColor] = useState<string | null>(null);
+    const [heroTextColor, setHeroTextColor] = useState<string>(
+        theme.palette.common.white
+    );
+    const [gradientBackground, setGradientBackground] = useState<string | null>(
+        null
+    );
+    const [heroImageLoaded, setHeroImageLoaded] = useState(false);
+    const [activeGalleryImage, setActiveGalleryImage] = useState<string | null>(
+        null
+    );
+
+    // Handle gallery image changes
+    const handleGalleryImageChange = (_index: number, imageUrl: string) => {
+        // Always update on image change - removed comparison that may prevent updates
+        setActiveGalleryImage(imageUrl);
+
+        // Directly extract colors from the new image
+        // Don't rely on the useEffect dependency
+        extractColorFromImage(imageUrl);
     };
 
-    const handleCloseMenu = () => {
-        setMenuAnchorEl(null);
-    };
-
-    // Fetch recipe if not provided in location state
+    // This effect runs only on initial load
     useEffect(() => {
-        if (!id || initialRecipe) return;
+        if (
+            recipe &&
+            recipe.images &&
+            recipe.images.length > 0 &&
+            recipe.images[0] &&
+            !activeGalleryImage // Only run on initial load
+        ) {
+            setActiveGalleryImage(recipe.images[0]);
+            extractColorFromImage(recipe.images[0]);
+        } else if (recipe && (!recipe.images || recipe.images.length === 0)) {
+            const defaultColor = theme.palette.grey[200];
+            setDominantColor(defaultColor);
+            setHeroTextColor(getOptimalTextColor(defaultColor));
+            setGradientBackground(theme.palette.background.default);
+            setHeroImageLoaded(true);
+        }
+        // Remove activeGalleryImage from dependencies to prevent cycles
+    }, [recipe, theme]);
+
+    // Function to extract color from an image URL
+    const extractColorFromImage = async (imageUrl: string) => {
+        if (!imageUrl) {
+            return;
+        }
+
+        try {
+            // Set a loading state if this is the first image (don't show loading on navigation)
+            if (!heroImageLoaded) {
+                setHeroImageLoaded(false);
+            }
+
+            // Create a new image element
+            const img = new Image();
+
+            // Set crossOrigin to anonymous to request CORS access
+            img.crossOrigin = 'Anonymous';
+
+            // Create promise to handle both success and error cases
+            const imageLoadPromise = new Promise<HTMLImageElement>(
+                (resolve, reject) => {
+                    img.onload = () => resolve(img);
+                    img.onerror = (e) => {
+                        console.error(
+                            'Error loading image for color extraction:',
+                            e
+                        );
+                        reject(new Error('Failed to load image'));
+                    };
+                }
+            );
+
+            // Determine if this is a Google Cloud Storage URL
+            const isGoogleCloudStorage = imageUrl.includes(
+                'storage.googleapis.com'
+            );
+
+            // Set the source to trigger loading - don't modify Google Cloud Storage URLs
+            if (isGoogleCloudStorage) {
+                // For Google Cloud Storage, use the URL as is
+                img.src = imageUrl;
+            } else {
+                // For other URLs, add cache-busting parameter
+                img.src = imageUrl;
+
+                // Add cache-busting parameter for some CDNs that might support CORS
+                if (!img.src.includes('?')) {
+                    img.src = `${img.src}?cors=1&t=${Date.now()}`;
+                } else {
+                    img.src = `${img.src}&cors=1&t=${Date.now()}`;
+                }
+            }
+
+            // Wait for image to load with a timeout
+            const loadedImg = await Promise.race([
+                imageLoadPromise,
+                new Promise<never>((_, reject) =>
+                    setTimeout(
+                        () => reject(new Error('Image load timeout')),
+                        5000
+                    )
+                ),
+            ]);
+
+            // Extract color from the loaded image
+            const color = await fac.getColorAsync(loadedImg);
+
+            if (color) {
+                setDominantColor(color.hex);
+                setHeroTextColor(getOptimalTextColor(color.hex));
+
+                const dominantRgbaFull = color.rgba;
+                const gradientStartRgba = dominantRgbaFull.replace(
+                    /,1\)$/,
+                    ',0.85)'
+                );
+                const gradientMidRgba = dominantRgbaFull.replace(
+                    /,1\)$/,
+                    ',0.40)'
+                );
+
+                const newGradient = `linear-gradient(to bottom, ${gradientStartRgba} 0%, ${gradientStartRgba} 35%, ${gradientMidRgba} 65%, ${theme.palette.background.default} 100%)`;
+                setGradientBackground(newGradient);
+                setHeroImageLoaded(true);
+            } else {
+                throw new Error('Could not extract color information');
+            }
+        } catch (error) {
+            console.warn(
+                'Color extraction failed, using fallback approach:',
+                error
+            );
+            // Use a color extraction fallback based on the recipe characteristics
+
+            // Option 1: Use primary theme color
+            let fallbackColor = theme.palette.primary.main;
+
+            // Option 2: Use a color based on recipe tags if available
+            if (recipe && recipe.tags && recipe.tags.length > 0) {
+                // Generate a repeatable color based on the first tag
+                const tag = recipe.tags[0].toLowerCase();
+
+                // Simple tag-to-color mapping for common food categories
+                if (
+                    tag.includes('dessert') ||
+                    tag.includes('sweet') ||
+                    tag.includes('cake') ||
+                    tag.includes('cookie')
+                ) {
+                    fallbackColor = '#F8BBD0'; // Light pink for desserts
+                } else if (
+                    tag.includes('vegetable') ||
+                    tag.includes('salad') ||
+                    tag.includes('green') ||
+                    tag.includes('vegan')
+                ) {
+                    fallbackColor = '#C5E1A5'; // Light green for vegetables/vegan
+                } else if (
+                    tag.includes('meat') ||
+                    tag.includes('beef') ||
+                    tag.includes('steak')
+                ) {
+                    fallbackColor = '#FFAB91'; // Light red/orange for meat
+                } else if (tag.includes('chicken') || tag.includes('poultry')) {
+                    fallbackColor = '#FFCC80'; // Light orange for poultry
+                } else if (tag.includes('fish') || tag.includes('seafood')) {
+                    fallbackColor = '#81D4FA'; // Light blue for seafood
+                } else if (tag.includes('breakfast')) {
+                    fallbackColor = '#FFF59D'; // Light yellow for breakfast
+                } else if (tag.includes('soup') || tag.includes('stew')) {
+                    fallbackColor = '#B39DDB'; // Light purple for soups/stews
+                }
+            }
+
+            // Apply the fallback color
+            setDominantColor(fallbackColor);
+            setHeroTextColor(getOptimalTextColor(fallbackColor));
+
+            const fallbackRgba085 = hexToRgba(fallbackColor, 0.85);
+            const fallbackRgba040 = hexToRgba(fallbackColor, 0.4);
+
+            setGradientBackground(
+                `linear-gradient(to bottom, ${fallbackRgba085} 0%, ${fallbackRgba085} 35%, ${fallbackRgba040} 65%, ${theme.palette.background.default} 100%)`
+            );
+            setHeroImageLoaded(true);
+        }
+    };
+
+    useEffect(() => {
+        if (!id || initialRecipe) {
+            if (initialRecipe) setHeroImageLoaded(true);
+            return;
+        }
 
         const fetchRecipe = async () => {
             setLoading(true);
+            setHeroImageLoaded(false);
             setError(null);
 
             try {
-                // Pass user ID if available, but don't require it for public recipes
                 const fetchedRecipe = await RecipeService.getRecipeById(
                     id,
                     user?.id
@@ -98,10 +289,12 @@ const RecipePage: FC = () => {
                     setServings(fetchedRecipe.servings || 2);
                 } else {
                     setError('Recipe not found');
+                    setHeroImageLoaded(true);
                 }
             } catch (err) {
                 console.error('Error fetching recipe:', err);
                 setError('Failed to load recipe. Please try again.');
+                setHeroImageLoaded(true);
             } finally {
                 setLoading(false);
             }
@@ -110,22 +303,17 @@ const RecipePage: FC = () => {
         fetchRecipe();
     }, [id, initialRecipe, user?.id]);
 
-    // Check for edit permission when recipe is loaded or user changes
     useEffect(() => {
         const checkEditPermission = async () => {
             if (!recipe || !recipe.id || !user) {
                 setCanEdit(false);
                 return;
             }
-
             try {
-                // Check if user is owner (for backward compatibility)
                 if (recipe.user_id === user.id) {
                     setCanEdit(true);
                     return;
                 }
-
-                // Check edit permission via RPC function
                 const hasEditPermission =
                     await RecipeService.checkEditPermission(recipe.id);
                 setCanEdit(hasEditPermission);
@@ -134,14 +322,18 @@ const RecipePage: FC = () => {
                 setCanEdit(false);
             }
         };
-
         checkEditPermission();
     }, [recipe, user]);
 
-    // When edit button is clicked, navigate to edit page with recipe data
+    const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
+        setMenuAnchorEl(event.currentTarget);
+    };
+
+    const handleCloseMenu = () => {
+        setMenuAnchorEl(null);
+    };
     const handleEditClick = () => {
         if (recipe) {
-            // Navigate to the edit page with the recipe data
             navigate('/recipe/edit', {
                 state: {
                     recipe: recipe,
@@ -153,7 +345,6 @@ const RecipePage: FC = () => {
         handleCloseMenu();
     };
 
-    // Delete handlers
     const handleDeleteClick = () => {
         handleCloseMenu();
         setDeleteDialogOpen(true);
@@ -165,13 +356,10 @@ const RecipePage: FC = () => {
 
     const handleDeleteConfirm = async () => {
         if (!recipe || !recipe.id || !user) return;
-
         setIsDeleting(true);
         try {
             await RecipeService.deleteRecipe(recipe.id);
             setDeleteDialogOpen(false);
-
-            // Navigate back to collection or home after successful deletion
             const returnPath = location.state?.returnTo || '/';
             navigate(returnPath);
         } catch (err) {
@@ -182,25 +370,27 @@ const RecipePage: FC = () => {
         }
     };
 
-    // Function to handle back navigation with collection context
     const handleBackClick = () => {
-        // Navigate back to the collection or home page
         const returnTo = location.state?.returnTo || '/';
         navigate(returnTo);
     };
 
-    // Add this handler function after handleDeleteClick
     const handleShareClick = () => {
         handleCloseMenu();
         setShareDialogOpen(true);
     };
 
-    // Add this function after handleDeleteConfirm
     const handleShareDialogClose = () => {
         setShareDialogOpen(false);
     };
 
-    if (loading) {
+    const heroHeight = useMemo(
+        () => ({ xs: '92vh', sm: '94vh', md: '91vh' }),
+        []
+    );
+    const heroMinHeight = useMemo(() => ({ xs: 350, sm: 450, md: 550 }), []);
+
+    if (loading || (!heroImageLoaded && !initialRecipe && !error)) {
         return (
             <AppLayout>
                 <Box
@@ -208,10 +398,11 @@ const RecipePage: FC = () => {
                         display: 'flex',
                         justifyContent: 'center',
                         alignItems: 'center',
-                        height: '50vh',
+                        height: 'calc(100vh - 64px)',
                     }}
                 >
                     <CircularProgress />
+                    <Typography sx={{ ml: 2 }}>Loading recipe...</Typography>
                 </Box>
             </AppLayout>
         );
@@ -220,25 +411,29 @@ const RecipePage: FC = () => {
     if (error || !recipe) {
         return (
             <AppLayout>
-                <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Box sx={{ textAlign: 'center', py: 4, px: 2 }}>
                     <Typography
-                        variant="h5"
+                        variant="h4"
                         sx={{
                             fontFamily: "'Kalam', cursive",
-                            color: 'primary.main',
+                            color: 'error.dark',
+                            mb: 3,
                         }}
                     >
-                        {error || 'Recipe not found'}
+                        {error || 'Oops! Recipe not found.'}
                     </Typography>
                     <Button
                         onClick={handleBackClick}
+                        variant="contained"
+                        color="primary"
+                        startIcon={<ArrowBackIcon />}
                         sx={{
-                            mt: 2,
-                            borderRadius: 1,
+                            borderRadius: '8px',
                             textTransform: 'none',
                             fontFamily: "'Inter', sans-serif",
+                            py: 1,
+                            px: 3,
                         }}
-                        variant="contained"
                     >
                         Back to Recipes
                     </Button>
@@ -247,7 +442,6 @@ const RecipePage: FC = () => {
         );
     }
 
-    // Create the action button with the three-dot menu
     const actionButton =
         user && recipe && (recipe.user_id === user.id || canEdit) ? (
             <>
@@ -255,15 +449,17 @@ const RecipePage: FC = () => {
                     onClick={handleOpenMenu}
                     aria-label="recipe actions"
                     sx={{
-                        color: 'text.secondary',
+                        color: 'text.primary',
+                        position: 'relative',
+                        zIndex: 1300,
                         '&:hover': {
+                            bgcolor: 'rgba(0,0,0,0.05)',
                             color: 'primary.main',
                         },
                     }}
                 >
                     <MoreVertIcon />
                 </IconButton>
-
                 <Menu
                     anchorEl={menuAnchorEl}
                     open={Boolean(menuAnchorEl)}
@@ -277,7 +473,6 @@ const RecipePage: FC = () => {
                         },
                     }}
                 >
-                    {/* Only show edit option if user has edit permission */}
                     {canEdit && (
                         <ShareMenuItem
                             icon={EditIcon}
@@ -285,8 +480,6 @@ const RecipePage: FC = () => {
                             onClick={handleEditClick}
                         />
                     )}
-
-                    {/* Only show sharing option if user is the owner */}
                     {recipe.user_id === user.id && (
                         <ShareMenuItem
                             icon={SendIcon}
@@ -295,8 +488,6 @@ const RecipePage: FC = () => {
                             iconSx={{ transform: 'rotate(-45deg)' }}
                         />
                     )}
-
-                    {/* Only show delete option if user is the owner */}
                     {recipe.user_id === user.id && (
                         <>
                             <Divider sx={{ my: 0.5 }} />
@@ -309,8 +500,6 @@ const RecipePage: FC = () => {
                         </>
                     )}
                 </Menu>
-
-                {/* Delete confirmation dialog */}
                 <Dialog
                     open={deleteDialogOpen}
                     onClose={handleDeleteCancel}
@@ -375,7 +564,6 @@ const RecipePage: FC = () => {
             </>
         ) : null;
 
-    // Create the header content with back button
     const headerContent = (
         <Box
             sx={{
@@ -383,6 +571,8 @@ const RecipePage: FC = () => {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 width: '100%',
+                position: 'relative',
+                zIndex: 1300,
             }}
         >
             {user ? (
@@ -391,10 +581,14 @@ const RecipePage: FC = () => {
                     sx={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 2,
+                        gap: 1,
                         cursor: 'pointer',
+                        p: 1,
+                        borderRadius: '4px',
+                        transition: 'background-color 0.3s',
                         color: 'text.primary',
                         '&:hover': {
+                            backgroundColor: 'rgba(0,0,0,0.05)',
                             color: 'primary.main',
                         },
                     }}
@@ -404,7 +598,7 @@ const RecipePage: FC = () => {
                         variant="body1"
                         sx={{
                             fontWeight: 500,
-                            fontSize: { xs: '1rem', sm: '1.125rem' },
+                            fontSize: { xs: '0.9rem', sm: '1rem' },
                             fontFamily: 'Inter, system-ui, sans-serif',
                         }}
                     >
@@ -417,6 +611,7 @@ const RecipePage: FC = () => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: 1.5,
+                        color: 'text.primary',
                     }}
                 >
                     <Typography
@@ -424,7 +619,6 @@ const RecipePage: FC = () => {
                         component="h1"
                         sx={{
                             fontWeight: 700,
-                            color: 'primary.main',
                             letterSpacing: '-0.5px',
                             fontFamily: "'Kalam', cursive",
                         }}
@@ -435,6 +629,8 @@ const RecipePage: FC = () => {
             )}
         </Box>
     );
+
+    const heroContentReady = heroImageLoaded && recipe;
 
     return (
         <AppLayout
@@ -448,161 +644,226 @@ const RecipePage: FC = () => {
             <IngredientSubstitutionProvider>
                 <Box
                     sx={{
-                        position: 'relative',
-                        bgcolor: 'paper.light',
+                        background:
+                            heroContentReady && gradientBackground
+                                ? gradientBackground
+                                : theme.palette.background.default,
                         minHeight: '100vh',
-                        px: { xs: 2, sm: 3, md: 4 },
-                        py: { xs: 3, sm: 4 },
-                        '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            boxShadow: 'inset 0 0 30px rgba(62, 28, 0, 0.05)',
-                            pointerEvents: 'none',
-                        },
-                        '&::after': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            opacity: 0.8,
-                            pointerEvents: 'none',
-                            backgroundImage: `
-                                radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.05) 0.5px, transparent 0.5px),
-                                radial-gradient(circle at 50% 50%, rgba(62, 28, 0, 0.03) 1px, transparent 1px)
-                            `,
-                            backgroundSize: '6px 6px, 14px 14px',
-                            backgroundPosition: '0 0',
-                            mixBlendMode: 'multiply',
-                            filter: 'opacity(1)',
-                        },
+                        pt: 0,
+                        pb: 4,
+                        transition: 'background 0.5s ease-in-out',
+                        position: 'relative',
+                        '&:before': dominantColor
+                            ? {
+                                  content: '""',
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  height: '3px',
+                                  background: 'none',
+                                  zIndex: 10,
+                              }
+                            : {},
                     }}
                 >
-                    <Grid
-                        container
-                        spacing={4}
-                        sx={{ position: 'relative', zIndex: 1 }}
-                    >
-                        {/* Header Section */}
-                        <Grid item xs={12}>
+                    {heroContentReady ? (
+                        <>
                             <Box
                                 sx={{
-                                    textAlign: 'center',
-                                    mb: 4,
-                                    mt: 2,
-                                    maxWidth: 800,
-                                    mx: 'auto',
+                                    position: 'relative',
+                                    width: '100%',
+                                    height: heroHeight,
+                                    minHeight: heroMinHeight,
                                 }}
                             >
-                                <Typography
-                                    variant={isMobile ? 'h4' : 'h3'}
-                                    component="h1"
-                                    gutterBottom
-                                    sx={{
-                                        fontWeight: 700,
-                                        color: 'primary.main',
-                                        fontFamily: "'Kalam', cursive",
-                                        mb: 2,
-                                    }}
-                                >
-                                    {recipe.title}
-                                </Typography>
-                                <Typography
-                                    variant="subtitle1"
-                                    color="text.secondary"
-                                    sx={{
-                                        mb: 3,
-                                        fontSize: '1.1rem',
-                                        maxWidth: '600px',
-                                        mx: 'auto',
-                                        lineHeight: 1.6,
-                                        fontFamily: "'Inter', sans-serif",
-                                    }}
-                                >
-                                    {recipe.description}
-                                </Typography>
+                                {/* Layer 1: Masked Image Background */}
                                 <Box
                                     sx={{
-                                        display: 'flex',
-                                        gap: 1,
-                                        flexWrap: 'wrap',
-                                        justifyContent: 'center',
-                                        mb: 3,
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        maskImage:
+                                            'linear-gradient(to bottom, black 70%, transparent 100%)',
+                                        WebkitMaskImage:
+                                            'linear-gradient(to bottom, black 70%, transparent 100%)',
+                                        overflow: 'hidden',
+                                        zIndex: 1,
                                     }}
                                 >
-                                    {recipe.tags.map((tag) => (
-                                        <Chip
-                                            key={tag}
-                                            label={tag}
-                                            color="secondary"
-                                            size={isMobile ? 'small' : 'medium'}
-                                            sx={{
-                                                borderRadius: '16px',
-                                                fontFamily:
-                                                    "'Inter', sans-serif",
-                                                boxShadow:
-                                                    '0 4px 20px rgba(0,0,0,0.08)',
-                                            }}
+                                    <RecipeGallery
+                                        images={recipe.images || []}
+                                        heroHeight="100%"
+                                        onImageChange={handleGalleryImageChange}
+                                    />
+                                    <Box // Darkening gradient for the image (inside masked layer)
+                                        sx={{
+                                            position: 'absolute',
+                                            top: '55%',
+                                            left: 0,
+                                            right: 0,
+                                            bottom: 0,
+                                            background:
+                                                'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0) 100%)',
+                                            zIndex: 1, // Ensures it's above RecipeGallery within this Box
+                                        }}
+                                    />
+                                </Box>
+
+                                {/* Layer 2: Text Content (Not Masked) */}
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        top: '55%', // Positioned from 55% down in HeroAreaContainer
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0, // Fills the remainder of the height
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'flex-end',
+                                        alignItems: 'flex-start',
+                                        color: heroTextColor, // Apply text color here
+                                        p: { xs: 2, sm: 3, md: 4 },
+                                        pb: { xs: 3, sm: 4, md: 5 },
+                                        zIndex: 2, // Ensures it's above the Masked Image Background layer
+                                    }}
+                                >
+                                    <Typography
+                                        variant={isMobile ? 'h3' : 'h2'}
+                                        component="h1"
+                                        sx={{
+                                            fontWeight: 700,
+                                            fontFamily:
+                                                "'Lato', 'Helvetica Neue', sans-serif",
+                                            color: heroTextColor,
+                                            textShadow:
+                                                '0px 2px 4px rgba(0,0,0,0.5)',
+                                            mb: 1.5,
+                                            textAlign: 'left',
+                                        }}
+                                    >
+                                        {recipe.title}
+                                    </Typography>
+                                    <Typography
+                                        variant={isMobile ? 'body1' : 'h6'}
+                                        component="p"
+                                        sx={{
+                                            mb: 2.5,
+                                            maxWidth: '700px',
+                                            lineHeight: 1.7,
+                                            fontFamily: "'Kalam', cursive",
+                                            color: heroTextColor,
+                                            textShadow:
+                                                '0px 1px 3px rgba(0,0,0,0.4)',
+                                            textAlign: 'left',
+                                        }}
+                                    >
+                                        {recipe.description}
+                                    </Typography>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            gap: 1,
+                                            flexWrap: 'wrap',
+                                            justifyContent: 'flex-start',
+                                            mb: 2.5,
+                                        }}
+                                    >
+                                        {recipe.tags.map((tag) => (
+                                            <Chip
+                                                key={tag}
+                                                label={tag}
+                                                size={
+                                                    isMobile
+                                                        ? 'small'
+                                                        : 'medium'
+                                                }
+                                                sx={{
+                                                    fontFamily:
+                                                        "'Inter', sans-serif",
+                                                    color: heroTextColor,
+                                                    backgroundColor:
+                                                        'rgba(255,255,255,0.15)',
+                                                    backdropFilter: 'blur(5px)',
+                                                    border: `1px solid rgba(255,255,255,0.2)`,
+                                                    borderRadius: '16px',
+                                                    boxShadow:
+                                                        '0 2px 8px rgba(0,0,0,0.1)',
+                                                    '& .MuiChip-label': {
+                                                        color: 'inherit',
+                                                    },
+                                                }}
+                                            />
+                                        ))}
+                                    </Box>
+                                    <Box
+                                        sx={{
+                                            width: '100%',
+                                            maxWidth: 500,
+                                            mt: 1,
+                                        }}
+                                    >
+                                        <TimeEstimate
+                                            timeEstimate={recipe.time_estimate}
+                                            baseTextColor={heroTextColor}
                                         />
-                                    ))}
+                                    </Box>
                                 </Box>
                             </Box>
-                        </Grid>
 
-                        {/* Image Section */}
-                        <Grid item xs={12}>
-                            <Paper
-                                elevation={0}
+                            <Container
+                                // maxWidth="md"
                                 sx={{
-                                    borderRadius: 2,
-                                    overflow: 'hidden',
+                                    py: 4,
                                     position: 'relative',
-                                    bgcolor: 'paper.main',
-                                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                                    zIndex: 2,
+                                    bgcolor: 'transparent',
                                 }}
                             >
-                                <RecipeGallery images={recipe.images} />
-                            </Paper>
-                        </Grid>
+                                <Box
+                                    display="flex"
+                                    flexDirection={{ xs: 'column', md: 'row' }}
+                                    gap={4}
+                                >
+                                    <Box
+                                        sx={{ flex: { md: 1 }, width: '100%' }}
+                                    >
+                                        <IngredientsList
+                                            recipe={recipe}
+                                            servings={servings}
+                                            onServingsChange={setServings}
+                                        />
+                                    </Box>
 
-                        {/* Time Estimate Section */}
-                        <Grid item xs={12}>
-                            <TimeEstimate timeEstimate={recipe.time_estimate} />
-                        </Grid>
+                                    <Box
+                                        sx={{ flex: { md: 2 }, width: '100%' }}
+                                    >
+                                        <CookingInstructions
+                                            recipe={recipe}
+                                            servings={servings}
+                                        />
+                                    </Box>
+                                </Box>
 
-                        {/* Ingredients Section */}
-                        <Grid item xs={12} md={4}>
-                            <IngredientsList
-                                recipe={recipe}
-                                servings={servings}
-                                onServingsChange={setServings}
-                            />
-                        </Grid>
-
-                        {/* Instructions Section */}
-                        <Grid item xs={12} md={8}>
-                            <CookingInstructions
-                                recipe={recipe}
-                                servings={servings}
-                            />
-                        </Grid>
-
-                        {/* Notes Section */}
-                        {recipe.notes && recipe.notes.length > 0 && (
-                            <Grid item xs={12}>
-                                <RecipeNotes recipe={recipe} />
-                            </Grid>
-                        )}
-                    </Grid>
+                                {recipe.notes && recipe.notes.length > 0 && (
+                                    <Box sx={{ mt: 4, width: '100%' }}>
+                                        <RecipeNotes recipe={recipe} />
+                                    </Box>
+                                )}
+                            </Container>
+                        </>
+                    ) : (
+                        <Box sx={{ p: 3, textAlign: 'center' }}>
+                            <Typography>
+                                Recipe content is preparing...
+                            </Typography>
+                        </Box>
+                    )}
                 </Box>
             </IngredientSubstitutionProvider>
 
-            {/* Share Dialog */}
             <ShareDialogContainer
                 open={shareDialogOpen}
                 onClose={handleShareDialogClose}
