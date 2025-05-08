@@ -131,16 +131,18 @@ const CookingInstructions: FC<CookingInstructionsProps> = ({
                     flexShrink: 0,
                     position: 'relative',
                     display: 'inline-block',
+                    pb: 1.5,
                     '&:after': {
                         content: '""',
                         position: 'absolute',
-                        left: 0,
-                        bottom: -8,
-                        width: '80px',
-                        height: '2px',
-                        background: `linear-gradient(90deg, ${
+                        left: 2,
+                        bottom: 2,
+                        width: '100%',
+                        height: '8px',
+                        background: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='8' viewBox='0 0 80 8' fill='none'%3E%3Cpath d='M1,4 C25,1 55,1 79,4 L79,4.5 C55,2 25,2.5 1,6 Z' fill='${encodeURIComponent(
                             theme.palette.primary.main
-                        } 0%, ${alpha(theme.palette.primary.main, 0.2)} 100%)`,
+                        )}'/%3E%3C/svg%3E") no-repeat bottom left`,
+                        backgroundSize: 'contain',
                     },
                 }}
             >
