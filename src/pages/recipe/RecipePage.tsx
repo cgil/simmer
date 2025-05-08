@@ -1,4 +1,4 @@
-import { FC, useState, useEffect, useMemo } from 'react';
+import { FC, useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
     Box,
@@ -26,7 +26,7 @@ import SendIcon from '@mui/icons-material/Send';
 import AppLayout from '../../components/layout/AppLayout';
 import IngredientsList from './components/IngredientsList';
 import CookingInstructions from './components/CookingInstructions';
-import RecipeGallery from './components/RecipeGallery';
+import RecipeGallery, { RecipeGalleryHandle } from './components/RecipeGallery';
 import RecipeNotes from './components/RecipeNotes';
 import TimeEstimate from './components/TimeEstimate';
 import { RecipeService } from '../../services/RecipeService';
@@ -56,6 +56,9 @@ const RecipePage: FC = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const { user } = useAuth();
+
+    // Add ref for the RecipeGallery
+    const galleryRef = useRef<RecipeGalleryHandle>(null);
 
     useWakeLock(isMobile);
 
@@ -676,6 +679,12 @@ const RecipePage: FC = () => {
                                     height: heroHeight,
                                     minHeight: heroMinHeight,
                                 }}
+                                onTouchStart={(e) =>
+                                    galleryRef.current?.handleTouchStart(e)
+                                }
+                                onTouchEnd={(e) =>
+                                    galleryRef.current?.handleTouchEnd(e)
+                                }
                             >
                                 {/* Layer 1: Masked Image Background */}
                                 <Box
@@ -694,6 +703,7 @@ const RecipePage: FC = () => {
                                     }}
                                 >
                                     <RecipeGallery
+                                        ref={galleryRef}
                                         images={recipe.images || []}
                                         heroHeight="100%"
                                         onImageChange={handleGalleryImageChange}
@@ -712,7 +722,7 @@ const RecipePage: FC = () => {
                                     />
                                 </Box>
 
-                                {/* Layer 2: Text Content (Not Masked) */}
+                                {/* Layer 2: Text Content (Not Masked) - Now with touch events */}
                                 <Box
                                     sx={{
                                         position: 'absolute',
