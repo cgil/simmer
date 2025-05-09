@@ -60,8 +60,8 @@ const TRANSITIONS = {
 ### 2.2. Component Base Styles
 
 ```typescript
-// Paper-like container base styles
-const paperStyles = {
+// Modern container base styles (e.g., for Cards)
+const modernContainerStyles = {
     backgroundColor: 'paper.light',
     borderRadius: 2,
     padding: 3,

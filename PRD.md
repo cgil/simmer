@@ -10,17 +10,17 @@ This document is the Product Requirements Document used to inform product decisi
 
 ### 1.2. Problem Statement
 
-Users want a simple way to store favorite recipes found online. Current methods (Google Slides, random bookmarks) are clunky, and existing apps feel too digital and impersonal. Simmer addresses these issues by offering a fast, AI-assisted way to capture, organize, and cook recipes with a warm, personal journal-like interface.
+Users want a simple way to store favorite recipes found online. Current methods (Google Slides, random bookmarks) are clunky, and existing apps feel too digital and impersonal. Simmer addresses these issues by offering a fast, AI-assisted way to capture, organize, and cook recipes with a sophisticated, modern digital magazine interface.
 
 ### 1.3. Product Solution
 
 A web-based application that:
 
 -   Captures recipes from URLs with AI extraction
--   Presents them in a beautiful, paper notebook-style interface
+-   Presents them in a beautiful, modern digital magazine-style interface
 -   Offers intuitive recipe editing and organization
 -   Provides a mobile-friendly cooking mode
--   Maintains a consistent paper journal aesthetic throughout
+-   Maintains a consistent, sleek, and modern magazine aesthetic throughout
 
 ---
 
@@ -28,40 +28,40 @@ A web-based application that:
 
 ### 2.1. Visual Language
 
-The app follows a "Paper Notebook Recipe Journal" aesthetic with these key elements:
+The app follows a "Modern Culinary Digital Magazine" aesthetic with these key elements:
 
 **Typography**
 
--   Headings: Kalam (cursive) for a handwritten feel
--   Body: Inter (sans-serif) for readability
+-   Headings: A sophisticated serif (e.g., 'Playfair Display', 'Lora') for primary titles, and a clean sans-serif (e.g., 'Inter', 'Montserrat', 'Open Sans') for subheadings and UI elements.
+-   Body: A highly readable sans-serif (e.g., 'Inter' or 'Open Sans') for optimal clarity.
 -   Clear hierarchy with consistent sizing
 
 **Color Palette**
 
--   Primary: Ink-like navy (#2C3E50)
--   Secondary: Warm yellow for interactive elements
--   Paper: Warm whites and creams
--   Text: Soft black for readability
+-   Primary: A deep, rich color (e.g., a dark eggplant #6A0DAD, a forest green #228B22, or a sophisticated charcoal #36454F) or a clean, bright accent on a predominantly neutral base.
+-   Secondary: Vibrant, appetizing accent colors (e.g., a coral #FF7F50, a saffron yellow #F4C430, or a teal #008080) for calls-to-action and highlights.
+-   Backgrounds: Clean whites (e.g., #FFFFFF, #FAFAFA), light greys (e.g., #F0F0F0), with potential for a dark mode theme. Emphasis on high-quality imagery.
+-   Text: Dark grey or off-black (e.g., #333333) for body text on light backgrounds, and light grey or white for dark backgrounds.
 
 **Texture & Depth**
 
--   Paper-like backgrounds with dot patterns
--   Subtle shadows and layering
--   Semi-transparent overlays
--   Backdrop blur effects
+-   Minimal to no explicit textures. Focus on clean lines, generous whitespace, and high-quality imagery.
+-   Depth achieved through subtle, modern shadows (e.g., soft, diffused shadows), layering of UI elements, and potentially parallax scrolling effects for visual interest.
+-   Use of semi-transparent overlays for modals, pop-ups, or layered information, often blurred for a modern effect.
+-   Strategic use of backdrop blur for modals and overlays to enhance focus and create a sophisticated feel.
 
 **Components**
 
--   Paper-like cards and containers
--   Notebook-style buttons
--   Tag chips resembling paper labels
--   Form inputs with gentle borders
+-   Sleek, modern cards with clean edges, possibly with rounded corners. Emphasis on showcasing images within cards.
+-   Modern, flat or subtly elevated buttons with clear iconography and typography. Interactive states should be polished.
+-   Stylish tag chips with modern typography, possibly using accent colors. Pill-shaped or slightly rounded rectangles.
+-   Minimalist form inputs with clean lines, clear focus states, and potentially inline icons.
 
 ### 2.2. Interaction Design
 
 -   Subtle hover effects
 -   Smooth transitions (0.2s ease)
--   Paper-like micro-interactions
+-   Polished, smooth micro-interactions that enhance the user experience without being distracting.
 -   Mobile-friendly touch targets
 -   Personalized user interface elements
 
@@ -91,7 +91,7 @@ The app follows a "Paper Notebook Recipe Journal" aesthetic with these key eleme
 
 ### 3.2. Recipe Viewing
 
--   Clean, paper-like layout
+-   Clean, modern layout with a strong emphasis on visual appeal and readability, akin to a high-quality digital magazine.
 -   Image gallery
 -   Ingredient scaling
 -   Section-based instructions

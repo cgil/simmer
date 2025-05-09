@@ -1,10 +1,10 @@
 # Simmer - A Paper Notebook Recipe Manager
 
-Simmer is a modern web application that brings the warmth and personality of a paper recipe notebook to the digital world. It allows you to capture, organize, and cook from your favorite recipes with a beautiful, journal-like interface.
+Simmer is a modern web application that offers a sleek, magazine-style experience for managing your digital recipes. It allows you to capture, organize, and cook from your favorite recipes with a beautiful, journal-like interface.
 
 ## Features
 
--   📝 Paper notebook-style interface with a warm, personal feel
+-   💄 Elegant, magazine-style interface for a premium culinary experience
 -   🔍 AI-powered recipe extraction from URLs
 -   🧠 AI-powered recipe ideas generation from text prompts
 -   🍳 AI-powered ingredient substitution suggestions
