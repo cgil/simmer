@@ -36,6 +36,17 @@ import RecipeGrid from '../../features/catalog/components/RecipeGrid';
 const MemoizedCollectionsDrawer = memo(CollectionsDrawer);
 
 /**
+ * @file CatalogPage.tsx
+ * @description This file defines the CatalogPage component, which is responsible for displaying
+ * a catalog of recipes. It handles fetching recipes, filtering them by collection and search query,
+ * managing collections (create, update, delete, share), and displaying recipes in a grid with
+ * infinite scrolling. It also integrates a drawer for collection navigation.
+ *
+ * The component uses a single primary loading effect to prevent redundant data fetching
+ * when navigating back to this page from other parts of the application.
+ */
+
+/**
  * Determines the highest priority match type for a recipe
  */
 const determineMatchType = (recipe: Recipe, searchQuery: string): MatchType => {
@@ -89,7 +100,6 @@ const CatalogPage: FC = () => {
     const { user } = useAuth();
     const RECIPES_PER_PAGE = 10;
     const initialLoadCompleted = useRef(false);
-    const userPreviouslyLoaded = useRef(false);
     const [selectedCollection, setSelectedCollection] = useState<string>(
         collectionId || ALL_RECIPES_ID
     );
@@ -138,51 +148,139 @@ const CatalogPage: FC = () => {
         setDebouncedSearchQuery(debouncedSearch);
     }, [debouncedSearch]);
 
-    // Effect to sync URL param with selected collection
+    // Primary effect for initial data loading
+    // This consolidates the previous loadCollections and loadInitialRecipes logic
     useEffect(() => {
+        // Only run if user is authenticated and initial load hasn't completed for this component instance
+        if (!user || initialLoadCompleted.current) return;
+
+        const loadInitialData = async () => {
+            setInitialLoading(true);
+            setError(null);
+
+            try {
+                // 1. Load all collections first
+                setCollectionsLoading(true);
+                let fetchedCollections: CollectionItem[] = [];
+
+                try {
+                    fetchedCollections =
+                        await CollectionService.getCollectionItems(user.id);
+                    setCollections(fetchedCollections);
+                } catch (err) {
+                    logger.error('Error loading collections:', err);
+                    setCollections([]);
+                } finally {
+                    setCollectionsLoading(false);
+                }
+
+                // 2. Determine the correct collection to load
+                // Either from URL param or default to ALL_RECIPES_ID
+                const collectionToLoad = collectionId || selectedCollection;
+
+                // 3. Validate that the collection exists or default to ALL_RECIPES_ID
+                const collectionExists = collectionId
+                    ? fetchedCollections.some((c) => c.id === collectionId) ||
+                      collectionId === ALL_RECIPES_ID
+                    : true;
+
+                const finalCollectionId = collectionExists
+                    ? collectionToLoad
+                    : ALL_RECIPES_ID;
+
+                // 4. If the collection in URL doesn't exist, navigate to all recipes
+                if (finalCollectionId !== collectionId && collectionId) {
+                    navigate(`${COLLECTION_ROUTE_PATH}/${ALL_RECIPES_ID}`, {
+                        replace: true,
+                    });
+                }
+
+                // 5. Set the selectedCollection state to match the finalCollectionId
+                setSelectedCollection(finalCollectionId);
+
+                // 6. Load recipes for the selected collection
+                let fetchedRecipes: Recipe[] = [];
+
+                try {
+                    // Check if this is "All Recipes" view or a specific collection
+                    if (finalCollectionId === ALL_RECIPES_ID) {
+                        fetchedRecipes = await RecipeService.getRecipes(
+                            user.id
+                        );
+                    } else {
+                        fetchedRecipes =
+                            await CollectionService.getRecipesByCollection(
+                                user.id,
+                                finalCollectionId
+                            );
+                    }
+
+                    // If there's a search query, filter the recipes client-side
+                    if (searchQuery) {
+                        const normalizedSearch = searchQuery
+                            .toLowerCase()
+                            .trim();
+                        fetchedRecipes = fetchedRecipes.filter(
+                            (recipe) =>
+                                recipe.title
+                                    .toLowerCase()
+                                    .includes(normalizedSearch) ||
+                                (recipe.tags &&
+                                    recipe.tags.some((tag) =>
+                                        tag
+                                            .toLowerCase()
+                                            .includes(normalizedSearch)
+                                    )) ||
+                                (recipe.ingredients &&
+                                    recipe.ingredients.some((ing) =>
+                                        ing.name
+                                            .toLowerCase()
+                                            .includes(normalizedSearch)
+                                    ))
+                        );
+                    }
+
+                    setRecipes(fetchedRecipes);
+
+                    // Update pagination
+                    setHasMore(fetchedRecipes.length > RECIPES_PER_PAGE);
+                    setPage(1);
+                } catch (err) {
+                    logger.error('Error loading recipes:', err);
+                    setError('Failed to load recipes. Please try again.');
+                }
+
+                // 7. Mark initial load as completed - ONLY after all steps succeeded
+                initialLoadCompleted.current = true;
+            } catch (err) {
+                logger.error('Error during initial data load:', err);
+                setError('Failed to load data. Please try again.');
+            } finally {
+                setInitialLoading(false);
+            }
+        };
+
+        loadInitialData();
+    }, [user, collectionId, selectedCollection, navigate, searchQuery]);
+
+    // Effect to handle URL param changes AFTER initial load is completed
+    useEffect(() => {
+        // Skip if user is not authenticated or initial load isn't complete yet
+        if (!user || !initialLoadCompleted.current) return;
+
         // Case 1: URL has a collection ID that's different from current selection
         if (collectionId && collectionId !== selectedCollection) {
             setSelectedCollection(collectionId);
-
-            // Only reload recipes if initial load is complete
-            if (initialLoadCompleted.current && user) {
-                loadRecipesByCollection(collectionId);
-            }
+            loadRecipesByCollection(collectionId);
         }
-        // Case 2: URL has no collection ID (root URL/All Recipes) but we're not on All Recipes view
-        else if (
-            !collectionId &&
-            selectedCollection !== ALL_RECIPES_ID &&
-            initialLoadCompleted.current &&
-            user
-        ) {
+        // Case 2: URL has no collection ID but we're not on All Recipes view
+        else if (!collectionId && selectedCollection !== ALL_RECIPES_ID) {
             setSelectedCollection(ALL_RECIPES_ID);
             loadRecipesByCollection(ALL_RECIPES_ID);
         }
     }, [collectionId, selectedCollection, user]);
 
-    // Load initial collections when user is available
-    useEffect(() => {
-        // Only run this effect if user state changes from null to a value or we haven't loaded before
-        if (
-            user &&
-            (!userPreviouslyLoaded.current || !initialLoadCompleted.current)
-        ) {
-            userPreviouslyLoaded.current = true;
-            loadCollections();
-        }
-    }, [user]);
-
-    // Handle initial load of recipes
-    useEffect(() => {
-        // Only run this effect when user becomes available and initial load hasn't completed
-        if (user && !initialLoadCompleted.current) {
-            loadInitialRecipes();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user, selectedCollection]);
-
-    // Handle search updates
+    // Handle search updates - only run after initial data is loaded
     useEffect(() => {
         if (
             user &&
@@ -191,52 +289,9 @@ const CatalogPage: FC = () => {
         ) {
             performSearch();
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [debouncedSearchQuery]);
 
-    // Function to load collections - memoized to prevent re-creation
-    const loadCollections = useCallback(async () => {
-        if (!user) return;
-
-        setCollectionsLoading(true);
-        try {
-            const fetchedCollections =
-                await CollectionService.getCollectionItems(user.id);
-            setCollections(fetchedCollections);
-
-            // If this is the first time loading collections, load the selected collection from URL or default to "All Recipes"
-            if (!initialLoadCompleted.current) {
-                const collectionToLoad = collectionId || selectedCollection;
-
-                // Validate that the collection exists or default to ALL_RECIPES_ID
-                const collectionExists = collectionId
-                    ? fetchedCollections.some((c) => c.id === collectionId) ||
-                      collectionId === ALL_RECIPES_ID // Also allow ALL_RECIPES_ID
-                    : true;
-
-                const finalCollectionId = collectionExists
-                    ? collectionToLoad
-                    : ALL_RECIPES_ID;
-
-                if (finalCollectionId !== collectionId && collectionId) {
-                    // If the collection in URL doesn't exist, navigate to all recipes
-                    navigate(`${COLLECTION_ROUTE_PATH}/${ALL_RECIPES_ID}`, {
-                        replace: true,
-                    });
-                } else {
-                    await loadRecipesByCollection(finalCollectionId);
-                    initialLoadCompleted.current = true;
-                }
-            }
-        } catch (err) {
-            logger.error('Error loading collections:', err);
-            setCollections([]);
-        } finally {
-            setCollectionsLoading(false);
-        }
-    }, [user?.id, collectionId, selectedCollection, navigate]);
-
-    // Add a new function to load recipes based on the selected collection - memoized
+    // Function to load recipes based on the selected collection - memoized
     const loadRecipesByCollection = useCallback(
         async (collectionId: string) => {
             if (!user) return;
@@ -293,24 +348,6 @@ const CatalogPage: FC = () => {
         },
         [user?.id, searchQuery]
     );
-
-    // Modify loadInitialRecipes to use the selected collection - memoized
-    const loadInitialRecipes = useCallback(async () => {
-        if (!user) return;
-
-        setInitialLoading(true);
-        setError(null);
-
-        try {
-            await loadRecipesByCollection(selectedCollection);
-            initialLoadCompleted.current = true;
-        } catch (err) {
-            logger.error('Error loading initial recipes:', err);
-            setError('Failed to load recipes. Please try again.');
-        } finally {
-            setInitialLoading(false);
-        }
-    }, [user, selectedCollection, loadRecipesByCollection]);
 
     // Modify performSearch to account for collection filtering - memoized
     const performSearch = useCallback(async () => {
@@ -471,11 +508,22 @@ const CatalogPage: FC = () => {
                 // No need to reload all collections since we've already updated our local state
             } catch (err) {
                 logger.error('Error updating collection:', err);
-                // Reload collections on error to ensure UI is in sync with backend
-                await loadCollections(); // loadCollections depends on user
+
+                // Instead of reloading all collections, just fetch the specific collection
+                // This avoids a full re-fetch and maintains the updated UI state for other collections
+                try {
+                    const updatedCollections =
+                        await CollectionService.getCollectionItems(user.id);
+                    setCollections(updatedCollections);
+                } catch (fetchErr) {
+                    logger.error(
+                        'Error fetching collections after update failure:',
+                        fetchErr
+                    );
+                }
             }
         },
-        [user] // Dependencies: user (implicitly depends on loadCollections which depends on user)
+        [user]
     );
 
     // Modified handleDeleteCollection function with animation support
@@ -527,7 +575,7 @@ const CatalogPage: FC = () => {
                 );
             }
         },
-        [user, selectedCollection, navigate] // Dependencies: user, selectedCollection, navigate (loadRecipesByCollection implicitly depends on user)
+        [user, selectedCollection, navigate, loadRecipesByCollection]
     );
 
     // Helper function to find the currently selected collection
@@ -546,6 +594,7 @@ const CatalogPage: FC = () => {
     // Handle recipe click with collection context
     const handleRecipeClick = (recipe: Recipe) => {
         // Navigate to recipe detail with collection context in state
+
         navigate(`/recipe/${recipe.id}`, {
             state: {
                 recipe,
@@ -661,35 +710,31 @@ const CatalogPage: FC = () => {
 
     // Handle reordering of recipes within a collection
     const handleRecipeReordering = useCallback(
-        async (draggedId: string, targetId: string, newIndex: number) => {
+        async (draggedId: string, targetId: string) => {
             if (!user || selectedCollection === ALL_RECIPES_ID) return;
 
-            logger.log(
-                `Reordering recipe ${draggedId} to position ${newIndex}`
+            // Find the dragged recipe and its index
+            const draggedRecipeIndex = recipes.findIndex(
+                (r) => r.id === draggedId
             );
+            if (draggedRecipeIndex === -1) {
+                logger.error('Dragged recipe not found in list');
+                return;
+            }
+
+            // Find the target recipe
+            const targetRecipeIndex = recipes.findIndex(
+                (r) => r.id === targetId
+            );
+            if (targetRecipeIndex === -1) {
+                logger.error('Target recipe not found in list');
+                return;
+            }
 
             // Store original recipe order for potential rollback
             const originalRecipes = [...recipes];
 
             try {
-                // Find the dragged recipe and its index
-                const draggedRecipeIndex = recipes.findIndex(
-                    (r) => r.id === draggedId
-                );
-                if (draggedRecipeIndex === -1) {
-                    logger.error('Dragged recipe not found in list');
-                    return;
-                }
-
-                // Find the target recipe
-                const targetRecipeIndex = recipes.findIndex(
-                    (r) => r.id === targetId
-                );
-                if (targetRecipeIndex === -1) {
-                    logger.error('Target recipe not found in list');
-                    return;
-                }
-
                 // Get all current recipe positions in this collection
                 const positionData =
                     await CollectionService.getRecipePositionsInCollection(
