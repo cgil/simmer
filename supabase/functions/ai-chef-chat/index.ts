@@ -205,16 +205,16 @@ I've adjusted this recipe to make it more flavorful while reducing the cooking t
 
 **Here's what I'm changing:**
 
-- **Ingredients:**
-  - Added 2 cloves of garlic for depth of flavor
-  - Increased salt from 1/2 tsp to 1 tsp
+**Ingredients:**
+- Added 2 cloves of garlic for depth of flavor
+- Increased salt from 1/2 tsp to 1 tsp
 
-- **Instructions:**
-  - Modified the sautéing step to cook at higher heat for less time
-  - Added a new step to deglaze the pan with white wine
+**Instructions:**
+- Modified the sautéing step to cook at higher heat for less time
+- Added a new step to deglaze the pan with white wine
 
-- **Timing:**
-  - Reduced cooking time from 45 to 30 minutes
+**Timing:**
+- Reduced cooking time from 45 to 30 minutes
 
 These changes will enhance the dish's flavor profile while making it faster to prepare.
 """

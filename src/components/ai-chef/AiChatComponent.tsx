@@ -17,6 +17,7 @@ import {
 import SendIcon from '@mui/icons-material/Send';
 import PolylineIcon from '@mui/icons-material/Polyline';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../../context/AuthContext';
 import SuggestionPills from './SuggestionPills';
 import { RecipeChanges } from './index';
@@ -365,16 +366,20 @@ const AiChatComponent: FC<AiChatComponentProps> = ({
                                 )}`,
                             }}
                         >
-                            <Typography
-                                variant="body1"
-                                sx={{
-                                    color: theme.palette.text.primary,
-                                    whiteSpace: 'pre-wrap',
-                                    wordBreak: 'break-word',
-                                }}
-                            >
-                                {msg.text}
-                            </Typography>
+                            {msg.sender === 'ai' ? (
+                                <ReactMarkdown>{msg.text}</ReactMarkdown>
+                            ) : (
+                                <Typography
+                                    variant="body1"
+                                    sx={{
+                                        color: theme.palette.text.primary,
+                                        whiteSpace: 'pre-wrap',
+                                        wordBreak: 'break-word',
+                                    }}
+                                >
+                                    {msg.text}
+                                </Typography>
+                            )}
 
                             {msg.hasActions &&
                                 msg.suggestedChanges &&
