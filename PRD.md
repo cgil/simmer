@@ -180,6 +180,25 @@ The app follows a "Modern Culinary Digital Magazine" aesthetic with these key el
 -   **Handling Complex Substitutions:** Supports substitutions that require multiple ingredients and optional brief instructions.
 -   **Empty State:** Provides clear feedback when no suitable substitutions are found.
 
+### 3.9. AI Chef Assistant
+
+-   **Conversational Recipe Improvement:** Users can engage in a back-and-forth conversation with an AI Chef to discuss and implement recipe-wide improvements.
+-   **Contextual Understanding:** The AI Chef considers the current recipe (title, description, ingredients, instructions, etc.) and the ongoing chat history to provide relevant suggestions.
+-   **Suggested Changes:** The AI can propose specific modifications to various parts of the recipe, including:
+    -   Title and Description
+    -   Servings
+    -   Ingredients (adding, removing, modifying amounts, units, or notes)
+    -   Instructions (adding, removing, or modifying sections and steps, including timing)
+    -   Time Estimates (prep, cook, rest, total)
+    -   Recipe Notes and Tags
+-   **Apply Changes with Visual Feedback:** Users can apply AI-suggested changes directly to their recipe draft with a single click. This action is accompanied by a visual animation to confirm the update.
+-   **User Interface:**
+    -   Accessible via a Floating Action Button (FAB) on the `EditRecipePage`.
+    -   Chat interface is presented in a swipeable bottom drawer.
+    -   Clear distinction between user messages and AI responses.
+    -   Loading indicators and error messages provide feedback on the AI's processing status.
+-   **Iterative Refinement:** Users can continue the conversation to further refine suggestions or ask for alternative improvements.
+
 ---
 
 ## 4. User Flows
@@ -200,7 +219,18 @@ The app follows a "Modern Culinary Digital Magazine" aesthetic with these key el
 4. Follow step-by-step instructions
 5. Reference ingredients and notes
 
-### 4.3. Editing a Recipe
+### 4.3. Improving a Recipe with AI Chef
+
+1.  While on the `EditRecipePage`, click the AI Chef FAB.
+2.  The AI Chef chat drawer opens.
+3.  Type a request for improvement (e.g., "Make this healthier," "Any ideas to make this recipe vegan?").
+4.  The AI Chef responds with suggestions and, if applicable, proposed recipe changes.
+5.  Review the AI's textual response and the specific changes highlighted.
+6.  If satisfied, click "Apply Changes."
+7.  The changes are applied to the recipe draft in the `EditRecipePage`, and the drawer closes.
+8.  Continue editing or save the recipe.
+
+### 4.4. Editing a Recipe
 
 1. Access recipe edit mode
 2. Modify text, images, or structure

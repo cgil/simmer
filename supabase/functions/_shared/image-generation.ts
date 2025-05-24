@@ -1,4 +1,4 @@
-import { OpenAI } from "https://esm.sh/openai@4.96.0";
+import { OpenAI } from "https://esm.sh/openai@4.98.0";
 
 // Simple environment-aware logger for shared utility
 const isProduction = Deno.env.get("ENVIRONMENT") === "production";

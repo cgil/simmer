@@ -27,6 +27,12 @@ import RecipeMetadataEditor from './components/RecipeMetadataEditor';
 import IngredientsEditor from './components/IngredientsEditor';
 import InstructionsEditor from './components/InstructionsEditor';
 import NotesEditor from './components/NotesEditor';
+import {
+    AiChefDrawer,
+    AiChefFab,
+    RecipeChanges,
+    ApplyChangesAnimation,
+} from '../../components/ai-chef';
 
 type FetchStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -153,8 +159,133 @@ const EditRecipePage: FC = () => {
     const [isOwner, setIsOwner] = useState<boolean>(false);
     const [isGeneratingAiImage, setIsGeneratingAiImage] = useState(false);
 
+    // AI Chef state
+    const [isAiChefDrawerOpen, setIsAiChefDrawerOpen] = useState(false);
+    const [isAnimatingChanges, setIsAnimatingChanges] = useState(false);
+
     // --- Event Handlers (Memoized) ---
     // Define handlers at the top level, before any potential early returns
+
+    // AI Chef handlers
+    const handleToggleAiChefDrawer = useCallback(() => {
+        setIsAiChefDrawerOpen(!isAiChefDrawerOpen);
+    }, [isAiChefDrawerOpen]);
+
+    const handleStartAnimation = useCallback(() => {
+        setIsAnimatingChanges(true);
+    }, []);
+
+    const handleAnimationComplete = useCallback(() => {
+        setIsAnimatingChanges(false);
+    }, []);
+
+    const handleApplyAiChanges = useCallback(
+        (changes: RecipeChanges) => {
+            // Apply AI-suggested changes to the recipe
+            if (changes.title) {
+                setTitle(changes.title);
+            }
+
+            if (changes.description) {
+                setDescription(changes.description);
+            }
+
+            if (changes.ingredients && changes.ingredients.length > 0) {
+                // Merge with existing ingredients to preserve any that weren't changed
+                const updatedIngredients = [...ingredients];
+
+                changes.ingredients.forEach((newIngredient) => {
+                    const existingIndex = updatedIngredients.findIndex(
+                        (ing) => ing.id === newIngredient.id
+                    );
+
+                    if (existingIndex >= 0) {
+                        // Update existing ingredient
+                        updatedIngredients[existingIndex] = {
+                            ...updatedIngredients[existingIndex],
+                            ...newIngredient,
+                        };
+                    } else {
+                        // Add new ingredient with required fields
+                        updatedIngredients.push({
+                            ...newIngredient,
+                            id: newIngredient.id || generateUuidV4(),
+                        });
+                    }
+                });
+
+                setIngredients(updatedIngredients);
+            }
+
+            if (changes.instructions && changes.instructions.length > 0) {
+                // Similar merging logic for instructions
+                setInstructions((prevInstructions) => {
+                    const updatedInstructions = [...prevInstructions];
+
+                    changes.instructions?.forEach((newSection) => {
+                        const existingSectionIndex =
+                            updatedInstructions.findIndex(
+                                (section) => section.id === newSection.id
+                            );
+
+                        if (existingSectionIndex >= 0) {
+                            // Update existing section
+                            updatedInstructions[existingSectionIndex] = {
+                                ...updatedInstructions[existingSectionIndex],
+                                section_title:
+                                    newSection.section_title ||
+                                    updatedInstructions[existingSectionIndex]
+                                        .section_title,
+                                steps: newSection.steps.map((step) => ({
+                                    ...step,
+                                    timing: step.timing,
+                                })),
+                            };
+                        } else {
+                            // Add new section
+                            updatedInstructions.push({
+                                id: newSection.id || generateUuidV4(),
+                                section_title: newSection.section_title || '',
+                                steps: newSection.steps.map((step) => ({
+                                    id: step.id || generateUuidV4(),
+                                    text: step.text,
+                                    timing: step.timing,
+                                })),
+                            });
+                        }
+                    });
+
+                    return updatedInstructions;
+                });
+            }
+
+            if (changes.timeEstimate) {
+                setTimeEstimate((prevTime) => ({
+                    ...prevTime,
+                    ...changes.timeEstimate,
+                }));
+            }
+
+            if (changes.notes) {
+                setNotes(
+                    changes.notes.map((noteText, index) => ({
+                        id: `note-${
+                            recipe?.id || 'new'
+                        }-${index}-${generateUuidV4()}`,
+                        text: noteText,
+                    }))
+                );
+            }
+
+            if (changes.tags) {
+                setTags(changes.tags);
+            }
+
+            // Close the drawer after applying changes
+            setIsAiChefDrawerOpen(false);
+        },
+        [ingredients, recipe?.id]
+    );
 
     const saveCollections = useCallback(
         async (recipeId: string) => {
@@ -853,6 +984,12 @@ const EditRecipePage: FC = () => {
                 />
             }
         >
+            {/* Animation overlay */}
+            <ApplyChangesAnimation
+                isAnimating={isAnimatingChanges}
+                onAnimationComplete={handleAnimationComplete}
+            />
+
             <Box
                 sx={{
                     position: 'relative',
@@ -997,6 +1134,41 @@ const EditRecipePage: FC = () => {
                         </Grid>
                     </Grid>
                 </Box>
+
+                {/* AI Chef functionality components */}
+                {canEdit && (
+                    <>
+                        <AiChefFab
+                            onClick={handleToggleAiChefDrawer}
+                            isOpen={isAiChefDrawerOpen}
+                        />
+
+                        <AiChefDrawer
+                            open={isAiChefDrawerOpen}
+                            onClose={() => setIsAiChefDrawerOpen(false)}
+                            onOpen={() => setIsAiChefDrawerOpen(true)}
+                            onApplyChanges={handleApplyAiChanges}
+                            onAnimationStart={handleStartAnimation}
+                            currentRecipe={{
+                                id: recipe.id,
+                                title,
+                                description,
+                                ingredients,
+                                instructions,
+                                notes: notes.map((note) => note.text),
+                                time_estimate: timeEstimate,
+                                tags,
+                                images,
+                                servings,
+                                user_id: user?.id || '',
+                                is_public: recipe.is_public ?? true,
+                                is_shared: recipe.is_shared ?? false,
+                                shared_with_me: recipe.shared_with_me ?? false,
+                                access_level: recipe.access_level,
+                            }}
+                        />
+                    </>
+                )}
             </Box>
         </AppLayout>
     );

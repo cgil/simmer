@@ -8,6 +8,7 @@ Simmer is a modern web application that offers a sleek, magazine-style experienc
 -   🔍 AI-powered recipe extraction from URLs
 -   🧠 AI-powered recipe ideas generation from text prompts
 -   🍳 AI-powered ingredient substitution suggestions
+-   💬 AI Chef assistant for conversational recipe improvement and editing
 -   📱 Mobile-friendly cooking mode with interactive timers
 -   🖼️ Beautiful image gallery management
 -   📂 Collections to organize recipes with custom emoji icons
@@ -121,6 +122,8 @@ The application will be available at:
 -   `npm run test:ideas` - Test recipe ideas generation with sample prompt
 -   `npm run test:creation` - Test recipe creation from an idea
 -   `npm run test:substitution` - Test ingredient substitution
+-   `npm run test:ai-chef-chat` - Test AI Chef chat with a simple recipe
+-   `npm run test:ai-chef-chat:detailed` - Test AI Chef chat with a more detailed recipe example
 
 ### Development Workflow
 
@@ -256,9 +259,10 @@ This command deploys the following functions configured for production (ensure a
 -   ingredient-substitution
 -   generate-recipe-image
 -   `upload-user-image` # Handles user image uploads
+-   `ai-chef-chat` # Handles conversational recipe improvements
 
 ### Deployment Checklist
 
 1.  Configure environment variables/secrets in Vercel and Supabase.
 2.  Ensure GCS bucket exists and CORS is configured correctly for your GCS bucket. Note: CORS rules are less critical for the current Edge Function upload approach compared to direct browser uploads, but may still be needed for displaying images depending on configuration.
-3.  Run database migrations if needed (`supabase db push`
+3.  Run database migrations if needed (`supabase db push`)

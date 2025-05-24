@@ -1,5 +1,6 @@
 // src/pages/recipe/components/IngredientsList.tsx
 // This component displays the list of ingredients for a recipe, allowing users to adjust servings.
+// It can also display a specific list of ingredients (e.g., for showing changes in a preview).
 // It's styled as a floating card with a modern magazine aesthetic for the recipe page redesign.
 
 import { FC } from 'react';
@@ -13,12 +14,18 @@ interface IngredientsListProps {
     recipe: Recipe;
     servings: number;
     onServingsChange: (servings: number) => void;
+    ingredientsToDisplay?: Array<
+        Ingredient & { changeType: 'added' | 'modified' | 'removed' }
+    >;
+    isPreviewMode?: boolean;
 }
 
 const IngredientsList: FC<IngredientsListProps> = ({
     recipe,
     servings,
     onServingsChange,
+    ingredientsToDisplay,
+    isPreviewMode = false,
 }) => {
     const theme = useTheme();
     const {
@@ -91,7 +98,15 @@ const IngredientsList: FC<IngredientsListProps> = ({
         flexDirection: 'column',
     };
 
-    if (!recipe.ingredients || recipe.ingredients.length === 0) {
+    const ingredientsSource = ingredientsToDisplay
+        ? ingredientsToDisplay
+        : recipe.ingredients;
+
+    if (!ingredientsSource || ingredientsSource.length === 0) {
+        let message = 'No ingredients available for this recipe.';
+        if (ingredientsToDisplay && ingredientsToDisplay.length === 0) {
+            message = 'No changes to ingredients.';
+        }
         return (
             <Paper sx={cardSx}>
                 <Typography
@@ -115,7 +130,7 @@ const IngredientsList: FC<IngredientsListProps> = ({
                         fontSize: { xs: '0.95rem', sm: '1.05rem' },
                     }}
                 >
-                    No ingredients available for this recipe.
+                    {message}
                 </Typography>
             </Paper>
         );
@@ -205,6 +220,7 @@ const IngredientsList: FC<IngredientsListProps> = ({
                         min={1}
                         max={maxServings}
                         valueLabelDisplay="off"
+                        disabled={isPreviewMode}
                         sx={{
                             color: 'primary.main',
                             height: { xs: 6, sm: 8 },
@@ -250,67 +266,70 @@ const IngredientsList: FC<IngredientsListProps> = ({
                         width: '100%',
                     }}
                 >
-                    {recipe.ingredients.map(
-                        (ingredient: Ingredient, index: number) => {
-                            const isSubstituted = hasSubstitution(
-                                ingredient.id
-                            );
-                            const currentSubstituteInfo =
-                                getSubstituteInfo(ingredient.id) || undefined;
-                            const currentOriginalIngredient =
-                                getOriginalIngredient(ingredient.id) ||
-                                undefined;
+                    {ingredientsSource.map((ingredient, index: number) => {
+                        const isSubstituted = hasSubstitution(ingredient.id);
+                        const currentSubstituteInfo =
+                            getSubstituteInfo(ingredient.id) || undefined;
+                        const currentOriginalIngredient =
+                            getOriginalIngredient(ingredient.id) || undefined;
+                        const changeType =
+                            'changeType' in ingredient
+                                ? (
+                                      ingredient as Ingredient & {
+                                          changeType:
+                                              | 'added'
+                                              | 'modified'
+                                              | 'removed';
+                                      }
+                                  ).changeType
+                                : undefined;
 
-                            return (
-                                <Box
-                                    component="li"
-                                    key={ingredient.id || index}
-                                    sx={{
-                                        py: { xs: 1.2, sm: 1.5 },
-                                        borderBottom:
-                                            index ===
-                                            recipe.ingredients.length - 1
-                                                ? 'none'
-                                                : `1px solid ${theme.palette.divider}`,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        width: '100%',
-                                    }}
-                                >
-                                    <Box sx={{ width: '100%' }}>
-                                        <IngredientItemWithSubstitution
-                                            id={ingredient.id}
-                                            name={ingredient.name}
-                                            quantity={ingredient.quantity}
-                                            unit={ingredient.unit}
-                                            originalServings={
-                                                recipe.servings || 2
-                                            }
-                                            currentServings={servings}
-                                            isSubstituted={isSubstituted}
-                                            onSubstitute={handleSubstitute}
-                                            onRevertSubstitution={
-                                                handleRevertSubstitution
-                                            }
-                                            substituteInfo={
-                                                currentSubstituteInfo
-                                            }
-                                            originalIngredient={
-                                                currentOriginalIngredient
-                                                    ? {
-                                                          name: currentOriginalIngredient.name,
-                                                          quantity:
-                                                              currentOriginalIngredient.quantity,
-                                                          unit: currentOriginalIngredient.unit,
-                                                      }
-                                                    : undefined
-                                            }
-                                        />
-                                    </Box>
+                        return (
+                            <Box
+                                component="li"
+                                key={ingredient.id || index}
+                                sx={{
+                                    py: { xs: 1.2, sm: 1.5 },
+                                    borderBottom:
+                                        index === ingredientsSource.length - 1
+                                            ? 'none'
+                                            : `1px solid ${theme.palette.divider}`,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    width: '100%',
+                                }}
+                            >
+                                <Box sx={{ width: '100%' }}>
+                                    <IngredientItemWithSubstitution
+                                        id={ingredient.id}
+                                        name={ingredient.name}
+                                        quantity={ingredient.quantity}
+                                        unit={ingredient.unit}
+                                        originalServings={recipe.servings || 2}
+                                        currentServings={servings}
+                                        isSubstituted={isSubstituted}
+                                        onSubstitute={handleSubstitute}
+                                        onRevertSubstitution={
+                                            handleRevertSubstitution
+                                        }
+                                        substituteInfo={currentSubstituteInfo}
+                                        originalIngredient={
+                                            currentOriginalIngredient
+                                                ? {
+                                                      name: currentOriginalIngredient.name,
+                                                      quantity:
+                                                          currentOriginalIngredient.quantity,
+                                                      unit: currentOriginalIngredient.unit,
+                                                  }
+                                                : undefined
+                                        }
+                                        changeType={changeType}
+                                        isPreviewMode={isPreviewMode}
+                                    />
                                 </Box>
-                            );
-                        }
-                    )}
+                            </Box>
+                        );
+                    })}
                 </Box>
             </Stack>
         </Paper>

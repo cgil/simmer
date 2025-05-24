@@ -19,6 +19,12 @@ import {
     getCookFriendlyQuantity,
 } from '../../utils/recipe';
 
+// This component displays a single ingredient item, handling its quantity scaling,
+// substitution state (showing original vs. substitute), and allows users to trigger
+// the substitution popover or revert a substitution.
+// It can also visually indicate if an ingredient is part of an AI-suggested change
+// (added, modified, or removed via strikethrough) and disable interactions in preview mode.
+
 // Types for the component props
 interface IngredientItemWithSubstitutionProps {
     id: string;
@@ -40,6 +46,8 @@ interface IngredientItemWithSubstitutionProps {
         unit?: string | null;
     };
     substituteInfo?: SubstituteOption;
+    changeType?: 'added' | 'modified' | 'removed'; // New prop for AI change indication
+    isPreviewMode?: boolean; // Explicit prop for preview mode
 }
 
 const IngredientItemWithSubstitution: FC<
@@ -56,12 +64,14 @@ const IngredientItemWithSubstitution: FC<
     onRevertSubstitution,
     originalIngredient,
     substituteInfo,
+    changeType,
+    isPreviewMode = false, // Default to false
 }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
-    const [isItemActive, setIsItemActive] = useState(false); // For mobile active state
+    const [isItemActive, setIsItemActive] = useState(false);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -124,57 +134,79 @@ const IngredientItemWithSubstitution: FC<
     );
 
     // Handler for the entire ingredient item click (for mobile)
-    const handleItemClick = isMobile
-        ? () => {
-              setIsItemActive(true); // Set active state for mobile highlighting
-              setIsPopoverOpen(true);
-          }
-        : undefined;
+    const handleItemClick =
+        isMobile && !isPreviewMode // Only allow click if not in preview mode
+            ? () => {
+                  setIsItemActive(true);
+                  if (!isSubstituted && onSubstitute) {
+                      setIsPopoverOpen(true);
+                  }
+              }
+            : undefined;
 
     // Mouse enter/leave handlers for hover state (desktop only)
-    const handleMouseEnter = !isMobile
-        ? () => {
-              setIsHovered(true);
-          }
-        : undefined;
+    const handleMouseEnter =
+        !isMobile && !isPreviewMode // Only allow hover if not in preview mode
+            ? () => {
+                  setIsHovered(true);
+              }
+            : undefined;
 
-    const handleMouseLeave = !isMobile
-        ? () => {
-              setIsHovered(false);
-          }
-        : undefined;
+    const handleMouseLeave =
+        !isMobile && !isPreviewMode // Only allow hover if not in preview mode
+            ? () => {
+                  setIsHovered(false);
+              }
+            : undefined;
 
     // To render a regular ingredient
-    const renderRegularIngredient = () => (
-        <Box sx={{ flex: 1, overflow: 'hidden' }}>
-            <Typography
-                component="span"
-                sx={{
-                    display: 'inline',
-                    fontSize: { xs: '1rem', sm: '1.05rem' },
-                    lineHeight: 1.5,
-                    color: 'text.primary',
-                    wordBreak: 'break-word',
-                    overflowWrap: 'break-word',
-                }}
-            >
-                {friendlyQuantity !== null && (
-                    <Box
-                        component="span"
-                        sx={{
-                            fontWeight: 500,
-                            display: 'inline-block',
-                            mr: 0.5,
-                        }}
-                    >
-                        {formatQuantity(friendlyQuantity)}
-                        {unit && ` ${unit}`}
-                    </Box>
-                )}
-                {name}
-            </Typography>
-        </Box>
-    );
+    const renderRegularIngredient = () => {
+        const isRemoved = changeType === 'removed';
+        const commonTextStyle: React.CSSProperties = {
+            wordBreak: 'break-word',
+            overflowWrap: 'break-word',
+        };
+        const activeColor = isRemoved
+            ? theme.palette.text.disabled
+            : theme.palette.text.primary;
+
+        return (
+            <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                <Typography
+                    component="span"
+                    sx={{
+                        display: 'inline',
+                        fontSize: { xs: '1rem', sm: '1.05rem' },
+                        lineHeight: 1.5,
+                        color: activeColor, // Apply color here
+                        textDecoration: isRemoved ? 'line-through' : 'none', // Apply strikethrough for the name part
+                        ...commonTextStyle,
+                    }}
+                >
+                    {friendlyQuantity !== null && (
+                        <Box
+                            component="span"
+                            sx={{
+                                fontWeight: 500,
+                                display: 'inline-block',
+                                mr: 0.5,
+                                // Explicitly apply strikethrough and color for quantity/unit if removed
+                                textDecoration: isRemoved
+                                    ? 'line-through'
+                                    : 'none',
+                                color: activeColor, // Ensure quantity/unit also get the correct color
+                                ...commonTextStyle, // Apply common text styles here too if needed, but mainly for consistency
+                            }}
+                        >
+                            {formatQuantity(friendlyQuantity)}
+                            {unit && ` ${unit}`}
+                        </Box>
+                    )}
+                    {name} {/* Name will inherit from Typography correctly */}
+                </Typography>
+            </Box>
+        );
+    };
 
     // To render a substituted ingredient with original at top (strikethrough) and substitution below
     const renderSubstitutedIngredient = () => {
@@ -394,18 +426,18 @@ const IngredientItemWithSubstitution: FC<
                 '&:last-child': {
                     mb: 0,
                 },
-                ...(isSubstituted && {
-                    bgcolor: (theme) =>
-                        alpha(theme.palette.primary.light, 0.04),
-                    borderRadius: 1,
-                    px: 1,
-                    py: 0.5,
-                    mx: -1,
-                }),
+                ...(isSubstituted &&
+                    !isPreviewMode && {
+                        bgcolor: alpha(theme.palette.primary.light, 0.04),
+                        borderRadius: 1,
+                        px: 1,
+                        py: 0.5,
+                        mx: -1,
+                    }),
                 ...(isItemActive &&
-                    isMobile && {
-                        bgcolor: (theme) =>
-                            alpha(theme.palette.primary.light, 0.08),
+                    isMobile &&
+                    !isPreviewMode && {
+                        bgcolor: alpha(theme.palette.primary.light, 0.08),
                     }),
             }}
         >
@@ -417,7 +449,7 @@ const IngredientItemWithSubstitution: FC<
                     display: 'flex',
                     alignItems: 'flex-start',
                     position: 'relative',
-                    cursor: isMobile ? 'pointer' : 'default',
+                    cursor: isMobile && !isPreviewMode ? 'pointer' : 'default',
                     width: '100%',
                     justifyContent: 'space-between',
                 }}
@@ -431,14 +463,14 @@ const IngredientItemWithSubstitution: FC<
                         overflow: 'hidden',
                     }}
                 >
-                    {/* Bullet point */}
                     <Box
                         sx={{
                             width: { xs: 4, sm: 6 },
                             height: { xs: 4, sm: 6 },
-                            bgcolor: isSubstituted
-                                ? alpha(theme.palette.primary.main, 0.6)
-                                : 'primary.main',
+                            bgcolor:
+                                isSubstituted && !isPreviewMode
+                                    ? alpha(theme.palette.primary.main, 0.6)
+                                    : 'primary.main',
                             borderRadius: '50%',
                             mr: 2,
                             mt: '0.5em',
@@ -447,155 +479,181 @@ const IngredientItemWithSubstitution: FC<
                         }}
                     />
 
-                    {/* Ingredient content - either regular or substituted */}
-                    {isSubstituted
+                    {isSubstituted && !isPreviewMode
                         ? renderSubstitutedIngredient()
                         : renderRegularIngredient()}
                 </Box>
 
-                {/* Swap button for regular ingredients or revert button for substituted ingredients */}
-                {!isMobile &&
-                    (isSubstituted ? (
-                        <Tooltip title="Revert to original ingredient">
-                            <IconButton
-                                size="small"
-                                onClick={handleRevertSubstitution}
-                                sx={{
-                                    alignSelf: 'flex-start',
-                                    opacity: isHovered ? 1 : 0.6,
-                                    color: 'text.secondary',
-                                    ml: 2,
-                                    flexShrink: 0,
-                                    '&:hover': {
-                                        bgcolor: alpha(
-                                            theme.palette.primary.main,
-                                            0.08
-                                        ),
-                                        color: 'primary.main',
-                                    },
-                                    transition: 'opacity 0.2s',
-                                }}
-                            >
-                                <UndoIcon fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
-                    ) : (
-                        <Tooltip title="Find substitutes">
-                            <IconButton
-                                ref={buttonRef}
-                                size="small"
-                                onClick={handleOpenSubstitutionPopover}
-                                sx={{
-                                    alignSelf: 'center',
-                                    opacity: isHovered ? 1 : 0,
-                                    color: 'text.secondary',
-                                    ml: 2,
-                                    flexShrink: 0,
-                                    '&:hover': {
-                                        bgcolor: alpha(
-                                            theme.palette.primary.main,
-                                            0.08
-                                        ),
-                                        color: 'primary.main',
-                                    },
-                                    transition: 'opacity 0.2s',
-                                }}
-                            >
-                                <SwapHorizRoundedIcon fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
-                    ))}
+                {!isPreviewMode && (
+                    <>
+                        {!isMobile &&
+                            (isSubstituted
+                                ? onRevertSubstitution && (
+                                      <Tooltip title="Revert to original ingredient">
+                                          <IconButton
+                                              size="small"
+                                              onClick={handleRevertSubstitution}
+                                              sx={{
+                                                  alignSelf: 'flex-start',
+                                                  opacity: isHovered ? 1 : 0.6,
+                                                  color: 'text.secondary',
+                                                  ml: 2,
+                                                  flexShrink: 0,
+                                                  '&:hover': {
+                                                      bgcolor: alpha(
+                                                          theme.palette.primary
+                                                              .main,
+                                                          0.08
+                                                      ),
+                                                      color: 'primary.main',
+                                                  },
+                                                  transition:
+                                                      'opacity 0.2s, color 0.2s, background-color 0.2s',
+                                              }}
+                                          >
+                                              <UndoIcon fontSize="small" />
+                                          </IconButton>
+                                      </Tooltip>
+                                  )
+                                : onSubstitute && (
+                                      <Tooltip title="Find substitutes">
+                                          <IconButton
+                                              ref={buttonRef}
+                                              size="small"
+                                              onClick={
+                                                  handleOpenSubstitutionPopover
+                                              }
+                                              sx={{
+                                                  alignSelf: 'center',
+                                                  opacity: isHovered ? 1 : 0,
+                                                  color: 'text.secondary',
+                                                  ml: 2,
+                                                  flexShrink: 0,
+                                                  '&:hover': {
+                                                      bgcolor: alpha(
+                                                          theme.palette.primary
+                                                              .main,
+                                                          0.08
+                                                      ),
+                                                      color: 'primary.main',
+                                                  },
+                                                  transition:
+                                                      'opacity 0.2s, color 0.2s, background-color 0.2s',
+                                              }}
+                                          >
+                                              <SwapHorizRoundedIcon fontSize="small" />
+                                          </IconButton>
+                                      </Tooltip>
+                                  ))}
 
-                {/* Mobile implementation for the revert button if it exists */}
-                {isMobile && (
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            alignSelf: 'center', // Center vertically
-                            mt: 0,
-                            ml: 1,
-                            flexShrink: 0,
-                        }}
-                    >
-                        {isSubstituted ? (
-                            <IconButton
-                                size="small"
-                                onClick={handleRevertWithStopPropagation}
+                        {isMobile && (
+                            <Box
                                 sx={{
-                                    p: '4px', // Slightly larger padding for better tap target
-                                    color: alpha(
-                                        theme.palette.primary.main,
-                                        0.6
-                                    ),
-                                    opacity: 0.8, // Higher opacity for better visibility
-                                    transition: 'all 0.2s ease',
+                                    display: 'flex',
+                                    alignSelf: 'center',
+                                    ml: 1,
                                     flexShrink: 0,
-                                    '&:hover': {
-                                        color: 'primary.main',
-                                        opacity: 1,
-                                        bgcolor: alpha(
-                                            theme.palette.primary.main,
-                                            0.05
-                                        ),
-                                    },
-                                    '&:active': {
-                                        bgcolor: alpha(
-                                            theme.palette.primary.main,
-                                            0.1
-                                        ),
-                                    },
                                 }}
                             >
-                                <UndoIcon fontSize="small" />
-                            </IconButton>
-                        ) : (
-                            <IconButton
-                                ref={buttonRef}
-                                size="small"
-                                onClick={handleOpenSubstitutionPopover}
-                                sx={{
-                                    p: '4px', // Slightly larger padding for better tap target
-                                    color: 'text.secondary',
-                                    opacity: 0.8, // Higher opacity for better visibility
-                                    transition: 'all 0.2s ease',
-                                    flexShrink: 0,
-                                    '&:hover': {
-                                        color: 'primary.main',
-                                        opacity: 1,
-                                        bgcolor: alpha(
-                                            theme.palette.primary.main,
-                                            0.05
-                                        ),
-                                    },
-                                    '&:active': {
-                                        bgcolor: alpha(
-                                            theme.palette.primary.main,
-                                            0.1
-                                        ),
-                                    },
-                                }}
-                            >
-                                <SwapHorizRoundedIcon fontSize="small" />
-                            </IconButton>
+                                {isSubstituted
+                                    ? onRevertSubstitution && (
+                                          <IconButton
+                                              size="small"
+                                              onClick={
+                                                  handleRevertWithStopPropagation
+                                              }
+                                              sx={{
+                                                  p: '4px',
+                                                  color: alpha(
+                                                      theme.palette.primary
+                                                          .main,
+                                                      0.6
+                                                  ),
+                                                  opacity: 0.8,
+                                                  transition: 'all 0.2s ease',
+                                                  flexShrink: 0,
+                                                  '&:hover': {
+                                                      color: 'primary.main',
+                                                      opacity: 1,
+                                                      bgcolor: alpha(
+                                                          theme.palette.primary
+                                                              .main,
+                                                          0.05
+                                                      ),
+                                                  },
+                                                  '&:active': {
+                                                      bgcolor: alpha(
+                                                          theme.palette.primary
+                                                              .main,
+                                                          0.1
+                                                      ),
+                                                  },
+                                              }}
+                                          >
+                                              <UndoIcon fontSize="small" />
+                                          </IconButton>
+                                      )
+                                    : onSubstitute && (
+                                          <IconButton
+                                              ref={buttonRef}
+                                              size="small"
+                                              onClick={
+                                                  handleOpenSubstitutionPopover
+                                              }
+                                              sx={{
+                                                  p: '4px',
+                                                  color: 'text.secondary',
+                                                  opacity: 0.8,
+                                                  transition: 'all 0.2s ease',
+                                                  flexShrink: 0,
+                                                  '&:hover': {
+                                                      color: 'primary.main',
+                                                      opacity: 1,
+                                                      bgcolor: alpha(
+                                                          theme.palette.primary
+                                                              .main,
+                                                          0.05
+                                                      ),
+                                                  },
+                                                  '&:active': {
+                                                      bgcolor: alpha(
+                                                          theme.palette.primary
+                                                              .main,
+                                                          0.1
+                                                      ),
+                                                  },
+                                              }}
+                                          >
+                                              <SwapHorizRoundedIcon fontSize="small" />
+                                          </IconButton>
+                                      )}
+                            </Box>
                         )}
-                    </Box>
+                    </>
                 )}
             </Box>
 
-            {/* Substitution popover */}
-            {isPopoverOpen && (
+            {!isPreviewMode && onSubstitute && (
                 <IngredientSubstitutionPopover
                     open={isPopoverOpen}
-                    anchorEl={containerRef.current}
+                    anchorEl={buttonRef.current || containerRef.current}
                     onClose={handleCloseSubstitutionPopover}
                     ingredientId={id}
-                    ingredientName={originalIngredient?.name || name}
+                    ingredientName={
+                        isSubstituted && originalIngredient
+                            ? originalIngredient.name
+                            : name
+                    }
                     ingredientQuantity={getCookFriendlyQuantity(
-                        isSubstituted
-                            ? originalIngredient?.quantity ?? null
+                        isSubstituted && originalIngredient
+                            ? originalIngredient.quantity ?? null
                             : quantity ?? null
                     )}
-                    ingredientUnit={originalIngredient?.unit || unit}
+                    ingredientUnit={
+                        isSubstituted && originalIngredient
+                            ? originalIngredient.unit
+                            : unit
+                    }
                     originalServings={originalServings}
                     currentServings={currentServings}
                     onSubstitute={handleSubstitute}
@@ -610,3 +668,12 @@ const IngredientItemWithSubstitution: FC<
 };
 
 export default IngredientItemWithSubstitution;
+
+// Helper to simulate getting recipe context (title, description)
+// In a real app, this might come from a context or props drilling
+// For now, we'll use placeholder values if not provided directly
+// Note: These props (currentRecipeTitle, currentRecipeDescription) are not currently defined
+// in IngredientItemWithSubstitutionProps and would need to be added if this popover
+// functionality is to be fully operational in its current placement with AI suggestions.
+// const currentRecipeTitle = 'Current Recipe Title';                   // Commented out
+// const currentRecipeDescription = 'Current recipe description for context.'; // Commented out

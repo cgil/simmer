@@ -18,7 +18,7 @@ This document outlines the technical architecture and implementation details of 
 
 -   **Database**: Supabase (PostgreSQL)
 -   **Storage**: Google Cloud Storage (GCS) for images (using Signed URLs)
--   **AI Integration**: OpenAI API for recipe extraction, ideas, creation, and substitution
+-   **AI Integration**: OpenAI API for recipe extraction, ideas, creation, substitution, and AI Chef chat.
 -   **Authentication**: Supabase Auth
 
 ---
@@ -522,7 +522,28 @@ The recipe extraction and ideas generation endpoints are protected by JWT verifi
 -   Development environment can optionally disable JWT verification
 -   Production environment enforces JWT verification
 
-### 5.4. Supabase Integration
+### 5.4. AI Chef Chat Integration
+
+-   **Edge Function (`ai-chef-chat`)**: A Supabase Edge Function that orchestrates the conversational AI capabilities.
+    -   **Purpose**: Receives the current recipe draft and chat history from the client, constructs a detailed prompt for OpenAI, calls the OpenAI API (GPT-4o model), and processes the AI's response.
+    -   **Inputs**:
+        -   `currentRecipe`: The full recipe object currently being edited.
+        -   `chatHistory`: An array of previous messages in the conversation.
+    -   **Outputs**: A JSON object containing:
+        -   `aiResponseText`: The AI's conversational reply.
+        -   `hasRecipeChanges`: Boolean indicating if recipe modifications are suggested.
+        -   `suggestedRecipeChanges` (optional): An object detailing the proposed changes to the recipe structure, adhering to a partial recipe schema.
+    -   **Validation**: Utilizes Zod schemas to validate incoming `currentRecipe` and the `suggestedRecipeChanges` from OpenAI, ensuring data integrity.
+-   **Client-Side API (`sendAiChefMessage`)**: A function in `src/lib/api.ts` that facilitates communication from the `AiChatComponent` to the `ai-chef-chat` Edge Function.
+-   **Data Flow**:
+    1. User interacts with `AiChatComponent` in the `AiChefDrawer` on `EditRecipePage`.
+    2. `AiChatComponent` sends the `currentRecipe` (with validated instruction/step IDs) and `chatHistory` to `sendAiChefMessage`.
+    3. `sendAiChefMessage` calls the `ai-chef-chat` Edge Function.
+    4. The Edge Function processes the request with OpenAI and returns a structured JSON response.
+    5. `AiChatComponent` displays the AI's response and, if changes are suggested, provides an option to apply them.
+-   **Authentication & Security**: The `ai-chef-chat` Edge Function is protected by JWT verification in production, similar to other AI-related functions.
+
+### 5.5. Supabase Integration
 
 ```typescript
 // Database types
@@ -563,7 +584,7 @@ const recipeQueries = {
 };
 ```
 
-### 5.5. Google Cloud Storage (GCS) Integration for Images
+### 5.6. Google Cloud Storage (GCS) Integration for Images
 
 -   **Flow**:
     1.  **User/AI Image Upload (Client-Side Trigger)**:
@@ -583,7 +604,7 @@ const recipeQueries = {
 -   **CORS**: GCS bucket CORS configuration might still be necessary for allowing the browser to _display_ images directly from GCS, depending on bucket/object access settings. However, it's no longer required for the upload PUT requests from the browser.
 -   **Security**: Service account keys are stored securely as environment variables/secrets in Supabase Function settings, granting backend functions the necessary permissions to upload data via `uploadDataToGCS`.
 
-### 5.6. PostHog Analytics Integration
+### 5.7. PostHog Analytics Integration
 
 -   **Initialization**: PostHog is initialized in `src/main.tsx` only when the application runs in the production environment (`config.environment === 'production'`). It requires `VITE_POSTHOG_KEY` and `VITE_POSTHOG_HOST` environment variables set in the deployment environment (e.g., Vercel).
 -   **User Identification**: User identification is handled within `src/context/AuthContext.tsx`. When the Supabase authentication state changes (`onAuthStateChange`), if a user is logged in (and in production), `posthog.identify()` is called with the user's ID, email, and name (if available in metadata). If the user logs out, `posthog.reset()` is called.

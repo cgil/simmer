@@ -136,7 +136,7 @@ const IngredientReferenceMention: FC<IngredientReferenceMentionProps> = ({
         // If it's a UUID but not found
         return (
             <Tooltip
-                title={`Ingredient with ID "${id}" not found. It may have been deleted or renamed.`}
+                title={`"${display}" were removed from the ingredient list.`}
             >
                 <DeletedMention>
                     <Typography
@@ -150,7 +150,7 @@ const IngredientReferenceMention: FC<IngredientReferenceMentionProps> = ({
                             fontWeight: 400,
                         }}
                     >
-                        {display} (not found)
+                        {display} (removed)
                     </Typography>
                 </DeletedMention>
             </Tooltip>

@@ -125,3 +125,52 @@ export const generateRecipeImage = async (
     // The function returns { imageDataUri: "data:image/..." } or { imageDataUri: null }
     return data?.imageDataUri || null;
 };
+
+// Interface for AI Chat response
+export interface AiChefChatResponse {
+    aiResponseText: string;
+    hasRecipeChanges: boolean;
+    suggestedRecipeChanges?: Record<string, unknown>;
+}
+
+// Interface for message in chat history
+export interface ChatMessage {
+    id: string;
+    text: string;
+    sender: "user" | "ai";
+    timestamp: string; // ISO string format
+}
+
+// Function to call the AI Chef Chat edge function
+export const sendAiChefMessage = async (
+    currentRecipe: Record<string, unknown>,
+    chatHistory: ChatMessage[],
+): Promise<AiChefChatResponse> => {
+    try {
+        const { data, error } = await supabase.functions.invoke(
+            "ai-chef-chat",
+            {
+                body: {
+                    currentRecipe,
+                    chatHistory,
+                },
+            },
+        );
+
+        if (error) {
+            logger.error("AI Chef chat failed:", error);
+            throw new Error(`AI Chef chat failed: ${error.message}`);
+        }
+
+        if (!data) {
+            throw new Error(
+                "AI Chef chat failed: No data returned from function.",
+            );
+        }
+
+        return data as AiChefChatResponse;
+    } catch (error) {
+        logger.error("Exception in AI Chef chat:", error);
+        throw error;
+    }
+};
