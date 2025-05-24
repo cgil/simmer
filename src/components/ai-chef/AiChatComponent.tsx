@@ -16,7 +16,7 @@ import {
     useMediaQuery,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
-import PolylineIcon from '@mui/icons-material/Polyline';
+import AutoFixHighOutlinedIcon from '@mui/icons-material/AutoFixHighOutlined';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../../context/AuthContext';
@@ -428,7 +428,9 @@ const AiChatComponent: FC<AiChatComponentProps> = ({
                                                         msg.suggestedChanges!
                                                     )
                                                 }
-                                                startIcon={<PolylineIcon />}
+                                                startIcon={
+                                                    <AutoFixHighOutlinedIcon />
+                                                }
                                                 sx={{
                                                     boxShadow: 'none',
                                                     textTransform: 'none',

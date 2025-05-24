@@ -147,7 +147,7 @@ const AiChefDrawer: FC<AiChefDrawerProps> = ({
                             mt: 1,
                         }}
                     >
-                        AI Chef Assistant
+                        AI Chef
                     </Typography>
 
                     <IconButton
