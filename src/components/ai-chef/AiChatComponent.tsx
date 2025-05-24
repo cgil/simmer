@@ -13,6 +13,7 @@ import {
     useTheme,
     Alert,
     Collapse,
+    useMediaQuery,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import PolylineIcon from '@mui/icons-material/Polyline';
@@ -51,6 +52,7 @@ const AiChatComponent: FC<AiChatComponentProps> = ({
     currentRecipe, // Now used for the API call
 }) => {
     const theme = useTheme();
+    const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const { user } = useAuth();
     const [message, setMessage] = useState('');
     const [messages, setMessages] = useState<Message[]>([
@@ -278,62 +280,71 @@ const AiChatComponent: FC<AiChatComponentProps> = ({
                             flexDirection:
                                 msg.sender === 'user' ? 'row-reverse' : 'row',
                             alignItems: 'flex-start',
-                            gap: 1.5,
+                            gap: isSmallScreen ? 0 : 1.5,
                         }}
                     >
-                        {msg.sender === 'user' ? (
-                            user?.user_metadata?.avatar_url ? (
-                                <Avatar
-                                    src={user.user_metadata.avatar_url}
-                                    alt="User"
-                                    sx={{
-                                        width: 38,
-                                        height: 38,
-                                        border: '1px solid',
-                                        borderColor: alpha(
-                                            theme.palette.primary.main,
-                                            0.1
-                                        ),
-                                        boxShadow: `0 2px 4px ${alpha(
-                                            theme.palette.common.black,
-                                            0.05
-                                        )}`,
-                                    }}
-                                />
-                            ) : (
-                                <Avatar
-                                    sx={{
-                                        width: 38,
-                                        height: 38,
-                                        bgcolor: alpha(
-                                            theme.palette.primary.main,
-                                            0.9
-                                        ),
-                                        border: '1px solid',
-                                        borderColor: alpha(
-                                            theme.palette.primary.dark,
-                                            0.2
-                                        ),
-                                        boxShadow: `0 2px 4px ${alpha(
-                                            theme.palette.common.black,
-                                            0.05
-                                        )}`,
-                                    }}
-                                >
-                                    <AccountCircleIcon
-                                        sx={{ color: 'white' }}
-                                    />
-                                </Avatar>
-                            )
-                        ) : (
-                            <ChefAvatar />
+                        {!isSmallScreen && (
+                            <>
+                                {msg.sender === 'user' ? (
+                                    user?.user_metadata?.avatar_url ? (
+                                        <Avatar
+                                            src={user.user_metadata.avatar_url}
+                                            alt="User"
+                                            sx={{
+                                                width: 38,
+                                                height: 38,
+                                                border: '1px solid',
+                                                borderColor: alpha(
+                                                    theme.palette.primary.main,
+                                                    0.1
+                                                ),
+                                                boxShadow: `0 2px 4px ${alpha(
+                                                    theme.palette.common.black,
+                                                    0.05
+                                                )}`,
+                                            }}
+                                        />
+                                    ) : (
+                                        <Avatar
+                                            sx={{
+                                                width: 38,
+                                                height: 38,
+                                                bgcolor: alpha(
+                                                    theme.palette.primary.main,
+                                                    0.9
+                                                ),
+                                                border: '1px solid',
+                                                borderColor: alpha(
+                                                    theme.palette.primary.dark,
+                                                    0.2
+                                                ),
+                                                boxShadow: `0 2px 4px ${alpha(
+                                                    theme.palette.common.black,
+                                                    0.05
+                                                )}`,
+                                            }}
+                                        >
+                                            <AccountCircleIcon
+                                                sx={{ color: 'white' }}
+                                            />
+                                        </Avatar>
+                                    )
+                                ) : (
+                                    <ChefAvatar />
+                                )}
+                            </>
                         )}
 
                         <Paper
                             elevation={0}
                             sx={{
                                 p: 2,
-                                maxWidth: '75%',
+                                width: isSmallScreen ? 'auto' : 'auto',
+                                maxWidth: isSmallScreen
+                                    ? msg.sender === 'ai'
+                                        ? '90%'
+                                        : '75%'
+                                    : '75%',
                                 borderRadius:
                                     msg.sender === 'user'
                                         ? '16px 16px 4px 16px'
@@ -364,6 +375,14 @@ const AiChatComponent: FC<AiChatComponentProps> = ({
                                     theme.palette.common.black,
                                     0.05
                                 )}`,
+                                ml:
+                                    msg.sender === 'ai' && isSmallScreen
+                                        ? 0
+                                        : 'auto',
+                                mr:
+                                    msg.sender === 'user' && isSmallScreen
+                                        ? 0
+                                        : 'auto',
                             }}
                         >
                             {msg.sender === 'ai' ? (

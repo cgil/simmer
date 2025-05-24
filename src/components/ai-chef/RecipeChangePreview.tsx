@@ -222,7 +222,7 @@ const RecipeChangePreview: FC<RecipeChangePreviewProps> = ({
                 mb: 2,
                 p: 2,
                 borderRadius: 2,
-                bgcolor: alpha(theme.palette.background.paper, 0.7),
+                bgcolor: theme.palette.background.paper,
                 border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
                 boxShadow: `0 2px 8px ${alpha(
                     theme.palette.common.black,
@@ -305,16 +305,7 @@ const RecipeChangePreview: FC<RecipeChangePreviewProps> = ({
                 <>
                     <Divider sx={{ my: 2 }} />
                     <Box sx={{ mb: 3 }}>
-                        <Box
-                            sx={
-                                {
-                                    // Keeping scaling for consistency if preferred,
-                                    // or remove if only a few items are typically shown.
-                                    // transform: 'scale(0.95)',
-                                    // transformOrigin: 'top left',
-                                }
-                            }
-                        >
+                        <Box>
                             <IngredientsList
                                 recipe={previewRecipe}
                                 servings={previewRecipe.servings}
@@ -334,7 +325,6 @@ const RecipeChangePreview: FC<RecipeChangePreviewProps> = ({
                     <Box sx={{ mb: 3 }}>
                         <Box
                             sx={{
-                                transform: 'scale(0.95)',
                                 transformOrigin: 'top left',
                             }}
                         >
@@ -354,7 +344,6 @@ const RecipeChangePreview: FC<RecipeChangePreviewProps> = ({
                     <Box>
                         <Box
                             sx={{
-                                transform: 'scale(0.95)',
                                 transformOrigin: 'top left',
                             }}
                         >

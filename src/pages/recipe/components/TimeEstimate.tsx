@@ -108,7 +108,7 @@ const TimeEstimate: React.FC<TimeEstimateProps> = ({
         >
             <Stack
                 direction="row"
-                spacing={{ xs: 2, sm: 3 }}
+                spacing={{ xs: 0, sm: 0 }}
                 sx={{
                     justifyContent: 'space-between',
                     flexWrap: 'wrap',
