@@ -57,7 +57,7 @@ export const generateGhibliRecipeImage = async (
                 `A delicious looking image of the final dish for a recipe titled '${title}'.${descriptionString}${contextString} Style: In the style of Studio Ghibli. Clearly show the ingredients and the final dish. No text, no watermarks, no logos.`,
             n: 1,
             size: "1024x1024",
-            quality: "low", // Consistent quality from recipe-creation
+            quality: "medium", // Consistent quality from recipe-creation
             output_format: "jpeg",
         };
 
