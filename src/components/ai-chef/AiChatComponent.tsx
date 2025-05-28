@@ -281,6 +281,7 @@ const AiChatComponent: FC<AiChatComponentProps> = ({
                                 msg.sender === 'user' ? 'row-reverse' : 'row',
                             alignItems: 'flex-start',
                             gap: isSmallScreen ? 0 : 1.5,
+                            justifyContent: 'flex-start',
                         }}
                     >
                         {!isSmallScreen && (
@@ -375,14 +376,6 @@ const AiChatComponent: FC<AiChatComponentProps> = ({
                                     theme.palette.common.black,
                                     0.05
                                 )}`,
-                                ml:
-                                    msg.sender === 'ai' && isSmallScreen
-                                        ? 0
-                                        : 'auto',
-                                mr:
-                                    msg.sender === 'user' && isSmallScreen
-                                        ? 0
-                                        : 'auto',
                             }}
                         >
                             {msg.sender === 'ai' ? (
