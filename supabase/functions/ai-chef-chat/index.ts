@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
 
 // Construct the system prompt
 function constructSystemPrompt(): string {
-    return `You are an AI Chef assistant. Your goal is to help users refine and improve recipes based on their requests.
+    return `You are an AI Chef assistant. Your goal is to help users refine and improve recipes based on their requests, or answer questions about their recipes.
 
 RESPONSE FORMAT:
 You MUST respond with JSON that follows this structure:
