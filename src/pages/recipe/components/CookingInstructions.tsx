@@ -227,12 +227,15 @@ const CookingInstructions: FC<CookingInstructionsProps> = ({
                                         sx={{
                                             display: 'flex',
                                             flexDirection: {
-                                                xs: 'row',
+                                                xs: 'column',
                                                 sm: 'row',
                                             },
-                                            gap: { xs: 1.5, sm: 2 },
                                             listStyle: 'none',
-                                            alignItems: 'flex-start',
+                                            alignItems: {
+                                                xs: 'stretch',
+                                                sm: 'flex-start',
+                                            },
+                                            gap: { xs: 2.5, sm: 2 },
                                         }}
                                     >
                                         <Tooltip
@@ -255,9 +258,12 @@ const CookingInstructions: FC<CookingInstructionsProps> = ({
                                         >
                                             <Box
                                                 sx={{
-                                                    width: { xs: 70, sm: 74 },
+                                                    width: {
+                                                        xs: '100%',
+                                                        sm: 74,
+                                                    },
                                                     minWidth: {
-                                                        xs: 60,
+                                                        xs: 'auto',
                                                         sm: 65,
                                                     },
                                                     display: 'flex',
@@ -266,7 +272,7 @@ const CookingInstructions: FC<CookingInstructionsProps> = ({
                                                     justifyContent:
                                                         'flex-start',
                                                     position: 'relative',
-                                                    mt: 0.75,
+                                                    mt: { xs: 0, sm: 0.75 },
                                                 }}
                                             >
                                                 {/* Step Number Circle */}
@@ -424,10 +430,14 @@ const CookingInstructions: FC<CookingInstructionsProps> = ({
                                                     sm: '1.05rem',
                                                 },
                                                 lineHeight: 1.8,
-                                                flex: 1,
+                                                flex: { xs: 'none', sm: 1 },
+                                                width: {
+                                                    xs: '100%',
+                                                    sm: 'auto',
+                                                },
                                                 fontFamily:
                                                     "'Inter', sans-serif",
-                                                pt: 0.5,
+                                                pt: { xs: 0, sm: 0.5 },
                                             }}
                                         >
                                             <HighlightedInstruction
