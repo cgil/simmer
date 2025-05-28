@@ -5,7 +5,7 @@ import {
     RecipeSchema,
     validateIngredientMentions,
 } from "../_shared/recipe-schemas.ts";
-import { OpenAI } from "https://esm.sh/openai@4.98.0";
+import { OpenAI } from "https://esm.sh/openai@4.103.0";
 import { zodResponseFormat } from "https://deno.land/x/openai@v4.55.1/helpers/zod.ts";
 import { z } from "https://deno.land/x/zod@v3.24.1/mod.ts";
 
@@ -318,9 +318,9 @@ async function callOpenAI(
 
     try {
         const completion = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "o4-mini",
+            reasoning_effort: "low",
             messages,
-            temperature: 0.2,
             response_format: zodResponseFormat(
                 AiChefResponseSchema,
                 "ai_chef_chat",
