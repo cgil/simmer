@@ -42,9 +42,7 @@ interface RecipeImageManagerProps {
 const RecipeImageManager: React.FC<RecipeImageManagerProps> = ({
     imageUploads,
     setImageUploads,
-    images,
     setImages,
-    isNewRecipe,
     title,
     onGenerateAiImage,
     isGeneratingAiImage,
@@ -283,7 +281,7 @@ const RecipeImageManager: React.FC<RecipeImageManagerProps> = ({
             </Typography>
 
             {/* AI Image Generation Button - Show only for new recipes with no images */}
-            {isNewRecipe && images.length === 0 && title.trim() && (
+            {title.trim() && (
                 <Box
                     sx={{
                         position: 'absolute',
