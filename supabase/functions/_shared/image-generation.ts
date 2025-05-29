@@ -40,13 +40,13 @@ export const generateStyledRecipeImage = async (
 
     const surfacePlacementOptions = [
         "a sun‑bleached reclaimed‑wood surface with a casually draped neutral‑linen napkin",
-        "a smooth white‑marble slab accented by a softly rumpled oatmeal‑linen runner",
+        "a smooth large white‑marble slab accented by a softly rumpled oatmeal‑linen runner",
         "a matte charcoal‑slate serving board atop a light birch butcher‑block with a loosely folded flax‑gauze cloth",
         "a sand‑toned rattan charger atop a bleached oak table, accented by a gauzy ecru runner",
-        "a smooth dove‑gray quartz slab with delicate veining, keeping the scene textile‑free for a clean editorial look",
-        "a lightly charred cedar plank set over a snow‑white parchment sheet, adding a hint of rustic warmth",
-        "a blush‑toned matte ceramic tile framed by a loosely knotted natural‑linen ribbon",
-        "a butter‑smooth ash wood cutting board bordered by a minimalist ivory parchment strip",
+        "a smooth largedove‑gray quartz slab with delicate veining, keeping the scene textile‑free for a clean editorial look",
+        "a large lightly charred cedar plank set over a snow‑white parchment sheet, adding a hint of rustic warmth",
+        "a large blush‑toned matte ceramic tile framed by a loosely knotted natural‑linen ribbon",
+        "a large butter‑smooth ash wood cutting board bordered by a minimalist ivory parchment strip",
     ];
 
     // Pick a random surface placement
