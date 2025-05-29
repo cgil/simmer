@@ -11,7 +11,7 @@ import {
     RecipeSchema,
     validateIngredientMentions,
 } from "../_shared/recipe-schemas.ts";
-import { generateGhibliRecipeImage } from "../_shared/image-generation.ts";
+import { generateStyledRecipeImage } from "../_shared/image-generation.ts";
 import { uploadDataToGCS } from "../_shared/gcs-upload.ts";
 
 // Simple environment-aware logger
@@ -311,7 +311,7 @@ serve(async (req) => {
         // Task 2: Generate and Upload Image
         const generateAndUploadImage = async () => {
             try {
-                const imageDataUri = await generateGhibliRecipeImage(
+                const imageDataUri = await generateStyledRecipeImage(
                     recipeIdea.title,
                     originalPrompt || recipeIdea.description,
                 );

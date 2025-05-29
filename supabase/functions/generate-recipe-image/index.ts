@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { generateGhibliRecipeImage } from "../_shared/image-generation.ts";
+import { generateStyledRecipeImage } from "../_shared/image-generation.ts";
 
 // Simple environment-aware logger
 const isProduction = Deno.env.get("ENVIRONMENT") === "production";
@@ -49,7 +49,7 @@ serve(async (req) => {
 
         // Call the shared image generation utility
         // Pass a generic context or null since there's no original prompt here
-        const imageDataUri = await generateGhibliRecipeImage(
+        const imageDataUri = await generateStyledRecipeImage(
             title,
             description || null,
         );

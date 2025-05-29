@@ -20,13 +20,13 @@ const logger = {
 
 /**
  * Generates a recipe image using OpenAI
- * Uses a prompt optimized for Studio Ghibli food art style.
+ * Uses a prompt optimized for our app's food art style.
  * @param title The title of the recipe.
  * @param description The description of the recipe.
  * @param detailContext Optional additional context (e.g., original user prompt, recipe idea) to refine the image.
  * @returns A Promise resolving to the base64 data URI (image/jpeg) or null if generation fails.
  */
-export const generateGhibliRecipeImage = async (
+export const generateStyledRecipeImage = async (
     title: string,
     description?: string | null,
     detailContext?: string | null,
@@ -37,6 +37,23 @@ export const generateGhibliRecipeImage = async (
         logger.error("Title is required for image generation.");
         return null;
     }
+
+    const surfacePlacementOptions = [
+        "a sun‑bleached reclaimed‑wood surface with a casually draped neutral‑linen napkin",
+        "a smooth white‑marble slab accented by a softly rumpled oatmeal‑linen runner",
+        "a matte charcoal‑slate serving board atop a light birch butcher‑block with a loosely folded flax‑gauze cloth",
+        "a sand‑toned rattan charger atop a bleached oak table, accented by a gauzy ecru runner",
+        "a smooth dove‑gray quartz slab with delicate veining, keeping the scene textile‑free for a clean editorial look",
+        "a lightly charred cedar plank set over a snow‑white parchment sheet, adding a hint of rustic warmth",
+        "a blush‑toned matte ceramic tile framed by a loosely knotted natural‑linen ribbon",
+        "a butter‑smooth ash wood cutting board bordered by a minimalist ivory parchment strip",
+    ];
+
+    // Pick a random surface placement
+    const randomIndex = Math.floor(
+        Math.random() * surfacePlacementOptions.length,
+    );
+    const selectedSurfacePlacement = surfacePlacementOptions[randomIndex];
 
     try {
         const openai = new OpenAI({
@@ -54,7 +71,9 @@ export const generateGhibliRecipeImage = async (
         const imageGenParams = {
             model: "gpt-image-1", // Consistent model from recipe-creation
             prompt:
-                `A delicious looking image of the final dish for a recipe titled '${title}'.${descriptionString}${contextString} Style: In the style of Studio Ghibli. Clearly show the ingredients and the final dish. No text, no watermarks, no logos.`,
+                `A delicious looking image of the final dish for a recipe titled '${title}'.${descriptionString}${contextString}
+
+                Style: Soft north‑light window setup with bright white bounce fill, hyper‑realistic hero dish centered on ${selectedSurfacePlacement}, meticulously plated with garnishes arranged for visual flow, complementary ingredient from the recipe vignettes displayed in small bowls, plates, bundles, loose clusters, folded linen or other small relevant props just behind and to the sides to frame the scene, shallow depth of field (≈ f/2.0) keeping the dish tack‑sharp while the ingredient props transition into a gentle creamy bokeh, balanced composition, luminous high‑key atmosphere, airy modern‑magazine clarity. No text, no watermarks, no logos.`,
             n: 1,
             size: "1024x1024",
             quality: "medium", // Consistent quality from recipe-creation
