@@ -19,7 +19,7 @@ const logger = {
 };
 
 /**
- * Generates a recipe image using OpenAI DALL-E.
+ * Generates a recipe image using OpenAI
  * Uses a prompt optimized for Studio Ghibli food art style.
  * @param title The title of the recipe.
  * @param description The description of the recipe.
