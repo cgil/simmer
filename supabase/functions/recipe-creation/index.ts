@@ -201,7 +201,7 @@ serve(async (req) => {
         - Generate relevant tags (min 4, max 10)
         - Maintain exact measurements and units
         - You must always use the correct unit type for each ingredient
-        - Provide ral and accurate time estimates for prep, cooking, and resting times
+        - Provide real and accurate time estimates for prep, cooking, and resting times
         - Return an empty array for images, don't make up any images
 
         CRITICAL INSTRUCTION FOR INGREDIENT MENTIONS:
