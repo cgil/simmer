@@ -1,14 +1,12 @@
 # Simmer - Your AI Recipe Manager
 
-Simmer is a modern web application that offers a sleek, magazine-style experience for managing your digital recipes. It allows you to capture, organize, and cook from your favorite recipes with a beautiful, journal-like interface.
+Simmer is a magazine-style experience for managing your digital recipes, guided by AI Chef! It allows you to capture, organize, and cook from your favorite recipes with a beautiful, journal-like interface.
 
 ![Simmer home page showing the All Recipes view](docs/media/showcase-simmer-home.png)
 
 ## Preview
 
 Simmer is built to feel warm, visual, and easy to browse. Here are a few quick examples of what the app looks like in practice.
-
-For browser playback, enable GitHub Pages for this repository using the `main` branch and `/docs` folder. Once Pages is enabled, the demo previews below will open dedicated video pages instead of downloading the raw files.
 
 ### Home Page
 
