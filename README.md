@@ -8,6 +8,8 @@ Simmer is a modern web application that offers a sleek, magazine-style experienc
 
 Simmer is built to feel warm, visual, and easy to browse. Here are a few quick examples of what the app looks like in practice.
 
+For browser playback, enable GitHub Pages for this repository using the `main` branch and `/docs` folder. Once Pages is enabled, the demo previews below will open dedicated video pages instead of downloading the raw files.
+
 ### Home Page
 
 The home page gives you a searchable overview of all your recipes, with collections on the left and rich recipe cards front and center. It is designed to make it easy to scan photos, titles, tags, servings, and cook times at a glance.
@@ -16,41 +18,41 @@ The home page gives you a searchable overview of all your recipes, with collecti
 
 This short walkthrough shows editing an existing recipe, using AI to generate a recipe image, and updating the cooking instructions with the rich editor.
 
-[![Recipe editing demo preview](docs/media/recipe-editing-ai-image-rich-editor-demo-preview.jpg)](https://raw.githubusercontent.com/cgil/simmer/main/docs/media/recipe-editing-ai-image-rich-editor-demo.mp4)
+[![Recipe editing demo preview](docs/media/recipe-editing-ai-image-rich-editor-demo-preview.jpg)](https://cgil.github.io/simmer/demos/recipe-editing-ai-image-rich-editor-demo.html)
 
-[Open the recipe editing demo video](https://raw.githubusercontent.com/cgil/simmer/main/docs/media/recipe-editing-ai-image-rich-editor-demo.mp4)
+[Open the recipe editing demo page](https://cgil.github.io/simmer/demos/recipe-editing-ai-image-rich-editor-demo.html)
 
 ### AI Chef Guided Editing
 
 This demo shows the guided AI Chef experience, where you chat with the recipe in plain language, review suggested changes, and apply the updates directly into the recipe.
 
-[![AI Chef guided editing demo preview](docs/media/ai-chef-guided-recipe-editing-demo-preview.jpg)](https://raw.githubusercontent.com/cgil/simmer/main/docs/media/ai-chef-guided-recipe-editing-demo.mp4)
+[![AI Chef guided editing demo preview](docs/media/ai-chef-guided-recipe-editing-demo-preview.jpg)](https://cgil.github.io/simmer/demos/ai-chef-guided-recipe-editing-demo.html)
 
-[Open the AI Chef guided editing demo video](https://raw.githubusercontent.com/cgil/simmer/main/docs/media/ai-chef-guided-recipe-editing-demo.mp4)
+[Open the AI Chef guided editing demo page](https://cgil.github.io/simmer/demos/ai-chef-guided-recipe-editing-demo.html)
 
 ### AI Chef New Recipe Creation
 
 This walkthrough shows creating a brand-new recipe from scratch with AI Chef, using the guided experience to shape the idea into a full recipe you can save and refine.
 
-[![AI Chef new recipe creation demo preview](docs/media/ai-chef-new-recipe-from-scratch-demo-preview.jpg)](https://raw.githubusercontent.com/cgil/simmer/main/docs/media/ai-chef-new-recipe-from-scratch-demo.mp4)
+[![AI Chef new recipe creation demo preview](docs/media/ai-chef-new-recipe-from-scratch-demo-preview.jpg)](https://cgil.github.io/simmer/demos/ai-chef-new-recipe-from-scratch-demo.html)
 
-[Open the AI Chef new recipe creation demo video](https://raw.githubusercontent.com/cgil/simmer/main/docs/media/ai-chef-new-recipe-from-scratch-demo.mp4)
+[Open the AI Chef new recipe creation demo page](https://cgil.github.io/simmer/demos/ai-chef-new-recipe-from-scratch-demo.html)
 
 ### Cooking Mode and Quick Adjustments
 
 This demo shows how to quickly update a recipe's servings, apply those changes throughout the instructions, swap ingredients with substitutions, and then jump into the mobile-friendly cooking mode with step-by-step instructions, timers, and a screen-awake experience while you cook.
 
-[![Cooking mode and quick adjustments demo preview](docs/media/servings-substitutions-and-cooking-mode-demo-preview.jpg)](https://raw.githubusercontent.com/cgil/simmer/main/docs/media/servings-substitutions-and-cooking-mode-demo.mp4)
+[![Cooking mode and quick adjustments demo preview](docs/media/servings-substitutions-and-cooking-mode-demo-preview.jpg)](https://cgil.github.io/simmer/demos/servings-substitutions-and-cooking-mode-demo.html)
 
-[Open the cooking mode and quick adjustments demo video](https://raw.githubusercontent.com/cgil/simmer/main/docs/media/servings-substitutions-and-cooking-mode-demo.mp4)
+[Open the cooking mode and quick adjustments demo page](https://cgil.github.io/simmer/demos/servings-substitutions-and-cooking-mode-demo.html)
 
 ### Sharing and Collaboration
 
 This demo shows how to share a recipe or a full collection with other people, keep recipes private for invited collaborators or make them public for anyone to discover, and assign viewer or editor access so people can collaborate in the way that fits best.
 
-[![Sharing and collaboration demo preview](docs/media/sharing-and-collaboration-demo-preview.jpg)](https://raw.githubusercontent.com/cgil/simmer/main/docs/media/sharing-and-collaboration-demo.mp4)
+[![Sharing and collaboration demo preview](docs/media/sharing-and-collaboration-demo-preview.jpg)](https://cgil.github.io/simmer/demos/sharing-and-collaboration-demo.html)
 
-[Open the sharing and collaboration demo video](https://raw.githubusercontent.com/cgil/simmer/main/docs/media/sharing-and-collaboration-demo.mp4)
+[Open the sharing and collaboration demo page](https://cgil.github.io/simmer/demos/sharing-and-collaboration-demo.html)
 
 ## Features
 
