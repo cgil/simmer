@@ -1,6 +1,8 @@
-# Simmer - A Paper Notebook Recipe Manager
+# Simmer - Your AI Recipe Manager
 
 Simmer is a modern web application that offers a sleek, magazine-style experience for managing your digital recipes. It allows you to capture, organize, and cook from your favorite recipes with a beautiful, journal-like interface.
+
+![Simmer home page showing the All Recipes view](docs/media/simmer-home-page-preview.jpg)
 
 ## Preview
 
@@ -9,8 +11,6 @@ Simmer is built to feel warm, visual, and easy to browse. Here are a few quick e
 ### Home Page
 
 The home page gives you a searchable overview of all your recipes, with collections on the left and rich recipe cards front and center. It is designed to make it easy to scan photos, titles, tags, servings, and cook times at a glance.
-
-_Screenshot: Simmer home page showing the All Recipes view._
 
 ### Recipe Editing Demo
 
@@ -44,34 +44,34 @@ This demo shows how to share a recipe or a full collection with other people, ke
 
 ## Features
 
--   💄 Elegant, magazine-style interface for a premium culinary experience
--   🔍 AI-powered recipe extraction from URLs
--   🧠 AI-powered recipe ideas generation from text prompts
--   🍳 AI-powered ingredient substitution suggestions
--   💬 AI Chef assistant for conversational recipe improvement and editing
--   📱 Mobile-friendly cooking mode with interactive timers
--   🖼️ Beautiful image gallery management
--   📂 Collections to organize recipes with custom emoji icons
--   🔍 All Recipes view and collection-specific browsing
--   ⚡ Real-time ingredient scaling
--   📋 Section-based cooking instructions
--   ⏲️ Multi-timer tracking across recipe steps
--   ⚖️ Flexible time handling (supports zero prep/cook times)
--   🎨 Whimsical loading states with recipe-themed progress indicators
--   🔖 @-mention style ingredient references in instructions
--   👤 User profile pictures from authentication providers (Google, GitHub, etc.)
--   📊 Product analytics via PostHog (production only)
+- 💄 Elegant, magazine-style interface for a premium culinary experience
+- 🔍 AI-powered recipe extraction from URLs
+- 🧠 AI-powered recipe ideas generation from text prompts
+- 🍳 AI-powered ingredient substitution suggestions
+- 💬 AI Chef assistant for conversational recipe improvement and editing
+- 📱 Mobile-friendly cooking mode with interactive timers
+- 🖼️ Beautiful image gallery management
+- 📂 Collections to organize recipes with custom emoji icons
+- 🔍 All Recipes view and collection-specific browsing
+- ⚡ Real-time ingredient scaling
+- 📋 Section-based cooking instructions
+- ⏲️ Multi-timer tracking across recipe steps
+- ⚖️ Flexible time handling (supports zero prep/cook times)
+- 🎨 Whimsical loading states with recipe-themed progress indicators
+- 🔖 @-mention style ingredient references in instructions
+- 👤 User profile pictures from authentication providers (Google, GitHub, etc.)
+- 📊 Product analytics via PostHog (production only)
 
 ## Local Development Setup
 
 ### Prerequisites
 
--   Node.js (v18 or higher)
--   npm or yarn
--   [Supabase CLI](https://supabase.com/docs/guides/cli) installed globally
--   Docker Desktop (required for Supabase local development)
--   OpenAI API key
--   [Google Cloud SDK (`gcloud`)](https://cloud.google.com/sdk/docs/install) installed and authenticated (for GCS CORS setup)
+- Node.js (v18 or higher)
+- npm or yarn
+- [Supabase CLI](https://supabase.com/docs/guides/cli) installed globally
+- Docker Desktop (required for Supabase local development)
+- OpenAI API key
+- [Google Cloud SDK (`gcloud`)](https://cloud.google.com/sdk/docs/install) installed and authenticated (for GCS CORS setup)
 
 ### Environment Setup
 
@@ -143,37 +143,37 @@ npm run dev:all
 
 The application will be available at:
 
--   Frontend: `http://localhost:5173`
--   Supabase Studio: `http://localhost:54323`
--   Functions: `http://localhost:54321/functions/v1/*`
+- Frontend: `http://localhost:5173`
+- Supabase Studio: `http://localhost:54323`
+- Functions: `http://localhost:54321/functions/v1/*`
 
 ### Available Development Commands
 
 #### Supabase Control
 
--   `npm run supabase:start` - Start Supabase local development
--   `npm run supabase:stop` - Stop Supabase local development
--   `npm run supabase:status` - Check Supabase services status
+- `npm run supabase:start` - Start Supabase local development
+- `npm run supabase:stop` - Stop Supabase local development
+- `npm run supabase:status` - Check Supabase services status
 
 #### Database Management
 
--   `npm run db:reset` - Reset local database to clean state
--   `npm run db:migration:new` - Create a new migration file
+- `npm run db:reset` - Reset local database to clean state
+- `npm run db:migration:new` - Create a new migration file
 
 #### Function Development
 
--   `npm run functions:serve` - Start functions development server
--   `npm run functions:deploy` - Deploy functions (development)
--   `npm run functions:deploy:prod` - Deploy functions (production)
+- `npm run functions:serve` - Start functions development server
+- `npm run functions:deploy` - Deploy functions (development)
+- `npm run functions:deploy:prod` - Deploy functions (production)
 
 #### Testing
 
--   `npm run test:function` - Test recipe extraction with sample URL
--   `npm run test:ideas` - Test recipe ideas generation with sample prompt
--   `npm run test:creation` - Test recipe creation from an idea
--   `npm run test:substitution` - Test ingredient substitution
--   `npm run test:ai-chef-chat` - Test AI Chef chat with a simple recipe
--   `npm run test:ai-chef-chat:detailed` - Test AI Chef chat with a more detailed recipe example
+- `npm run test:function` - Test recipe extraction with sample URL
+- `npm run test:ideas` - Test recipe ideas generation with sample prompt
+- `npm run test:creation` - Test recipe creation from an idea
+- `npm run test:substitution` - Test ingredient substitution
+- `npm run test:ai-chef-chat` - Test AI Chef chat with a simple recipe
+- `npm run test:ai-chef-chat:detailed` - Test AI Chef chat with a more detailed recipe example
 
 ### Development Workflow
 
@@ -212,7 +212,6 @@ The application will be available at:
 ### Troubleshooting
 
 1. **Supabase Issues**
-
     - Check service status: `npm run supabase:status`
     - Try stopping and restarting:
         ```bash
@@ -221,7 +220,6 @@ The application will be available at:
         ```
 
 2. **Function Development**
-
     - Functions logs are available in the terminal running `functions:serve`
     - Check Supabase Studio for function invocation logs
 
@@ -249,32 +247,31 @@ For deployment, **critical environment variables must be set directly in your ho
 
 **Required Environment Variables:**
 
--   **Vercel (Frontend)**:
+- **Vercel (Frontend)**:
+    - `VITE_SUPABASE_URL`
+    - `VITE_SUPABASE_ANON_KEY`
+    - `VITE_PUBLIC_APP_URL`
+    - `VITE_AUTH_REDIRECT_URL` (optional if it matches `VITE_PUBLIC_APP_URL/auth/callback`)
+    - `VITE_LOGIN_BACKGROUND_IMAGE_URL` (optional)
+    - `VITE_SIGNUP_BACKGROUND_IMAGE_URL` (optional)
+    - `VITE_POSTHOG_KEY` (Your **production** PostHog Project API Key)
+    - `VITE_POSTHOG_HOST` (Your **production** PostHog API Host URL)
+    - Frontend generally doesn't need `GCS_*` variables directly because uploads go through Edge Functions.
 
-    -   `VITE_SUPABASE_URL`
-    -   `VITE_SUPABASE_ANON_KEY`
-    -   `VITE_PUBLIC_APP_URL`
-    -   `VITE_AUTH_REDIRECT_URL` (optional if it matches `VITE_PUBLIC_APP_URL/auth/callback`)
-    -   `VITE_LOGIN_BACKGROUND_IMAGE_URL` (optional)
-    -   `VITE_SIGNUP_BACKGROUND_IMAGE_URL` (optional)
-    -   `VITE_POSTHOG_KEY` (Your **production** PostHog Project API Key)
-    -   `VITE_POSTHOG_HOST` (Your **production** PostHog API Host URL)
-    -   Frontend generally doesn't need `GCS_*` variables directly because uploads go through Edge Functions.
+- **Supabase (Edge Functions Secrets)**:
+    - `SUPABASE_URL` (Often available implicitly)
+    - `SUPABASE_ANON_KEY` (Often available implicitly)
+    - `SUPABASE_SERVICE_ROLE_KEY` (If needed by functions)
+    - `OPENAI_API_KEY`
+    - `SUPABASE_JWT_SECRET` (Required for production JWT verification)
+    - `ENVIRONMENT=production`
+    - `GCS_BUCKET_NAME`
+    - `GCS_PROJECT_ID`
+    - `GCS_CLIENT_EMAIL`
+    - `GCS_PRIVATE_KEY` (Store securely as a secret)
 
--   **Supabase (Edge Functions Secrets)**:
-    -   `SUPABASE_URL` (Often available implicitly)
-    -   `SUPABASE_ANON_KEY` (Often available implicitly)
-    -   `SUPABASE_SERVICE_ROLE_KEY` (If needed by functions)
-    -   `OPENAI_API_KEY`
-    -   `SUPABASE_JWT_SECRET` (Required for production JWT verification)
-    -   `ENVIRONMENT=production`
-    -   `GCS_BUCKET_NAME`
-    -   `GCS_PROJECT_ID`
-    -   `GCS_CLIENT_EMAIL`
-    -   `GCS_PRIVATE_KEY` (Store securely as a secret)
-
--   **Local CLI Deployment Configuration**:
-    -   `SUPABASE_PROJECT_REF` (used locally by `npm run functions:deploy:prod` if you do not rely on `supabase link`)
+- **Local CLI Deployment Configuration**:
+    - `SUPABASE_PROJECT_REF` (used locally by `npm run functions:deploy:prod` if you do not rely on `supabase link`)
 
 **Setup Steps:**
 
@@ -310,14 +307,14 @@ npm run functions:deploy:prod
 
 This command deploys the following functions configured for production. It will use `SUPABASE_PROJECT_REF` from your shell or local `.env.production` when available, and otherwise falls back to the Supabase project linked in your CLI:
 
--   recipe-extraction
--   recipe-ideas-generation
--   recipe-creation
--   link-shares-on-signup
--   ingredient-substitution
--   generate-recipe-image
--   `upload-user-image` # Handles user image uploads
--   `ai-chef-chat` # Handles conversational recipe improvements
+- recipe-extraction
+- recipe-ideas-generation
+- recipe-creation
+- link-shares-on-signup
+- ingredient-substitution
+- generate-recipe-image
+- `upload-user-image` # Handles user image uploads
+- `ai-chef-chat` # Handles conversational recipe improvements
 
 ### Deployment Checklist
 
