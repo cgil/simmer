@@ -14,6 +14,10 @@ For browser playback, enable GitHub Pages for this repository using the `main` b
 
 The home page gives you a searchable overview of all your recipes, with collections on the left and rich recipe cards front and center. It is designed to make it easy to scan photos, titles, tags, servings, and cook times at a glance.
 
+[![Home page filtering and discovery demo preview](docs/media/homepage-filtering-and-discovery-demo-preview.jpg)](https://cgil.github.io/simmer/demos/homepage-filtering-and-discovery-demo.html)
+
+[Open the home page filtering and discovery demo page](https://cgil.github.io/simmer/demos/homepage-filtering-and-discovery-demo.html)
+
 ### Recipe Editing Demo
 
 This short walkthrough shows editing an existing recipe, using AI to generate a recipe image, and updating the cooking instructions with the rich editor.
