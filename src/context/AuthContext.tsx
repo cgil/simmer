@@ -144,20 +144,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     const signInWithGoogle = useCallback(async () => {
-        // Use our dedicated callback route so we can parse the hash and then send the user to /collection/all
-        let redirectTo = `${window.location.origin}/auth/callback`;
-
-        // For production environment, use the production URL
-        if (config.environment === 'production') {
-            redirectTo = 'https://simmer-app.vercel.app/auth/callback';
-        }
-
         try {
             // We'll rely on the error response to determine if user exists
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo,
+                    redirectTo: config.app.authRedirectUrl,
                 },
             });
 
@@ -191,7 +183,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             email,
             password,
             options: {
-                emailRedirectTo: `${window.location.origin}/auth/callback`,
+                emailRedirectTo: config.app.authRedirectUrl,
             },
         });
         return { data, error };

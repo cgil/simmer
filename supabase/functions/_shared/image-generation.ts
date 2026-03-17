@@ -1,4 +1,4 @@
-import { OpenAI } from "https://esm.sh/openai@4.103.0";
+import { OpenAI } from "https://esm.sh/openai@6.32.0";
 
 // Simple environment-aware logger for shared utility
 const isProduction = Deno.env.get("ENVIRONMENT") === "production";
@@ -69,7 +69,7 @@ export const generateStyledRecipeImage = async (
             : "";
 
         const imageGenParams = {
-            model: "gpt-image-1", // Consistent model from recipe-creation
+            model: "gpt-image-1.5", // Consistent model from recipe-creation
             prompt:
                 `A delicious looking image of the final dish for a recipe titled '${title}'.${descriptionString}${contextString}
 

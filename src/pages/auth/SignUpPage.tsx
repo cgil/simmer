@@ -18,6 +18,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import GoogleIcon from '@mui/icons-material/Google';
 import { useAuth } from '../../context/AuthContext';
+import config from '../../config';
 
 // Custom styled components with enhanced paper notebook aesthetic
 const NotebookPaper = styled(Paper)(({ theme }) => ({
@@ -332,7 +333,9 @@ const SignUpPage = () => {
                 margin: 0,
                 padding: 0,
                 backgroundColor: '#FBF6E8',
-                backgroundImage: `url('https://storage.googleapis.com/simmer-recipe-images/public/simmer-signup-background.png')`,
+                backgroundImage: config.app.signupBackgroundImageUrl
+                    ? `url('${config.app.signupBackgroundImageUrl}')`
+                    : 'none',
                 backgroundSize: 'cover',
                 backgroundPosition: 'center center',
                 backgroundRepeat: 'no-repeat',
